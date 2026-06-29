@@ -1,159 +1,108 @@
-import type {Node} from '@/lib-components/nodes/Node.js';
-import type {VuetrexStage} from '@/lib-components/three/stage.js';
-import {Vector3} from 'three';
+import { Vector3 } from 'three';
 
-export type LayoutFn = (child: Node, siblings: Node[], stage: VuetrexStage) => Vector3
-type SlotSizeFn = (containerSize: Vector3, child: Node, siblings: Node[], stage: VuetrexStage) => Vector3
-
-export type LayoutFactory = ((containerPos: Vector3, containerSize: Vector3) => LayoutFn) & {
-    slotSizeOf?: SlotSizeFn
+export interface Layout {
+    measure(children: Vector3[], gap: number): Vector3
+    place(index: number, children: Vector3[], gap: number): Vector3
 }
 
-const childHeight = (child: Node) => {
-    const height = (child as any).state?.height;
-    return typeof height === 'number' && Number.isFinite(height) ? height : 0;
+const sum = (ns: number[]) => ns.reduce((a, b) => a + b, 0);
+const maxOr0 = (ns: number[]) => (ns.length ? Math.max(...ns) : 0);
+
+const linearMeasure = (children: Vector3[], gap: number, axis: 'x' | 'z'): Vector3 => {
+    if (!children.length) return new Vector3();
+    const extent = sum(children.map(c => c[axis])) + gap * (children.length - 1);
+    const w = axis === 'x' ? extent : maxOr0(children.map(c => c.x));
+    const d = axis === 'z' ? extent : maxOr0(children.map(c => c.z));
+    return new Vector3(w, maxOr0(children.map(c => c.y)), d);
 };
 
-const childIndex = (child: Node, siblings: Node[]) => {
-    const idx = siblings.indexOf(child);
-    return idx >= 0 ? idx : 0;
+const linearPlace = (index: number, children: Vector3[], gap: number, axis: 'x' | 'z'): Vector3 => {
+    if (!children.length) return new Vector3();
+    const extent = sum(children.map(c => c[axis])) + gap * (children.length - 1);
+    const before = sum(children.slice(0, index).map(c => c[axis])) + gap * index;
+    const offset = -extent / 2 + before + children[index][axis] / 2;
+    return axis === 'x' ? new Vector3(offset, 0, 0) : new Vector3(0, 0, offset);
 };
 
-const childCount = (siblings: Node[]) => Math.max(siblings.length, 1);
+export const horizontalLayout: Layout = {
+    measure: (children, gap) => linearMeasure(children, gap, 'x'),
+    place: (index, children, gap) => linearPlace(index, children, gap, 'x'),
+};
 
-const gridDimensions = (count: number, size: Vector3) => {
-    const safeCount = Math.max(count, 1);
-    const aspect = size.z === 0 ? 1 : Math.max(size.x / size.z, 0.1);
-    const columns = Math.max(1, Math.ceil(Math.sqrt(safeCount * aspect)));
-    const rows = Math.max(1, Math.ceil(safeCount / columns));
+export const depthLayout: Layout = {
+    measure: (children, gap) => linearMeasure(children, gap, 'z'),
+    place: (index, children, gap) => linearPlace(index, children, gap, 'z'),
+};
+
+export const stackLayout: Layout = {
+    measure(children, gap) {
+        if (!children.length) return new Vector3();
+        const height = sum(children.map(c => c.y)) + gap * (children.length - 1);
+        return new Vector3(maxOr0(children.map(c => c.x)), height, maxOr0(children.map(c => c.z)));
+    },
+    place(index, children, gap) {
+        if (!children.length) return new Vector3();
+        const y = sum(children.slice(0, index).map(c => c.y)) + gap * index;
+        return new Vector3(0, y, 0);
+    },
+};
+
+const ringRadius = (children: Vector3[], gap: number): number => {
+    const n = children.length;
+    if (n <= 1) return 0;
+    const chord = maxOr0(children.map(c => Math.max(c.x, c.z))) + gap;
+    return chord / (2 * Math.sin(Math.PI / n));
+};
+
+export const ringLayout: Layout = {
+    measure(children, gap) {
+        if (!children.length) return new Vector3();
+        const r = ringRadius(children, gap);
+        return new Vector3(
+            2 * r + maxOr0(children.map(c => c.x)),
+            maxOr0(children.map(c => c.y)),
+            2 * r + maxOr0(children.map(c => c.z)),
+        );
+    },
+    place(index, children, gap) {
+        if (!children.length) return new Vector3();
+        const r = ringRadius(children, gap);
+        const angle = index * Math.PI * 2 / children.length;
+        return new Vector3(r * Math.sin(angle), 0, r * Math.cos(angle));
+    },
+};
+
+const gridDimensions = (count: number) => {
+    const columns = Math.max(1, Math.ceil(Math.sqrt(count)));
+    const rows = Math.max(1, Math.ceil(count / columns));
     return { columns, rows };
 };
 
-const createLayoutFactory = (
-    layout: (containerPos: Vector3, containerSize: Vector3, child: Node, siblings: Node[], stage: VuetrexStage) => Vector3,
-    slotSizeOf: SlotSizeFn,
-) => {
-    const factory = ((containerPos: Vector3, containerSize: Vector3) => {
-        return (child: Node, siblings: Node[], stage: VuetrexStage) => layout(containerPos, containerSize, child, siblings, stage);
-    }) as LayoutFactory;
-    factory.slotSizeOf = slotSizeOf;
-    return factory;
+export const gridLayout: Layout = {
+    measure(children, gap) {
+        if (!children.length) return new Vector3();
+        const { columns, rows } = gridDimensions(children.length);
+        const cellX = maxOr0(children.map(c => c.x));
+        const cellZ = maxOr0(children.map(c => c.z));
+        return new Vector3(
+            columns * cellX + gap * (columns - 1),
+            maxOr0(children.map(c => c.y)),
+            rows * cellZ + gap * (rows - 1),
+        );
+    },
+    place(index, children, gap) {
+        if (!children.length) return new Vector3();
+        const { columns, rows } = gridDimensions(children.length);
+        const cellX = maxOr0(children.map(c => c.x));
+        const cellZ = maxOr0(children.map(c => c.z));
+        const width = columns * cellX + gap * (columns - 1);
+        const depth = rows * cellZ + gap * (rows - 1);
+        const column = index % columns;
+        const row = Math.floor(index / columns);
+        return new Vector3(
+            -width / 2 + column * (cellX + gap) + cellX / 2,
+            0,
+            -depth / 2 + row * (cellZ + gap) + cellZ / 2,
+        );
+    },
 };
-
-export const horizontalLayout = createLayoutFactory(
-    (containerPos, containerSize, child, siblings, _stage) => {
-        void _stage;
-        const count = childCount(siblings);
-        const idx = childIndex(child, siblings);
-        const slotWidth = containerSize.x / count;
-        const minX = containerPos.x - containerSize.x / 2;
-
-        return new Vector3(
-            minX + slotWidth * (idx + 0.5),
-            containerPos.y, //todo + childHeight(child) / 2 + child.getElevation(),
-            containerPos.z,
-        );
-    },
-    (containerSize, _child, siblings) => new Vector3(
-        containerSize.x / childCount(siblings),
-        containerSize.y,
-        containerSize.z,
-    ),
-);
-
-export const depthLayout = createLayoutFactory(
-    (containerPos, containerSize, child, siblings, _stage) => {
-        void _stage;
-        const count = childCount(siblings);
-        const idx = childIndex(child, siblings);
-        const slotDepth = containerSize.z / count;
-        const minZ = containerPos.z - containerSize.z / 2;
-
-        return new Vector3(
-            containerPos.x,
-            containerPos.y, //todo + childHeight(child) / 2 + child.getElevation(),
-            minZ + slotDepth * (idx + 0.5),
-        );
-    },
-    (containerSize, _child, siblings) => new Vector3(
-        containerSize.x,
-        containerSize.y,
-        containerSize.z / childCount(siblings),
-    ),
-);
-
-export const stackLayout = createLayoutFactory(
-    (containerPos, _containerSize, child, siblings, _stage) => {
-        void _containerSize;
-        void _stage;
-        const idx = childIndex(child, siblings);
-        const baseY = containerPos.y;
-        const precedingHeight = siblings
-            .slice(0, idx)
-            .reduce((sum, sibling) => sum + childHeight(sibling), 0);
-        const height = childHeight(child);
-
-        return new Vector3(
-            containerPos.x,
-            baseY + precedingHeight + height / 2 + child.getElevation(),
-            containerPos.z,
-        );
-    },
-    (containerSize, _child, siblings) => new Vector3(
-        containerSize.x,
-        childHeight(_child) || containerSize.y,
-        containerSize.z,
-    ),
-);
-
-export const ringLayout = createLayoutFactory(
-    (containerPos, containerSize, child, siblings, _stage) => {
-        void _stage;
-        const count = childCount(siblings);
-        const idx = childIndex(child, siblings);
-        const radius = Math.min(containerSize.x, containerSize.z) / 2;
-        const angle = idx * Math.PI * 2 / count;
-
-        return new Vector3(
-            containerPos.x + radius * Math.sin(angle),
-            containerPos.y, //todo + childHeight(child) / 2 + child.getElevation(),
-            containerPos.z + radius * Math.cos(angle),
-        );
-    },
-    (containerSize, _child, siblings) => {
-        const count = childCount(siblings);
-        const radius = Math.min(containerSize.x, containerSize.z) / 2;
-        const chord = count > 1 ? 2 * radius * Math.sin(Math.PI / count) : radius * 2;
-        return new Vector3(chord, containerSize.y, chord);
-    },
-);
-
-export const gridLayout = createLayoutFactory(
-    (containerPos, containerSize, child, siblings, _stage) => {
-        void _stage;
-        const { columns, rows } = gridDimensions(siblings.length, containerSize);
-        const idx = childIndex(child, siblings);
-        const column = idx % columns;
-        const row = Math.floor(idx / columns);
-        const slotWidth = containerSize.x / columns;
-        const slotDepth = containerSize.z / rows;
-        const minX = containerPos.x - containerSize.x / 2;
-        const minZ = containerPos.z - containerSize.z / 2;
-
-        return new Vector3(
-            minX + slotWidth * (column + 0.5),
-            containerPos.y + childHeight(child) / 2 + child.getElevation(),
-            minZ + slotDepth * (row + 0.5),
-        );
-    },
-    (containerSize, child, siblings) => {
-        const { columns, rows } = gridDimensions(siblings.length, containerSize);
-        void child;
-
-        return new Vector3(
-            containerSize.x / columns,
-            containerSize.y,
-            containerSize.z / rows,
-        );
-    },
-);
