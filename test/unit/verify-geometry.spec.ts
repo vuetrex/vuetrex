@@ -344,3 +344,14 @@ describe('Wedge.modelGen geometry centroid', () => {
         }
     })
 })
+
+describe('base anchoring via Element3d.getPosition', () => {
+    it('a box in a stack sits on the floor: mesh Y = base + height/2', () => {
+        const stack = new Stack(mockStage)
+        const box = new Box(mockStage)
+        box.setHeight(0.5)
+        stack.appendChild(box)
+        // base from layout is y=0 for the first child; renderOffset lifts by height/2
+        expect(box.element.getPosition().y).toBeCloseTo(0.25, 5)
+    })
+})

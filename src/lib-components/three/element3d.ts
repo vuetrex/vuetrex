@@ -37,7 +37,7 @@ export class Element3d {
     getPosition(): THREE.Vector3 {
         const parent = this.node.parent.value as Node | null;
         if (!parent) return new THREE.Vector3();
-        return parent.layoutPositionOf(this.node);
+        return parent.layoutPositionOf(this.node).add(this.node.renderOffset());
     }
 
     getWorldPosition(): THREE.Vector3 {
