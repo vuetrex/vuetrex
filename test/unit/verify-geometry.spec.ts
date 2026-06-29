@@ -373,3 +373,17 @@ describe('GroupNode content-driven sizing', () => {
         expect(row.measuredSize.value.x).toBeCloseTo(1, 5)   // reports the reservation
     })
 })
+
+import { Root } from '@/lib-components/nodes/Root.js'
+
+describe('Root.layoutPositionOf', () => {
+    it('centers a single top-level child near the root space center', () => {
+        const root = new Root(mockStage)
+        const row = new Row(mockStage)
+        root.appendChild(row)
+        const p = root.layoutPositionOf(row)
+        expect(p.x).toBeCloseTo(0, 5)
+        expect(p.z).toBeCloseTo(0, 5)
+        expect(p.y).toBeCloseTo(-0.1, 5)   // ROOT_SPACE_CENTER.y
+    })
+})

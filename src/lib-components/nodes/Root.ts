@@ -4,7 +4,6 @@ import {gridLayout} from '@/lib-components/nodes/layouts.js';
 import {Vector3} from 'three';
 
 const ROOT_SPACE_CENTER = new Vector3(0, -0.1, 0)
-const ROOT_SPACE_SIZE = new Vector3(20, 15, 20)
 
 export class Root extends Node {
     constructor(stage: any) {
@@ -17,13 +16,18 @@ export class Root extends Node {
         this.stage.destroy();
     }
 
-    override layoutPositionOf(child: Node): Vector3 {
-        return gridLayout(ROOT_SPACE_CENTER, ROOT_SPACE_SIZE)(child, this.elements.value as Node[], this.stage)
+    private gap(): number {
+        const g = (this.stage as any).gap
+        return typeof g === 'number' ? g : this.stage.boxDistance
     }
 
-    override allocatedSizeOf(child: Node): Vector3 {
-        return gridLayout.slotSizeOf?.(ROOT_SPACE_SIZE, child, this.elements.value as Node[], this.stage)
-            ?? ROOT_SPACE_SIZE.clone()
+    override layoutPositionOf(child: Node): Vector3 {
+        const siblings = this.elements.value as Node[]
+        const idx = siblings.indexOf(child)
+        const footprints = siblings.map(s => s.measuredSize.value)
+        const pos = gridLayout.place(idx < 0 ? 0 : idx, footprints, this.gap())
+        pos.y += child.getElevation()
+        return pos.add(ROOT_SPACE_CENTER)
     }
 }
 
