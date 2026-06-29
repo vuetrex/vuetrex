@@ -2,7 +2,7 @@ import {reactive, watchEffect, WatchStopHandle, computed, ComputedRef} from 'vue
 import { Node } from '@/lib-components/nodes/Node.js';
 import { VuetrexStage } from '@/lib-components/three/stage.js';
 import { VxMaterialProps, VxHoverProps, applyMaterialProps } from '@/lib-components/nodes/material.js';
-import { Mesh, MeshStandardMaterial, Color } from 'three';
+import { Mesh, MeshStandardMaterial, Color, Vector3 } from 'three';
 import gsap from 'gsap';
 
 export interface MeshState {
@@ -71,6 +71,14 @@ export abstract class MeshNode extends Node {
         super(stage);
         this.state = reactive({ text: '', size: 1.0, height: 0.5, connection: null, material: undefined, hover: undefined, ...stateDefaults });
         this.material = stage.createElementMaterial();
+    }
+
+    protected override intrinsicSize(): Vector3 {
+        return new Vector3(this.state.size, this.state.height, this.state.size);
+    }
+
+    override renderOffset(): Vector3 {
+        return new Vector3(0, this.state.height / 2, 0);
     }
 
     abstract modelGen(): (height: number, size: number) => Mesh;
