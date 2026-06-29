@@ -60,6 +60,7 @@ export interface VxSettings {
 
     unit?: number
     distance?: number
+    gap?: number
 }
 
 export interface VxMouseEvent extends MouseEvent {
@@ -90,6 +91,7 @@ export class VuetrexStage extends Scene implements VxStage {
     private captions: Array<{x:number, y:number, text:string}> = []
     boxRadius: number;
     boxDistance: number;
+    gap: number;
 
     constructor(domParent: HTMLElement, settings:VxSettings) {
         super(domParent)
@@ -98,6 +100,7 @@ export class VuetrexStage extends Scene implements VxStage {
 
         this.boxRadius = settings.unit || BOX_RADIUS
         this.boxDistance = settings.distance || BOX_DISTANCE
+        this.gap = settings.gap ?? this.boxDistance
         this.colorMain = new THREE.Color(settings.color || 0x555555);
         this.colorHighlight = new THREE.Color(settings.highlightColor || 0x4c7fb2);
     }
