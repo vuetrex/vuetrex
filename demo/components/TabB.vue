@@ -20,25 +20,25 @@
       <div v-else class="k8s-hint">Click a deployment to inspect &mdash; click its pods to drain</div>
     </div>
 
-    <vuetrex height="75vh" :camera="camera"  @ready="onStageReady">
+    <vuetrex height="80vh" :camera="camera"  @ready="onStageReady">
       <layer>
         <!-- API Gateway -->
         <row>
           <stack>
-            <box name="api-gw" text="api-gateway" size="1.8"
+            <box name="api-gw" text="api-gateway" size="1.5"
               :hover="{ scale: 1.05, transition: 0.22, color: 0x4c7fb2 }"
               @click="onDeployClick"
               @dblclick="onDeployBurst"
               @pointerenter="!selected ? (hovered = 'api-gw') : null"
               @pointerleave="!selected ? (hovered = null) : null"
             />
-            <layer :elevation="0.25">
-              <ring size="0.8">
-                <wedge
+            <layer :elevation="-1.65">
+              <ring size="2.0">
+                <wedge size="3.5"
                   v-for="i in podCounts['api-gw']"
                   :key="'api-gw-pod-' + i"
                   :name="'api-gw-pod-' + i"
-                  text="" height="0.75" size="1.5"
+                  text="" height="0.75"
                   :hover="{ scale: 1.18, transition: 0.18, color: 0x4c7fb2 }"
                   @click="onPodClick"
                 />

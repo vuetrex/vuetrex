@@ -1,7 +1,7 @@
 import { Base } from '@/lib-components/nodes/Base.js';
 import { Element3d, VxEventMap } from '@/lib-components/three/element3d.js';
 import { VuetrexStage } from '@/lib-components/three/stage.js';
-import { nextTick, reactive } from 'vue';
+import { reactive } from 'vue';
 import * as THREE from 'three';
 
 declare type VxEventListener<T extends Event> = (event: T) => void;
@@ -15,7 +15,7 @@ type NodeEvents = {
 
 /**
  * Named node in the ThreeJS tree hierarchy of Vuetrex renderer.
- * Supports grid layout of the box (i.e., children x grandchildren = rows x columns)
+ * Supports event dispatch and provides the local layout hooks containers override.
  */
 export abstract class Node extends Base {
     public element: Element3d;
@@ -87,51 +87,46 @@ export abstract class Node extends Base {
     }
 
     getScale(): number {
-        const layer = this.getLayer();
-        if (layer === null) return 1.0;
-        return (layer.state as any)?.scale || 1.0;
+        let result = 1.0;
+        let current: Base | null = this;
+
+        while (current) {
+            const scale = (current as any).state?.scale;
+            if (typeof scale === 'number' && Number.isFinite(scale)) {
+                result *= scale;
+            }
+            current = current.parent.value;
+        }
+
+        return result;
     }
 
     getElevation(): number {
-        let result = (this as any).state?.elevation || 0.0;
-        let parent = this.getLayer();
-        while (parent) {
-            result += (parent as any)?.state?.elevation || 0.0;
-            parent = parent.getLayer();
-        }
-        return result;
+        // let result = 0.0;
+        // let current: Base | null = this;
+        //
+        // while (current) {
+        //     const elevation = (current as any).state?.elevation;
+        //     if (typeof elevation === 'number' && Number.isFinite(elevation)) {
+        //         result += elevation;
+        //     }
+        //     current = current.parent.value;
+        // }
+        //
+        // return result;
+        return (this as any).state?.elevation ?? 0;
     }
 
     getCaption(): string {
         return this.state.text;
     }
 
-    /**
-     * Returns the 3D position of `child` within this container's layout.
-     * Default implementation: grid layout (rows × columns).
-     * Containers (Ring, Stack) override this to apply their own layout strategy.
-     */
     layoutPositionOf(child: Node): THREE.Vector3 {
-        const R = this.stage.boxRadius;
-        const D = this.stage.boxDistance;
-        const scale = child.getScale();
+        return new THREE.Vector3(0, child.getElevation(), 0);
+    }
 
-        let colIdx = child.myIdx.value;
-        let rowIdx = child.parent.value?.myIdx.value;
-        let cols = child.numColumns.value || 1;
-        let rows = child.numRows.value || 1;
-
-        if (rowIdx === undefined || rowIdx < 0) {
-            rowIdx = 0; colIdx = 0; cols = 1; rows = 1;
-        }
-
-        const rowPosX = (-cols * (R + D)) / 2 / scale + (R + D) / 2 / scale;
-        const rowPosZ = (-rows * (R + D)) / 2 / scale + (R + D) / 2 / scale;
-        return new THREE.Vector3(
-            rowPosX + (R + D) * colIdx / scale,
-            child.getElevation(),
-            rowPosZ + (R + D) * rowIdx / scale
-        );
+    allocatedSizeOf(_child: Node): THREE.Vector3 {
+        return new THREE.Vector3(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
     }
 
     setName(name: string) {
@@ -180,15 +175,13 @@ export abstract class Node extends Base {
     }
 
     subscribeEvents() {
-        nextTick(() => {
-            if (!this.subscribed) {
-                this.element.mesh?.addEventListener(Node.CLICK, this.clickListener);
-                this.element.mesh?.addEventListener(Node.DBLCLICK, this.dblclickListener);
-                this.element.mesh?.addEventListener(Node.MOUSE_OVER, this.mouseOverListener);
-                this.element.mesh?.addEventListener(Node.MOUSE_OUT, this.mouseOutListener);
-                this.subscribed = true;
-            }
-        }).catch(() => {});
+        if (!this.element.mesh || this.subscribed) return;
+
+        this.element.mesh.addEventListener(Node.CLICK, this.clickListener);
+        this.element.mesh.addEventListener(Node.DBLCLICK, this.dblclickListener);
+        this.element.mesh.addEventListener(Node.MOUSE_OVER, this.mouseOverListener);
+        this.element.mesh.addEventListener(Node.MOUSE_OUT, this.mouseOutListener);
+        this.subscribed = true;
     }
 }
 

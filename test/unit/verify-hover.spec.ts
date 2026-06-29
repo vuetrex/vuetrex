@@ -34,6 +34,7 @@ vi.mock('gsap', () => ({
 function makeMockStage() {
     const mat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.3, metalness: 0.1 })
     const mesh = new THREE.Mesh()
+    const scene = new THREE.Scene()
 
     const stage = {
         boxRadius: 1.3,
@@ -41,9 +42,14 @@ function makeMockStage() {
         createElementMaterial: () => mat,
         renderMesh: vi.fn(),
         removeObject: vi.fn(),
+        getScene: vi.fn(() => scene),
         getById: vi.fn(),
         connect: vi.fn(),
-        reconcileConnections: vi.fn()
+        reconcileConnections: vi.fn(),
+        connectors: {
+            update: vi.fn(),
+            remove: vi.fn(() => []),
+        },
     } as unknown as VuetrexStage
 
     return { stage, mat, mesh }

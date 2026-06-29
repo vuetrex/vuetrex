@@ -1,33 +1,34 @@
 import { GroupNode } from '@/lib-components/nodes/GroupNode.js';
-import { Node } from '@/lib-components/nodes/Node.js';
+import { ringLayout } from '@/lib-components/nodes/layouts.js';
 import { VuetrexStage } from '@/lib-components/three/stage.js';
-import {reactive} from 'vue';
-import * as THREE from 'three';
+import {Vector3} from 'three';
 
 export class Ring extends GroupNode {
 
     public readonly type: string = 'Ring';
 
-    public state: { text: string, size: number } = reactive({
-        text: '',
-        size: 1.0
-    });
-
     constructor(stage: VuetrexStage) {
-        super(stage);
+        super(stage, ringLayout);
     }
 
+    protected override defaultSize(): Vector3 {
+        return new Vector3(this.stage.boxDistance * 4, this.stage.boxRadius * 4, this.stage.boxDistance * 4)
+    }
 
-    layoutPositionOf(child: Node): THREE.Vector3 {
-        const D = this.stage.boxDistance * this.state.size;
-        const scale = child.getScale()*this.getScale();
-        const colIdx = child.myIdx.value;
-        const cols = child.numColumns.value  || 1;
+    protected override normalizeSizeValue(value: unknown, height = this.state?.height ?? this.defaultSize().y): Vector3 {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            const radius = this.stage.boxDistance * value
+            return new Vector3(radius * 2, height, radius * 2)
+        }
 
-        //ring center is local (0,0)
-        const alpha = colIdx * 2.0 * Math.PI / cols;
-        const xx = (D) * Math.sin(alpha) * scale;
-        const zz = (D) * Math.cos(alpha) * scale;
-        return new THREE.Vector3(xx, child.getElevation(), zz);
+        if (typeof value === 'string') {
+            const parsed = Number.parseFloat(value)
+            if (Number.isFinite(parsed)) {
+                const radius = this.stage.boxDistance * parsed
+                return new Vector3(radius * 2, height, radius * 2)
+            }
+        }
+
+        return super.normalizeSizeValue(value, height)
     }
 }

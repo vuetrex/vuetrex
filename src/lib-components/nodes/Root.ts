@@ -1,6 +1,10 @@
 import {Node} from '@/lib-components/nodes/Node.js';
 import {Base} from '@/lib-components/nodes/Base.js';
-import { nextTick } from 'vue'
+import {gridLayout} from '@/lib-components/nodes/layouts.js';
+import {Vector3} from 'three';
+
+const ROOT_SPACE_CENTER = new Vector3(0, -0.1, 0)
+const ROOT_SPACE_SIZE = new Vector3(20, 15, 20)
 
 export class Root extends Node {
     constructor(stage: any) {
@@ -13,12 +17,13 @@ export class Root extends Node {
         this.stage.destroy();
     }
 
-    private readonly afterFlush = () => {
-        nextTick(() => this.stage.reconcileConnections())
+    override layoutPositionOf(child: Node): Vector3 {
+        return gridLayout(ROOT_SPACE_CENTER, ROOT_SPACE_SIZE)(child, this.elements.value as Node[], this.stage)
     }
 
-    protected override getAfterFlushHook(): (() => void) {
-        return this.afterFlush
+    override allocatedSizeOf(child: Node): Vector3 {
+        return gridLayout.slotSizeOf?.(ROOT_SPACE_SIZE, child, this.elements.value as Node[], this.stage)
+            ?? ROOT_SPACE_SIZE.clone()
     }
 }
 
@@ -30,8 +35,6 @@ export class Comment extends Base {
         this.text = text;
     }
 
-    protected subscribeEvents() : void {}
-
     public get state() { return {}; }
 }
 
@@ -42,8 +45,6 @@ export class TextNode extends Base {
         super();
         this.text = text;
     }
-
-    protected subscribeEvents() : void {}
 
     public get state() { return {}; }
 

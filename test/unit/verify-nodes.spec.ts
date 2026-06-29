@@ -8,9 +8,13 @@ import { patchProp } from '@/lib-components/patchProp.js'
 class TestNode extends Base {
     public state: Record<string, any> = {}
     isRenderableNode(): boolean { return true; }
-    protected subscribeEvents() {}
 }
 (TestNode.prototype as any)['__v_skip'] = true
+
+class HiddenNode extends Base {
+    public state: Record<string, any> = {}
+}
+(HiddenNode.prototype as any)['__v_skip'] = true
 
 // ── Tree hierarchy ────────────────────────────────────────────────────────────
 
@@ -56,12 +60,11 @@ describe('Base tree hierarchy', () => {
         expect(c2.nextSibling.value).toBeNull()
     })
 
-    it('renderSize counts element children', () => {
+    it('elements omits non-renderable children', () => {
         const parent = new TestNode()
-        expect(parent.renderSize.value).toBe(0)
         parent.appendChild(new TestNode())
-        parent.appendChild(new TestNode())
-        expect(parent.renderSize.value).toBe(2)
+        parent.appendChild(new HiddenNode())
+        expect(parent.elements.value).toHaveLength(1)
     })
 })
 

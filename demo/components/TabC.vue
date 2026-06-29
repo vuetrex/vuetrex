@@ -4,6 +4,7 @@
    </div>
 
    <vuetrex height="79vh" width="100%" :camera="camera" :stopped="paused" :settings="vsSettings" @ready="onStageReady">
+     <layer>
       <row>
         <box name="xx" :text="'['+counter1+']'" @click="counter1++"/>
         <box name="yy" :text="'('+counter2+')'" @click="counter2++"/>
@@ -15,6 +16,7 @@
        <box text="singleton" connection="abc" />
        <box name="abc" text="abc" size="0.5" />
      </row>
+     </layer>
    </vuetrex>
 </template>
 

@@ -32,13 +32,14 @@ Extends `Base`. Everything that can exist in the 3D scene. Holds:
 - `stage: VuetrexStage` — scene-level services
 - click / dblclick bubbling and pointer enter/leave dispatch
 - **`layoutPositionOf(child): Vector3`** — returns local coordinates for children
+- **`allocatedSizeOf(child): Vector3`** — reports the slot reserved for a child container
 - **`nearestAncestorObject()`** — finds the closest `THREE.Group` in the parent chain
 
 ### `GroupNode` (`nodes/GroupNode.ts`)
-Extends `Node`. Establish local coordinate spaces in the Three.js scene graph. Owns a `THREE.Group` where its children are parented. Containers (`Row`, `Ring`, `Stack`, `Layer`) extend this.
+Extends `Node`. Establishes local coordinate spaces in the Three.js scene graph. Owns a `THREE.Group` where its children are parented, plus a declarative layout contract: `state.size: Vector3`, `state.height: number`, and a `LayoutFactory` from `nodes/layouts.ts`. Containers (`Row`, `Ring`, `Stack`, `Layer`) extend this.
 
 ### `MeshNode` (`nodes/MeshNode.ts`)
-Extends `Node`. Base for all geometry nodes. Provides reactive `state` (`text`, `size`, `height`, `connection`, `material`, `hover`), shared `syncWithThree()` lifecycle (geometry/material/connection watchEffects → `stage.renderMesh()` / `stage.connect()` / `stage.reconcileConnections()`), and `onRemoved()` cleanup. **To add a new shape: extend `MeshNode`, implement `modelGen()`.**
+Extends `Node`. Base for all geometry nodes. Provides reactive `state` (`text`, `size`, `height`, `connection`, `material`, `hover`), shared idempotent `syncWithThree()` lifecycle (geometry/material/connection watchEffects → `stage.renderMesh()` / `stage.connect()` / `stage.reconcileConnections()`), and `onRemoved()` cleanup. Event wiring happens inside the geometry watchEffect after the mesh exists. **To add a new shape: extend `MeshNode`, implement `modelGen()`.**
 
 ### `ConnectorNode` (`nodes/ConnectorNode.ts`)
 Extends `Node`. Declarative connector record independent of any shape node. Reactive `from`, `to`, `layout`, and `type` props register connections through `stage.connect()`. This complements `MeshNode.state.connection`, which is still the shorthand for "connect this node to target id".
@@ -56,11 +57,11 @@ Extends `Node`. Declarative connector record independent of any shape node. Reac
 | `Box`       | Rounded-box geometry                | `modelGen()`                             |
 | `Cylinder`  | Beveled cylinder                    | `modelGen()`, `flushMode = 'sync'`       |
 | `Wedge`     | Beveled ring segment                | `modelGen()`, `flushMode = 'sync'`       |
-| `Layer`     | World anchor / visual plane         | `isLayer()`, `syncWithThree()`           |
-| `GroupNode` | Base for local coordinate spaces    | `layoutPositionOf()`                     |
-| `Row`       | Horizontal layout container         | `layoutPositionOf()` — grid              |
-| `Stack`     | Vertical stacking container         | `layoutPositionOf()` — cumulative height |
-| `Ring`     | Circular layout container           | `layoutPositionOf()` — circular          |
+| `Layer`     | Depth layout container / world anchor | `isLayer()`, `getIntrinsicScale()`     |
+| `GroupNode` | Base for local coordinate spaces    | `LayoutFactory`, `allocatedSizeOf()`     |
+| `Row`       | Horizontal layout container         | `horizontalLayout`                       |
+| `Stack`     | Vertical stacking container         | `stackLayout`                            |
+| `Ring`      | Circular layout container           | `ringLayout`                             |
 | `ConnectorNode` | Declarative link between nodes  | `syncWithThree()`                        |
 | `Root`      | Tree root, owns destroy             | —                                        |
 
@@ -83,23 +84,23 @@ Scene infrastructure. Manages floor, mirror, lights, caption texture, connectors
 
 ## Layout system
 
-Each container node (extending `GroupNode`) owns the position calculation for its children via `layoutPositionOf(child: Node): Vector3`. These calculations return coordinates in the container's **local space**.
+Each container node (extending `GroupNode`) owns the position calculation for its children via a `LayoutFactory` from [layouts.ts](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/src/lib-components/nodes/layouts.ts?type=file&root=%252F). The factory is created from the container's declared `size` / `height`, then `layoutPositionOf(child: Node): Vector3` returns coordinates in the container's **local space**.
 
-- **`Node` (default):** grid — rows × columns
-- **`GroupNode`:** base implementation for nesting; defaults to origin `(0, 0, 0)`
-- **`Row`:** grid layout (default)
-- **`Ring`:** circular layout around the container's center
-- **`Stack`:** stacks children on Y axis by cumulative height
+- **`GroupNode` (default):** `gridLayout`
+- **`Row`:** `horizontalLayout`
+- **`Layer`:** `depthLayout`
+- **`Ring`:** `ringLayout`
+- **`Stack`:** `stackLayout`
 
 Children meshes are automatically parented to the nearest ancestor's `THREE.Group` via `nearestAncestorObject()`. This enables recursive nesting of containers.
 
-Adding a new layout: subclass `GroupNode`, override `layoutPositionOf()`.
+Adding a new layout: add a factory in `nodes/layouts.ts`, then subclass `GroupNode` with that factory.
 
 ---
 
 ## Reactive sync
 
-Structural changes (append/remove/insert) call `registerSync()` which batches via `queuePostFlushCb`. After Vue's render flush, `applySync()` calls `syncWithThree()` on each child. `MeshNode.syncWithThree()` installs watchEffects for geometry, material, and connection/text updates. `Root` adds an after-flush hook that schedules `stage.reconcileConnections()` on the next tick so connectors settle after the tree has finished syncing.
+Structural changes (append/remove/insert) call `registerSync()` which batches via `queuePostFlushCb`. After Vue's render flush, `applySync()` calls `syncWithThree()` on each child. Every Three-aware node uses an idempotent `syncWithThree()` that installs its own watchEffects exactly once; `onRemoved()` stops those handles and detaches scene objects. Connection reconciliation now runs from the node watchEffects themselves, so there is no `Root.afterFlush()` / `nextTick()` stage pass.
 
 ---
 
@@ -107,7 +108,7 @@ Structural changes (append/remove/insert) call `registerSync()` which batches vi
 
 ### click:
 1. DOM mousedown → `scene.ts:bindEvents` → `stage.ts:onCanvasClick` → `el3d.mesh.dispatchEvent({type:'click'})` → Three.js event on mesh
-2. `Node.subscribeEvents()` binds clickListener on the mesh → calls `dispatchClick()` → `nodeEvents.onClick(e)`
+2. `MeshNode.syncWithThree()` renders the mesh, then `Node.subscribeEvents()` binds clickListener on the live mesh → calls `dispatchClick()` → `nodeEvents.onClick(e)`
 3. `patchProp.ts` sets `el.onClick = handler` via the set onClick() setter on Node
 
 ### dblclick is like click 
@@ -127,3 +128,4 @@ onMouseOver/onMouseOut hooks that stage.ts overrides, keeping scene.ts generic. 
 4. Register in `nodes/types.ts`: `myshape: MyShape`
 
 For a new container layout: `extends GroupNode`, override `layoutPositionOf(child)`.
+For a new container layout: `extends GroupNode` with a new `LayoutFactory`.

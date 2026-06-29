@@ -1,4 +1,4 @@
-import { reactive, watchEffect, WatchStopHandle, nextTick, computed, ComputedRef } from 'vue';
+import {reactive, watchEffect, WatchStopHandle, computed, ComputedRef} from 'vue';
 import { Node } from '@/lib-components/nodes/Node.js';
 import { VuetrexStage } from '@/lib-components/three/stage.js';
 import { VxMaterialProps, VxHoverProps, applyMaterialProps } from '@/lib-components/nodes/material.js';
@@ -53,16 +53,18 @@ export abstract class MeshNode extends Node {
     protected state: MeshState;
     protected stopHandle?: WatchStopHandle;
     private materialStopHandle?: WatchStopHandle;
+    private connectionStopHandle?: WatchStopHandle;
     protected readonly flushMode: 'post' | 'sync' = 'post'; // see Vue's WatchEffectOptions, Callback Flush Timing
 
     readonly material: MeshStandardMaterial;
 
     private baseProps: VxMaterialProps = {};
     private isHovered = false;
+    private registeredConnection?: string;
 
     protected layoutContext: ComputedRef<LayoutContext> = computed(() => ({
         myIdx: this.myIdx.value,
-        siblingCount: this.numColumns.value,
+        siblingCount: (this.parent.value?.elements.value.length || 1),
     }));
 
     protected constructor(stage: VuetrexStage, stateDefaults: Partial<MeshState> = {}) {
@@ -90,6 +92,7 @@ export abstract class MeshNode extends Node {
             this.element.mesh.removeEventListener(Node.MOUSE_OUT, this.mouseOutListener);
             this.subscribed = false;
         }
+        this.isHovered = false;
         this.stage.removeObject(this.element);
     }
 
@@ -112,11 +115,10 @@ export abstract class MeshNode extends Node {
 
         // Geometry watchEffect — rebuilds mesh when layout or geometry params change.
         this.stopHandle = watchEffect(() => {
-            const { myIdx } = this.layoutContext.value;
+            const { myIdx, siblingCount } = this.layoutContext.value;
             if (myIdx >= 0) {
+                void siblingCount;
                 const { height, size } = this.state;
-                // If height or size changed, we must clear the old mesh because
-                // renderMesh creates new geometry based on these values.
                 this.clearMesh();
                 const parentObj = this.nearestAncestorObject()
                 this.stage.renderMesh(this.element, height, size, this.modelGen(), parentObj);
@@ -134,17 +136,21 @@ export abstract class MeshNode extends Node {
         });
 
         // Connection and Text watchEffect
-        watchEffect(() => {
-            const { connection, text } = this.state;
+        this.connectionStopHandle = watchEffect(() => {
+            const { connection, text, height, size } = this.state;
+            void text;
             if (connection) {
-                this.stage.connect(this.name, connection);
+                const key = `${this.name}->${connection}`;
+                if (key !== this.registeredConnection) {
+                    this.stage.connect(this.name, connection);
+                    this.registeredConnection = key;
+                }
+            } else {
+                this.registeredConnection = undefined;
             }
+
             if (this.element.mesh) {
-                // If only text changed, renderMesh (when called via its own watchEffect or here)
-                // will update the caption. We call it here to ensure text-only updates
-                // are reflected immediately without a full mesh rebuild.
-                const { height, size } = this.state;
-                this.stage.renderMesh(this.element, height, size, this.modelGen());
+                this.stage.renderMesh(this.element, height, size, this.modelGen(), this.nearestAncestorObject());
             }
             this.stage.reconcileConnections();
         }, { flush: 'post' });
@@ -244,7 +250,12 @@ export abstract class MeshNode extends Node {
             this.materialStopHandle();
             this.materialStopHandle = undefined;
         }
+        if (this.connectionStopHandle) {
+            this.connectionStopHandle();
+            this.connectionStopHandle = undefined;
+        }
         this.clearMesh();
+        this.registeredConnection = undefined;
         this.state.connection = null;
     }
 }

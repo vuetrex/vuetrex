@@ -5,15 +5,11 @@ const pendingSyncBase: Base[] = [];
 let pending = false;
 
 const flushChanges = () => {
-    const afterFlushHooks = new Set<() => void>() //needed if multiple vuetrex scenes exist on one page
     pendingSyncBase.forEach(base => {
         base.applySync()
-        const hook = base.getAfterFlushHook()
-        if (hook) afterFlushHooks.add(hook)
     })
     pendingSyncBase.length = 0
     pending = false
-    afterFlushHooks.forEach(hook => hook())
 };
 
 const registerUpdatedBase = (base: Base) => {
@@ -33,7 +29,6 @@ export abstract class Base {
     protected children: Ref<Base[]> = ref([]);
 
     protected abstract get state():  { [id: string] : any };
-    protected abstract subscribeEvents(): void;
 
     private mustSync = false;
 
@@ -47,23 +42,6 @@ export abstract class Base {
         const res = this.parent.value?.elements.value.indexOf(this);
         return res === undefined ? -1 : res;
     })
-
-    public renderSize: ComputedRef<number> = computed(() => {
-        const res = this.elements.value.length;
-        return res || 0
-    })
-
-    public numColumns: ComputedRef<number> = computed(() => {
-        const res = this.parent.value?.renderSize.value || 1
-        return res || 0
-    });
-
-    getAfterFlushHook(): (() => void) | null {
-        //runner to the Root
-        return this.parent.value?.getAfterFlushHook() ?? null
-    }
-
-    public numRows: ComputedRef<number> = computed(() => (this.parent.value?.parent.value?.renderSize.value || 1));
 
     public readonly nextSibling : ComputedRef<Base | null> = computed(() => {
             if (this.parent.value === null) {
@@ -124,7 +102,6 @@ export abstract class Base {
     applySync(): void {
         this.children.value.forEach(b => {
             b.syncWithThree()
-            if (b.subscribeEvents) b.subscribeEvents()
         })
         this.mustSync = false
     }
@@ -150,4 +127,3 @@ export abstract class Base {
 
     onRemoved() {}
 }
-

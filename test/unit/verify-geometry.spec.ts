@@ -2,7 +2,7 @@
  * Spec: layout and geometry calculations for all node types.
  *
  * Tests are split into three layers:
- *  1. Layout maths   — layoutPositionOf() for Ring, Stack, Node (grid).
+ *  1. Layout maths   — layoutPositionOf() for Ring, Stack, Row, Layer, GroupNode(grid).
  *  2. THREE geometry — modelGen() output: bounding-box centering and symmetry.
  *  3. Integration    — position propagated through renderMesh() correctly.
  *
@@ -18,6 +18,8 @@ import { describe, it, expect } from 'vitest'
 import { Ring }     from '@/lib-components/nodes/Ring.js'
 import { Stack }    from '@/lib-components/nodes/Stack.js'
 import { Row }      from '@/lib-components/nodes/Row.js'
+import { Layer }    from '@/lib-components/nodes/Layer.js'
+import { GroupNode } from '@/lib-components/nodes/GroupNode.js'
 import { Box }      from '@/lib-components/nodes/shapes/Box.js'
 import { Cylinder } from '@/lib-components/nodes/shapes/Cylinder.js'
 import { Wedge }    from '@/lib-components/nodes/shapes/Wedge.js'
@@ -26,10 +28,20 @@ import type { VuetrexStage } from '@/lib-components/three/stage.js'
 // ── Mock stage ─────────────────────────────────────────────────────────────────
 // Only the properties consumed by layoutPositionOf and modelGen are needed.
 // VuetrexStage is not instantiated (requires a DOM/WebGL context).
+const mockScene = new THREE.Scene()
 const mockStage = {
     boxRadius: 1.3,
     boxDistance: 1.5,
     createElementMaterial: () => new THREE.MeshStandardMaterial(),
+    renderMesh: () => {},
+    removeObject: () => {},
+    getScene: () => mockScene,
+    connect: () => {},
+    reconcileConnections: () => {},
+    connectors: {
+        update: () => {},
+        remove: () => [],
+    },
 } as unknown as VuetrexStage
 
 // ── Geometry helpers ───────────────────────────────────────────────────────────
@@ -64,9 +76,7 @@ function meshGeo(obj: THREE.Object3D): THREE.BufferGeometry {
 describe('Ring.layoutPositionOf', () => {
 
     function buildRing(n: number) {
-        const row  = new Row(mockStage)
         const ring = new Ring(mockStage)
-        row.appendChild(ring)
         const wedges = Array.from({ length: n }, () => {
             const w = new Wedge(mockStage)
             ring.appendChild(w)
@@ -104,7 +114,6 @@ describe('Ring.layoutPositionOf', () => {
         // The ring centre is the XZ centroid of all positions.
         const cx = ps.reduce((s, p) => s + p.x, 0) / ps.length
         const cz = ps.reduce((s, p) => s + p.z, 0) / ps.length
-        const centre = new THREE.Vector3(cx, 0, cz)
         const radii  = ps.map(p => new THREE.Vector2(p.x - cx, p.z - cz).length())
         radii.forEach(r => expect(r).toBeCloseTo(radii[0], 4))
         // Confirm each child is not collapsed on the centre (ring has a non-zero radius)
@@ -131,9 +140,7 @@ describe('Ring.layoutPositionOf', () => {
 describe('Stack.layoutPositionOf', () => {
 
     it('children are stacked upward: each Y is greater than the previous', () => {
-        const row   = new Row(mockStage)
         const stack = new Stack(mockStage)
-        row.appendChild(stack)
         const heights = [0.5, 0.33, 0.75]
         const nodes = heights.map(h => {
             const w = new Wedge(mockStage)
@@ -147,9 +154,7 @@ describe('Stack.layoutPositionOf', () => {
     })
 
     it('all children share the same X and Z position within a stack', () => {
-        const row   = new Row(mockStage)
         const stack = new Stack(mockStage)
-        row.appendChild(stack)
         const nodes = [new Box(mockStage), new Box(mockStage), new Box(mockStage)]
         nodes.forEach(n => stack.appendChild(n))
         const ps = nodes.map(n => stack.layoutPositionOf(n))
@@ -160,40 +165,62 @@ describe('Stack.layoutPositionOf', () => {
     })
 })
 
-// ── 3. Node.layoutPositionOf (grid) ──────────────────────────────────────────
+// ── 3. Row / Layer / default grid layouts ───────────────────────────────────
 
-describe('Node.layoutPositionOf (default grid layout)', () => {
+describe('Row.layoutPositionOf', () => {
 
     it('sibling boxes in a row are evenly spaced along the X axis', () => {
-        const outer = new Row(mockStage)
         const row   = new Row(mockStage)
-        outer.appendChild(row)
         const boxes = [new Box(mockStage), new Box(mockStage), new Box(mockStage)]
         boxes.forEach(b => row.appendChild(b))
 
         const ps = boxes.map(b => row.layoutPositionOf(b))
         const dx = ps[1].x - ps[0].x
         expect(ps[2].x - ps[1].x).toBeCloseTo(dx, 5)
-        expect(dx).toBeCloseTo(mockStage.boxRadius + mockStage.boxDistance, 5)
+        ps.forEach(p => expect(p.z).toBeCloseTo(ps[0].z, 5))
     })
+})
 
-    it('two rows share the same X layout but are offset along Z', () => {
-        const outer = new Row(mockStage)
+describe('Layer.layoutPositionOf', () => {
+
+    it('children in a layer are distributed along Z at equal intervals', () => {
+        const layer = new Layer(mockStage)
         const row0  = new Row(mockStage)
         const row1  = new Row(mockStage)
-        outer.appendChild(row0)
-        outer.appendChild(row1)
-        const b0 = new Box(mockStage)
-        const b1 = new Box(mockStage)
-        row0.appendChild(b0)
-        row1.appendChild(b1)
+        const row2  = new Row(mockStage)
+        layer.appendChild(row0)
+        layer.appendChild(row1)
+        layer.appendChild(row2)
 
-        const p0 = row0.layoutPositionOf(b0)
-        const p1 = row1.layoutPositionOf(b1)
-        // Same Z (both are the only child in their row → colIdx 0)
-        expect(p0.x).toBeCloseTo(p1.x, 5)
-        // Different X (rows are offset by boxRadius + boxDistance)
-        expect(Math.abs(p1.z - p0.z)).toBeCloseTo(mockStage.boxRadius + mockStage.boxDistance, 5)
+        const ps = [row0, row1, row2].map(row => layer.layoutPositionOf(row))
+        const dz = ps[1].z - ps[0].z
+        expect(ps[2].z - ps[1].z).toBeCloseTo(dz, 5)
+        ps.forEach(p => expect(p.x).toBeCloseTo(ps[0].x, 5))
+    })
+})
+
+describe('GroupNode.layoutPositionOf (default grid layout)', () => {
+
+    it('four children occupy a 2x2 XZ grid', () => {
+        const group = new GroupNode(mockStage)
+        const boxes = [new Box(mockStage), new Box(mockStage), new Box(mockStage), new Box(mockStage)]
+        boxes.forEach(box => group.appendChild(box))
+
+        const ps = boxes.map(box => group.layoutPositionOf(box))
+        const xs = [...new Set(ps.map(p => Number(p.x.toFixed(6))))].sort((a, b) => a - b)
+        const zs = [...new Set(ps.map(p => Number(p.z.toFixed(6))))].sort((a, b) => a - b)
+
+        expect(xs).toHaveLength(2)
+        expect(zs).toHaveLength(2)
+    })
+
+    it('single child stays centered in the container', () => {
+        const group = new GroupNode(mockStage)
+        const box = new Box(mockStage)
+        group.appendChild(box)
+        const p = group.layoutPositionOf(box)
+        expect(p.x).toBeCloseTo(0, 5)
+        expect(p.z).toBeCloseTo(0, 5)
     })
 })
 
@@ -252,9 +279,7 @@ describe('Cylinder.modelGen geometry', () => {
 describe('Wedge.modelGen geometry centroid', () => {
 
     function buildWedges(n: number) {
-        const row  = new Row(mockStage)
         const ring = new Ring(mockStage)
-        row.appendChild(ring)
         return Array.from({ length: n }, () => {
             const w = new Wedge(mockStage)
             ring.appendChild(w)

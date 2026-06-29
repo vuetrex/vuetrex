@@ -9,7 +9,6 @@ import type { FunctionalComponent, ClassComponent } from '@/lib-components/nodes
 
 class TestNode extends Base {
     public state: Record<string, any> = {}
-    protected subscribeEvents() {}
 }
 (TestNode.prototype as any)['__v_skip'] = true
 
@@ -23,7 +22,6 @@ const makeFunctional = () => {
 // ClassComponent: extends Base (not Node), so no Element3d / stage needed.
 class TestClassElement extends Base {
     public state: Record<string, any> = {}
-    protected subscribeEvents() {}
     constructor(_stage: any) { super() }
 }
 (TestClassElement.prototype as any)['__v_skip'] = true
