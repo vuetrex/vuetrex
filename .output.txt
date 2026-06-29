@@ -1,0 +1,311 @@
+Command finished with exit code 1.
+Command output:
+
+ RUN  v4.1.6 /Users/alex.pakka/dev/github/vuetrex
+
+ ❯ test/unit/verify-geometry.spec.ts (23 tests | 19 failed) 23ms
+     × all children have the same Y (elevation) coordinate 3ms
+     × N=3: children form an equilateral triangle (equidistant from each other) 0ms
+     × N=4: adjacent children are separated by equal arc lengths 0ms
+     × all children lie on a circle (equidistant from the ring centre) 0ms
+     × angular step between consecutive children is 2π/N 0ms
+     × children are stacked upward: each Y is greater than the previous 0ms
+     × all children share the same X and Z position within a stack 0ms
+     × sibling boxes in a row are evenly spaced along the X axis 0ms
+     × children in a layer are distributed along Z at equal intervals 0ms
+     × four children occupy a 2x2 XZ grid 0ms
+     × single child stays centered in the container 0ms
+     ✓ bounding-box centre is at XZ origin 5ms
+     ✓ bounding-box is symmetric in X and Z for equal width and depth 2ms
+     ✓ bounding-box centre is on the XZ plane centre (x≈0, z≈0) 7ms
+     ✓ geometry is rotationally symmetric: bounding-box X and Z extents are equal 2ms
+     × N=3: every wedge has XZ centroid near origin 0ms
+     × N=5: every wedge has XZ centroid near origin 0ms
+     × N=8: every wedge has XZ centroid near origin 0ms
+     × all wedges in a ring have the same radial distance to their centroid (uniform sizing) 0ms
+     × geometry extent does not degenerate as N increases from 2 to 8 0ms
+     × a box in a stack sits on the floor: mesh Y = base + height/2 0ms
+     × a row measures to the summed width of its children + gap 0ms
+     × an explicit smaller size shrinks but never enlarges (override is a max) 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 19 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > Ring.layoutPositionOf > all children have the same Y (elevation) coordinate
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ new Ring src/lib-components/nodes/Ring.ts:11:9
+ ❯ buildRing test/unit/verify-geometry.spec.ts:79:22
+ ❯ test/unit/verify-geometry.spec.ts:89:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/19]⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > Ring.layoutPositionOf > N=3: children form an equilateral triangle (equidistant from each other)
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ new Ring src/lib-components/nodes/Ring.ts:11:9
+ ❯ buildRing test/unit/verify-geometry.spec.ts:79:22
+ ❯ test/unit/verify-geometry.spec.ts:95:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/19]⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > Ring.layoutPositionOf > N=4: adjacent children are separated by equal arc lengths
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ new Ring src/lib-components/nodes/Ring.ts:11:9
+ ❯ buildRing test/unit/verify-geometry.spec.ts:79:22
+ ❯ test/unit/verify-geometry.spec.ts:105:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/19]⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > Ring.layoutPositionOf > all children lie on a circle (equidistant from the ring centre)
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ new Ring src/lib-components/nodes/Ring.ts:11:9
+ ❯ buildRing test/unit/verify-geometry.spec.ts:79:22
+ ❯ test/unit/verify-geometry.spec.ts:112:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/19]⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > Ring.layoutPositionOf > angular step between consecutive children is 2π/N
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ new Ring src/lib-components/nodes/Ring.ts:11:9
+ ❯ buildRing test/unit/verify-geometry.spec.ts:79:22
+ ❯ test/unit/verify-geometry.spec.ts:125:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/19]⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > Stack.layoutPositionOf > children are stacked upward: each Y is greater than the previous
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ new Stack src/lib-components/nodes/Stack.ts:11:9
+ ❯ test/unit/verify-geometry.spec.ts:143:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/19]⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > Stack.layoutPositionOf > all children share the same X and Z position within a stack
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ new Stack src/lib-components/nodes/Stack.ts:11:9
+ ❯ test/unit/verify-geometry.spec.ts:157:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/19]⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > Row.layoutPositionOf > sibling boxes in a row are evenly spaced along the X axis
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ new Row src/lib-components/nodes/Row.ts:11:9
+ ❯ test/unit/verify-geometry.spec.ts:173:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/19]⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > Layer.layoutPositionOf > children in a layer are distributed along Z at equal intervals
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ new Layer src/lib-components/nodes/Layer.ts:22:9
+ ❯ test/unit/verify-geometry.spec.ts:187:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/19]⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > GroupNode.layoutPositionOf (default grid layout) > four children occupy a 2x2 XZ grid
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ test/unit/verify-geometry.spec.ts:205:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/19]⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > GroupNode.layoutPositionOf (default grid layout) > single child stays centered in the container
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ test/unit/verify-geometry.spec.ts:218:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/19]⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > Wedge.modelGen geometry centroid > N=3: every wedge has XZ centroid near origin
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ new Ring src/lib-components/nodes/Ring.ts:11:9
+ ❯ buildWedges test/unit/verify-geometry.spec.ts:282:22
+ ❯ test/unit/verify-geometry.spec.ts:304:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/19]⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > Wedge.modelGen geometry centroid > N=5: every wedge has XZ centroid near origin
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ new Ring src/lib-components/nodes/Ring.ts:11:9
+ ❯ buildWedges test/unit/verify-geometry.spec.ts:282:22
+ ❯ test/unit/verify-geometry.spec.ts:312:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/19]⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > Wedge.modelGen geometry centroid > N=8: every wedge has XZ centroid near origin
+TypeError: this.layoutFactory is not a function
+
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ new Ring src/lib-components/nodes/Ring.ts:11:9
+ ❯ buildWedges test/unit/verify-geometry.spec.ts:282:22
+ Test Files  1 failed (1)
+ ❯ test/unit/verify-geometry.spec.ts:320:9
+      Tests  19 failed | 4 passed (23)
+
+   Start at  23:44:42
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/19]⎯
+
+   Duration  636ms (transform 134ms, setup 57ms, import 177ms, tests 23ms, environment 213ms)
+ FAIL  test/unit/verify-geometry.spec.ts > Wedge.modelGen geometry centroid > all wedges in a ring have the same radial distance to their centroid (uniform sizing)
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ new Ring src/lib-components/nodes/Ring.ts:11:9
+ ❯ buildWedges test/unit/verify-geometry.spec.ts:282:22
+ ❯ test/unit/verify-geometry.spec.ts:328:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/19]⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > Wedge.modelGen geometry centroid > geometry extent does not degenerate as N increases from 2 to 8
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ new Ring src/lib-components/nodes/Ring.ts:11:9
+ ❯ buildWedges test/unit/verify-geometry.spec.ts:282:22
+ ❯ test/unit/verify-geometry.spec.ts:337:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/19]⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > base anchoring via Element3d.getPosition > a box in a stack sits on the floor: mesh Y = base + height/2
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ new Stack src/lib-components/nodes/Stack.ts:11:9
+ ❯ test/unit/verify-geometry.spec.ts:350:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/19]⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > GroupNode content-driven sizing > a row measures to the summed width of its children + gap
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ new Row src/lib-components/nodes/Row.ts:11:9
+ ❯ test/unit/verify-geometry.spec.ts:361:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/19]⎯
+
+ FAIL  test/unit/verify-geometry.spec.ts > GroupNode content-driven sizing > an explicit smaller size shrinks but never enlarges (override is a max)
+TypeError: this.layoutFactory is not a function
+ ❯ new GroupNode src/lib-components/nodes/GroupNode.ts:34:30
+     32|             height: initialHeight,
+     33|         }) as GroupState
+     34|         this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.…
+       |                              ^
+     35|         this.element.mesh = this.group as any   // satisfies `Element3…
+     36|     }
+ ❯ new Row src/lib-components/nodes/Row.ts:11:9
+ ❯ test/unit/verify-geometry.spec.ts:369:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/19]⎯

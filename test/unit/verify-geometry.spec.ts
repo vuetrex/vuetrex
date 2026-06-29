@@ -32,6 +32,7 @@ const mockScene = new THREE.Scene()
 const mockStage = {
     boxRadius: 1.3,
     boxDistance: 1.5,
+    gap: 1.5,
     createElementMaterial: () => new THREE.MeshStandardMaterial(),
     renderMesh: () => {},
     removeObject: () => {},
