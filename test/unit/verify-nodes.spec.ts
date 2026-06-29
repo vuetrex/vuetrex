@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { Base } from '@/lib-components/nodes/Base.js'
 import { patchProp } from '@/lib-components/patchProp.js'
+import { Box } from '@/lib-components/nodes/shapes/Box.js'
+import * as THREE from 'three'
+
+const measureStage = {
+    boxRadius: 1.3, boxDistance: 1.5, gap: 1.5,
+    createElementMaterial: () => new THREE.MeshStandardMaterial(),
+} as any
 
 // Minimal concrete subclass — no Three.js dependency.
 // __v_skip prevents Vue from wrapping instances in a reactive Proxy when they
@@ -100,5 +107,15 @@ describe('patchProp type coercion', () => {
         // el.state has no 'name' key — should assign directly on the node
         patchProp(el, 'name', null, 'myBox')
         expect((el as any).name).toBe('myBox')
+    })
+})
+
+describe('measuredSize / renderOffset', () => {
+    it('a Box reports a box-equivalent footprint and a half-height base offset', () => {
+        const box = new Box(measureStage)
+        box.setSize(2)
+        box.setHeight(0.5)
+        expect(box.measuredSize.value).toEqual(new THREE.Vector3(2, 0.5, 2))
+        expect(box.renderOffset().y).toBeCloseTo(0.25, 6)
     })
 })

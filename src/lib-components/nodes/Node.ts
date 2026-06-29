@@ -1,7 +1,7 @@
 import { Base } from '@/lib-components/nodes/Base.js';
 import { Element3d, VxEventMap } from '@/lib-components/three/element3d.js';
 import { VuetrexStage } from '@/lib-components/three/stage.js';
-import { reactive } from 'vue';
+import { reactive, computed, ComputedRef } from 'vue';
 import * as THREE from 'three';
 
 declare type VxEventListener<T extends Event> = (event: T) => void;
@@ -121,12 +121,18 @@ export abstract class Node extends Base {
         return this.state.text;
     }
 
-    layoutPositionOf(child: Node): THREE.Vector3 {
-        return new THREE.Vector3(0, child.getElevation(), 0);
+    public readonly measuredSize: ComputedRef<THREE.Vector3> = computed(() => this.intrinsicSize());
+
+    protected intrinsicSize(): THREE.Vector3 {
+        return new THREE.Vector3();
     }
 
-    allocatedSizeOf(_child: Node): THREE.Vector3 {
-        return new THREE.Vector3(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
+    renderOffset(): THREE.Vector3 {
+        return new THREE.Vector3();
+    }
+
+    layoutPositionOf(child: Node): THREE.Vector3 {
+        return new THREE.Vector3(0, child.getElevation(), 0);
     }
 
     setName(name: string) {
