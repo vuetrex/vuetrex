@@ -355,3 +355,21 @@ describe('base anchoring via Element3d.getPosition', () => {
         expect(box.element.getPosition().y).toBeCloseTo(0.25, 5)
     })
 })
+
+describe('GroupNode content-driven sizing', () => {
+    it('a row measures to the summed width of its children + gap', () => {
+        const row = new Row(mockStage)        // mockStage.boxDistance = 1.5 → gap 1.5
+        const boxes = [new Box(mockStage), new Box(mockStage)]
+        boxes.forEach(b => { b.setSize(1); row.appendChild(b) })
+        // 2 boxes of width 1 + one 1.5 gap = 3.5
+        expect(row.measuredSize.value.x).toBeCloseTo(3.5, 5)
+    })
+
+    it('an explicit smaller size shrinks but never enlarges (override is a max)', () => {
+        const row = new Row(mockStage)
+        const boxes = [new Box(mockStage), new Box(mockStage)]
+        boxes.forEach(b => { b.setSize(1); row.appendChild(b) })
+        row.setStateValue('size', 1)          // declare 1×1 footprint, smaller than 3.5 content
+        expect(row.measuredSize.value.x).toBeCloseTo(1, 5)   // reports the reservation
+    })
+})

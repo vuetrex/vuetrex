@@ -1,5 +1,5 @@
 import {Node} from '@/lib-components/nodes/Node.js';
-import {gridLayout, LayoutFactory, LayoutFn} from '@/lib-components/nodes/layouts.js';
+import {gridLayout, Layout} from '@/lib-components/nodes/layouts.js';
 import {VuetrexStage} from '@/lib-components/three/stage.js';
 import {Group, Vector3} from 'three';
 import {markRaw, reactive, watchEffect, WatchStopHandle} from 'vue';
@@ -8,6 +8,7 @@ export interface GroupState {
     text: string
     size: Vector3
     height: number
+    gap?: number
 }
 
 export class GroupNode extends Node {
@@ -16,110 +17,95 @@ export class GroupNode extends Node {
     declare protected state: GroupState;
 
     private stopHandle?: WatchStopHandle
-    private layoutFn: LayoutFn = (child) => new Vector3(0, child.getElevation(), 0)
-    protected readonly layoutFactory: LayoutFactory
+    protected readonly layout: Layout
 
-    constructor(stage: VuetrexStage, layoutFactory: LayoutFactory = gridLayout, stateDefaults: Partial<GroupState & Record<string, any>> = {}) {
+    private sizeOverridden = false
+    private heightOverridden = false
+
+    constructor(stage: VuetrexStage, layout: Layout = gridLayout, stateDefaults: Partial<GroupState & Record<string, any>> = {}) {
         super(stage)
-        this.layoutFactory = layoutFactory
-        const defaultSize = this.defaultSize()
-        const defaultHeight = defaultSize.y
-        const initialHeight = typeof stateDefaults.height === 'number' ? stateDefaults.height : defaultHeight
+        this.layout = layout
         this.state = reactive({
             text: '',
             ...stateDefaults,
-            size: markRaw(this.normalizeSizeValue(stateDefaults.size ?? defaultSize, initialHeight)),
-            height: initialHeight,
+            size: markRaw(new Vector3()),
+            height: 0,
         }) as GroupState
-        this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), this.layoutSize())
-        this.element.mesh = this.group as any   // satisfies `Element3d.mesh` type, TODO rethink the strategy here
+        this.element.mesh = this.group as any   // satisfies `Element3d.mesh` type
     }
 
-    protected defaultSize(): Vector3 {
-        return new Vector3(this.stage.boxDistance * 2, this.stage.boxRadius * 2, this.stage.boxDistance * 2)
+    protected gap(): number {
+        if (typeof this.state.gap === 'number') return this.state.gap
+        const g = (this.stage as any).gap
+        return typeof g === 'number' ? g : this.stage.boxDistance
     }
 
-    protected normalizeSizeValue(value: unknown, height = this.state?.height ?? this.defaultSize().y): Vector3 {
-        if (value instanceof Vector3) {
-            return value.clone()
-        }
-
-        if (typeof value === 'number' && Number.isFinite(value)) {
-            return new Vector3(value, height, value)
-        }
-
-        if (typeof value === 'string') {
-            const parsed = Number.parseFloat(value)
-            if (Number.isFinite(parsed)) {
-                return new Vector3(parsed, height, parsed)
-            }
-        }
-
-        if (value && typeof value === 'object') {
-            const maybeVector = value as {x?: unknown, y?: unknown, z?: unknown}
-            const x = typeof maybeVector.x === 'number' ? maybeVector.x : 0
-            const y = typeof maybeVector.y === 'number' ? maybeVector.y : height
-            const z = typeof maybeVector.z === 'number' ? maybeVector.z : x
-            return new Vector3(x, y, z)
-        }
-
-        return this.defaultSize()
+    protected childFootprints(): Vector3[] {
+        return (this.elements.value as Node[]).map(c => c.measuredSize.value)
     }
 
-    protected layoutSize(): Vector3 {
-        const size = this.state.size.clone()
-        size.y = this.state.height
+    protected contentSize(): Vector3 {
+        return this.layout.measure(this.childFootprints(), this.gap())
+    }
+
+    protected override intrinsicSize(): Vector3 {
+        const size = this.contentSize()
+        if (this.sizeOverridden) { size.x = this.state.size.x; size.z = this.state.size.z }
+        if (this.heightOverridden) { size.y = this.state.height }
         return size
-    }
-
-    override setStateValue(key: string, value: any): void {
-        if (key === 'size') {
-            this.state.size = markRaw(this.normalizeSizeValue(value))
-            return
-        }
-
-        if (key === 'height') {
-            const height = typeof value === 'number' ? value : Number.parseFloat(value)
-            if (Number.isFinite(height)) {
-                this.state.height = height
-            }
-            return
-        }
-
-        super.setStateValue(key, value)
     }
 
     protected getIntrinsicScale(): number {
         return 1.0
     }
 
-    protected requestedBounds(): Vector3 {
-        const size = this.layoutSize()
-        return new Vector3(size.x, this.state.height, size.z)
+    private fitScale(): number {
+        if (!this.sizeOverridden && !this.heightOverridden) return 1.0
+        const content = this.contentSize()
+        const declared = this.intrinsicSize()
+        const ratios = [declared.x / content.x, declared.y / content.y, declared.z / content.z]
+            .filter(ratio => Number.isFinite(ratio) && ratio > 0)
+        return ratios.length === 0 ? 1.0 : Math.min(1.0, ...ratios)
     }
 
-    private fitScale(): number {
-        const parent = this.parent.value as Node | null
-        if (!parent) return 1.0
+    private parseSize(value: unknown): Vector3 {
+        if (value instanceof Vector3) return value.clone()
+        const n = typeof value === 'number' ? value : Number.parseFloat(String(value))
+        if (Number.isFinite(n)) return new Vector3(n, this.state.height, n)
+        if (value && typeof value === 'object') {
+            const v = value as {x?: number, y?: number, z?: number}
+            const x = typeof v.x === 'number' ? v.x : 0
+            return new Vector3(x, typeof v.y === 'number' ? v.y : this.state.height, typeof v.z === 'number' ? v.z : x)
+        }
+        return new Vector3()
+    }
 
-        const declaredScale = this.getIntrinsicScale()
-        const desired = this.requestedBounds().multiplyScalar(declaredScale)
-        const allocated = parent.allocatedSizeOf(this)
-        const ratios = [allocated.x / desired.x, allocated.y / desired.y, allocated.z / desired.z]
-            .filter(ratio => Number.isFinite(ratio) && ratio > 0)
-
-        return ratios.length === 0 ? 1.0 : Math.min(1.0, ...ratios)
+    override setStateValue(key: string, value: any): void {
+        if (key === 'size') {
+            this.state.size = markRaw(this.parseSize(value))
+            this.sizeOverridden = true
+            return
+        }
+        if (key === 'height') {
+            const height = typeof value === 'number' ? value : Number.parseFloat(value)
+            if (Number.isFinite(height)) { this.state.height = height; this.heightOverridden = true }
+            return
+        }
+        if (key === 'gap') {
+            const gap = typeof value === 'number' ? value : Number.parseFloat(value)
+            if (Number.isFinite(gap)) this.state.gap = gap
+            return
+        }
+        super.setStateValue(key, value)
     }
 
     syncWithThree() {
         if (this.stopHandle) return
 
         this.stopHandle = watchEffect(() => {
-            const size = this.layoutSize()
             const pos = this.element.getPosition()
             const parentObj = this.nearestAncestorObject()
 
-            this.layoutFn = this.layoutFactory(new Vector3(0, 0, 0), size)
             if (this.group.parent !== parentObj) {
                 parentObj.add(this.group)
             }
@@ -133,13 +119,11 @@ export class GroupNode extends Node {
     }
 
     layoutPositionOf(child: Node): Vector3 {
-        const layout = this.stopHandle ? this.layoutFn : this.layoutFactory(new Vector3(0, 0, 0), this.layoutSize())
-        return layout(child, this.elements.value as Node[], this.stage)
-    }
-
-    allocatedSizeOf(child: Node): Vector3 {
-        return this.layoutFactory.slotSizeOf?.(this.layoutSize(), child, this.elements.value as Node[], this.stage)
-            ?? this.layoutSize()
+        const siblings = this.elements.value as Node[]
+        const idx = siblings.indexOf(child)
+        const pos = this.layout.place(idx < 0 ? 0 : idx, this.childFootprints(), this.gap())
+        pos.y += child.getElevation()
+        return pos
     }
 
     onRemoved() {
