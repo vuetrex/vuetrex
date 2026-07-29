@@ -5,6 +5,15 @@ export interface Layout {
     place(index: number, children: Vector3[], gap: number): Vector3
 }
 
+export interface RingOptions {
+    startAngle?: number
+    direction?: 'normal' | 'reverse'
+}
+
+export interface RingLayout extends Layout {
+    withOptions(options: RingOptions): Layout
+}
+
 const sum = (ns: number[]) => ns.reduce((a, b) => a + b, 0);
 const maxOr0 = (ns: number[]) => (ns.length ? Math.max(...ns) : 0);
 
@@ -54,7 +63,7 @@ const ringRadius = (children: Vector3[], gap: number): number => {
     return chord / (2 * Math.sin(Math.PI / n));
 };
 
-export const ringLayout: Layout = {
+const createRingLayout = ({ startAngle = 0, direction = 'normal' }: RingOptions = {}): Layout => ({
     measure(children, gap) {
         if (!children.length) return new Vector3();
         const r = ringRadius(children, gap);
@@ -67,8 +76,17 @@ export const ringLayout: Layout = {
     place(index, children, gap) {
         if (!children.length) return new Vector3();
         const r = ringRadius(children, gap);
-        const angle = index * Math.PI * 2 / children.length;
+        const start = startAngle * Math.PI / 180;
+        const step = (direction === 'reverse' ? -1 : 1) * Math.PI * 2 / children.length;
+        const angle = start + index * step;
         return new Vector3(r * Math.sin(angle), 0, r * Math.cos(angle));
+    },
+});
+
+export const ringLayout: RingLayout = {
+    ...createRingLayout(),
+    withOptions(options) {
+        return createRingLayout(options);
     },
 };
 

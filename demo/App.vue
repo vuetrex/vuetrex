@@ -31,6 +31,12 @@
         <TabC />
       </section>
     </tab>
+    <tab title="Layout options">
+      <h1>Layout options</h1>
+      <section>
+        <TabE />
+      </section>
+    </tab>
   </tabs>
 
 </template>
@@ -40,6 +46,7 @@ import TabA from './components/TabA.vue';
 import TabB from './components/TabB.vue';
 import TabC from './components/TabC.vue';
 import TabD from './components/TabD.vue';
+import TabE from './components/TabE.vue';
 import Tabs from './components/Tabs.vue';
 import Tab from './components/Tab.vue';
 import {defineComponent, ref, reactive} from 'vue';
@@ -50,6 +57,7 @@ export default defineComponent( {
     TabB,
     TabC,
     TabD,
+    TabE,
     Tabs,
     Tab
   },

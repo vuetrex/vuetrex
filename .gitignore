@@ -12,6 +12,7 @@ coverage/
 .air/
 dist/
 dist_types/
+temp/
 yarn.lock
 .DS_Store
 package-lock.json

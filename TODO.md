@@ -1,16 +1,25 @@
-1. Make layouting pluggable
-2. Switch nodes to functional style components
-3. Enable extending node with your own design
+# Roadmap
 
+## Delivered
 
-### Using Vuetrex in custom project directly from source code
+- Content-driven, pluggable measure/place layouts
+- Nested local coordinate spaces
+- Global and per-instance custom element registration
+- Ring `start-angle` and `direction`
+- Shared container alignment
 
-These instructions help to use the head of the library without waiting for official release
-1. yarn build
-2. yarn pack
-3. copy paste resulting tar.gz full path
-4. go to target project and yarn add '/path/to/exceeder-vuetrex-vX.X.X.tgz'
-5. if it already exists, to update, run 
+## Remaining design work
 
-   `rm -rf ./node_modules/@exceeder/vuetrex` then repeat (4)
-   
+1. Define `fit="contain"` and `fit="overflow"` behavior.
+2. Add `wrap="grid"` for one-dimensional layouts.
+3. Reconcile the proposal's formal `bounds: Vector3` vocabulary with the existing `measuredSize`.
+4. Design functional-style node components.
+5. Expand documentation examples and publish coverage reporting.
+
+## Testing a source build in another project
+
+1. Run `pnpm build`.
+2. Run `pnpm pack`.
+3. Copy the generated tarball path.
+4. In the target project, run `pnpm add /path/to/exceeder-vuetrex-vX.X.X.tgz`.
+5. To update it, run the same `pnpm add` command with the new tarball.

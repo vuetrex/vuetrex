@@ -33,7 +33,7 @@
               @pointerleave="!selected ? (hovered = null) : null"
             />
             <layer :elevation="-0.55">
-              <ring size="2.0">
+              <ring size="2.0" start-angle="45" direction="reverse">
                 <wedge size="3.5"
                   v-for="i in podCounts['api-gw']"
                   :key="'api-gw-pod-' + i"
@@ -49,7 +49,7 @@
         </row>
 
         <!-- Microservices -->
-        <row>
+        <row align-x="start">
           <stack>
             <box name="auth-svc" text="auth-svc" connection="api-gw"
               :hover="{ scale: 1.05, transition: 0.22, color: 0x4c7fb2 }"

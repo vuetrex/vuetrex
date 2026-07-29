@@ -134,6 +134,20 @@ describe('Ring.layoutPositionOf', () => {
         const expected = (Math.PI * 2) / N
         steps.forEach(s => expect(s).toBeCloseTo(expected, 3))
     })
+
+    it('reacts to startAngle and direction state changes', () => {
+        const { ring, wedges } = buildRing(4)
+        ring.setStateValue('start-angle', '90')
+        const rotated = ring.layoutPositionOf(wedges[0])
+        expect(rotated.x).toBeGreaterThan(0)
+        expect(rotated.z).toBeCloseTo(0, 6)
+
+        ring.setStateValue('startAngle', 0)
+        ring.setStateValue('direction', 'reverse')
+        const reverse = ring.layoutPositionOf(wedges[1])
+        expect(reverse.x).toBeLessThan(0)
+        expect(reverse.z).toBeCloseTo(0, 6)
+    })
 })
 
 // ── 2. Stack.layoutPositionOf ─────────────────────────────────────────────────
@@ -180,6 +194,26 @@ describe('Row.layoutPositionOf', () => {
         expect(ps[2].x - ps[1].x).toBeCloseTo(dx, 5)
         ps.forEach(p => expect(p.z).toBeCloseTo(ps[0].z, 5))
     })
+
+    it('align-x="start" shifts a child left of its slot center', () => {
+        const row = new Row(mockStage)
+        const box = new Box(mockStage)
+        row.appendChild(box)
+        row.setStateValue('align-x', 'start')
+
+        expect(row.layoutPositionOf(box).x).toBeCloseTo(-0.5, 5)
+    })
+})
+
+describe('Stack alignment', () => {
+    it('align-z="end" shifts a child toward +Z inside its slot', () => {
+        const stack = new Stack(mockStage)
+        const box = new Box(mockStage)
+        stack.appendChild(box)
+        stack.setStateValue('align-z', 'end')
+
+        expect(stack.layoutPositionOf(box).z).toBeCloseTo(0.5, 5)
+    })
 })
 
 describe('Layer.layoutPositionOf', () => {
@@ -222,6 +256,18 @@ describe('GroupNode.layoutPositionOf (default grid layout)', () => {
         const p = group.layoutPositionOf(box)
         expect(p.x).toBeCloseTo(0, 5)
         expect(p.z).toBeCloseTo(0, 5)
+    })
+
+    it('supports the canonical group layout prop', () => {
+        const group = new GroupNode(mockStage)
+        const boxes = [new Box(mockStage), new Box(mockStage)]
+        boxes.forEach(box => group.appendChild(box))
+        group.setStateValue('layout', 'depth')
+
+        const positions = boxes.map(box => group.layoutPositionOf(box))
+        expect(positions[0].x).toBeCloseTo(0, 5)
+        expect(positions[1].x).toBeCloseTo(0, 5)
+        expect(positions[0].z).toBeLessThan(positions[1].z)
     })
 })
 

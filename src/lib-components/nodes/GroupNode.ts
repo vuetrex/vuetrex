@@ -1,14 +1,30 @@
 import {Node} from '@/lib-components/nodes/Node.js';
-import {gridLayout, Layout} from '@/lib-components/nodes/layouts.js';
+import {
+    depthLayout,
+    gridLayout,
+    horizontalLayout,
+    Layout,
+    ringLayout,
+    stackLayout,
+} from '@/lib-components/nodes/layouts.js';
 import {VuetrexStage} from '@/lib-components/three/stage.js';
 import {Group, Vector3} from 'three';
 import {markRaw, reactive, watchEffect, WatchStopHandle} from 'vue';
+
+export type Alignment = 'start' | 'center' | 'end'
+export type LayoutName = 'grid' | 'row' | 'depth' | 'stack' | 'ring'
 
 export interface GroupState {
     text: string
     size: Vector3
     height: number
     gap?: number
+    alignX: Alignment
+    alignY: Alignment
+    alignZ: Alignment
+    layout?: LayoutName
+    startAngle: number
+    direction: 'normal' | 'reverse'
 }
 
 export class GroupNode extends Node {
@@ -27,6 +43,11 @@ export class GroupNode extends Node {
         this.layout = layout
         this.state = reactive({
             text: '',
+            alignX: 'center',
+            alignY: 'center',
+            alignZ: 'center',
+            startAngle: 0,
+            direction: 'normal',
             ...stateDefaults,
             size: markRaw(new Vector3()),
             height: 0,
@@ -47,8 +68,22 @@ export class GroupNode extends Node {
         return (this.elements.value as Node[]).map(c => c.measuredSize.value)
     }
 
+    protected currentLayout(): Layout {
+        if (this.state.layout === 'row') return horizontalLayout
+        if (this.state.layout === 'depth') return depthLayout
+        if (this.state.layout === 'stack') return stackLayout
+        if (this.state.layout === 'ring') {
+            return ringLayout.withOptions({
+                startAngle: this.state.startAngle,
+                direction: this.state.direction,
+            })
+        }
+        if (this.state.layout === 'grid') return gridLayout
+        return this.layout
+    }
+
     protected contentSize(): Vector3 {
-        return this.layout.measure(this.childFootprints(), this.gap())
+        return this.currentLayout().measure(this.childFootprints(), this.gap())
     }
 
     protected override intrinsicSize(): Vector3 {
@@ -99,7 +134,52 @@ export class GroupNode extends Node {
             if (Number.isFinite(gap)) this.state.gap = gap
             return
         }
+        if (key === 'align') {
+            if (this.isAlignment(value)) {
+                this.state.alignX = value
+                this.state.alignY = value
+                this.state.alignZ = value
+            }
+            return
+        }
+        if (key === 'layout') {
+            if (value === 'grid' || value === 'row' || value === 'depth' || value === 'stack' || value === 'ring') {
+                this.state.layout = value
+            }
+            return
+        }
+        if (key === 'startAngle' || key === 'start-angle') {
+            const startAngle = typeof value === 'number' ? value : Number.parseFloat(value)
+            if (Number.isFinite(startAngle)) this.state.startAngle = startAngle
+            return
+        }
+        if (key === 'direction') {
+            if (value === 'normal' || value === 'reverse') this.state.direction = value
+            return
+        }
+        const alignKey = {
+            'align-x': 'alignX',
+            alignX: 'alignX',
+            'align-y': 'alignY',
+            alignY: 'alignY',
+            'align-z': 'alignZ',
+            alignZ: 'alignZ',
+        }[key] as 'alignX' | 'alignY' | 'alignZ' | undefined
+        if (alignKey) {
+            if (this.isAlignment(value)) this.state[alignKey] = value
+            return
+        }
         super.setStateValue(key, value)
+    }
+
+    private isAlignment(value: unknown): value is Alignment {
+        return value === 'start' || value === 'center' || value === 'end'
+    }
+
+    private alignmentShift(alignment: Alignment, extent: number): number {
+        if (alignment === 'start') return -extent / 2
+        if (alignment === 'end') return extent / 2
+        return 0
     }
 
     syncWithThree() {
@@ -124,7 +204,15 @@ export class GroupNode extends Node {
     layoutPositionOf(child: Node): Vector3 {
         const siblings = this.elements.value as Node[]
         const idx = siblings.indexOf(child)
-        const pos = this.layout.place(idx < 0 ? 0 : idx, this.childFootprints(), this.gap())
+        const footprints = this.childFootprints()
+        const childIndex = idx < 0 ? 0 : idx
+        const footprint = footprints[childIndex] ?? new Vector3()
+        const pos = this.currentLayout().place(childIndex, footprints, this.gap())
+        pos.add(new Vector3(
+            this.alignmentShift(this.state.alignX, footprint.x),
+            this.alignmentShift(this.state.alignY, footprint.y),
+            this.alignmentShift(this.state.alignZ, footprint.z),
+        ))
         pos.y += child.getElevation()
         return pos
     }

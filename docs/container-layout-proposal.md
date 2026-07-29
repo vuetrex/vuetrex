@@ -131,6 +131,8 @@ Values: `normal` (default) | `reverse`
 
 "Normal" for each container is defined in the container table above. `ring` additionally accepts `start-angle` (in degrees).
 
+**Status:** shipped for `ring`; linear-layout direction remains future work.
+
 ### `gap` — *Slots*
 
 Fixed spacing between adjacent slots in world units. Default: `0`.
@@ -181,6 +183,8 @@ Per-axis props (`align-x`, `align-y`, `align-z`) override the shorthand.
 - `align-x`: left / right inside slot.
 - `align-y`: bottom / top inside slot.
 - `align-z`: back / front inside slot.
+
+**Status:** shipped for all `GroupNode` containers through `align` and `align-x` / `align-y` / `align-z`.
 
 ### `fit` — *Fit*
 
@@ -338,8 +342,13 @@ Gap is subtracted from content space before slot computation. Matches CSS `conte
 **Nodes expose a formal `bounds` property.**
 `slot-size="content"` needs a stable reading point. Inferring from `size`/`height` inline works only for types the layout engine knows about; `bounds` keeps this open to new node types.
 
-**`ring` supports `start-angle` and `direction` from day one.**
-The first child's position and rotation direction are load-bearing authoring expectations. Deferring these would silently break visual layouts when they ship later.
+**Shipped: `ring` supports `start-angle` and `direction`.**
+Both options are reactive. `start-angle` is expressed in degrees (`0` = front/+Z), and `direction` accepts `normal`
+or `reverse`. Default options reproduce the original ring placement.
+
+**Shipped: shared alignment defaults to `center`.**
+`align` updates all axes and `align-x` / `align-y` / `align-z` provide per-axis overrides with
+`start | center | end` values.
 
 **`fit="contain"` may scale up or down.**
 `shrink` covers the common safe case (down-only). `contain` is an explicit opt-in for fill-to-slot behavior. Two names, clear intent.

@@ -67,6 +67,29 @@ describe('ringLayout', () => {
         radii.forEach(r => { expect(r).toBeCloseTo(radii[0], 6); expect(r).toBeGreaterThan(0) })
         ps.forEach(p => expect(p.y).toBeCloseTo(0, 6))
     })
+
+    it('startAngle=90 places the first child on +X', () => {
+        const c = [unit(), unit(), unit(), unit()]
+        const p = ringLayout.withOptions({ startAngle: 90 }).place(0, c, 0.5)
+        expect(p.x).toBeGreaterThan(0)
+        expect(p.z).toBeCloseTo(0, 6)
+    })
+
+    it('direction=reverse reverses the angular sweep', () => {
+        const c = [unit(), unit(), unit(), unit()]
+        const normal = ringLayout.withOptions({ direction: 'normal' }).place(1, c, 0.5)
+        const reverse = ringLayout.withOptions({ direction: 'reverse' }).place(1, c, 0.5)
+        expect(reverse.x).toBeCloseTo(-normal.x, 6)
+        expect(reverse.z).toBeCloseTo(normal.z, 6)
+    })
+
+    it('explicit defaults reproduce the legacy placement', () => {
+        const c = [unit(), unit(), unit(), unit()]
+        const configured = ringLayout.withOptions({ startAngle: 0, direction: 'normal' })
+        c.forEach((_, index) => {
+            expect(configured.place(index, c, 0.5)).toEqual(ringLayout.place(index, c, 0.5))
+        })
+    })
 })
 
 describe('empty containers', () => {

@@ -4,9 +4,9 @@ WebGL animated diagram visualizations in 3D for Vue 3.x
  
 This project uses [Vue Custom Renderer API](https://v3.vuejs.org/api/global-api.html#createrenderer) and [Three.js](https://threejs.org/)
     
-Note: the project is in alpha stage and there could be some changes to the interface.
+Vuetrex is currently in beta; minor interface changes may still occur before 1.0.
 
-## For development:
+## Development
 
 1.  `pnpm dev` for development
 2.  `pnpm build` to rebuild the library
@@ -17,28 +17,28 @@ Note: the project is in alpha stage and there could be some changes to the inter
 For an example using in-browser ES6 modules, see the [tests](test/iife).
 
 ### Using in Vue Project
-Use [Vue CLI](https://github.com/vuejs/vue-cli) to set up your project with Vue 3. 
+Use [Vite](https://vite.dev/) to set up your project with Vue 3.
 
-Note: Vuetrex requires Vue 3.0.3 or better and ThreeJS r117+, which is not bundled for convenience.
+Vuetrex supports Vue 3.5+ and Three.js 0.183+.
 
 #### Setup
 Install ThreeJS and Vuetrex:
-```
+```sh
 npm install three @exceeder/vuetrex
 ```
 
 #### Usage
 In the script section of your .vue component:
-```
-import {Vuetrex} from '@exceeder/vuetrex.js';
+```ts
+import { Vuetrex } from '@exceeder/vuetrex';
 ...
 components: {
- Vuetrex
+  Vuetrex
 }
 ```
 
 Vue template example with reactive features fully supported:
-```
+```vue
 <template>
  <Vuetrex>
     <layer>
@@ -67,4 +67,3 @@ Examples and explanations are in [Documentation](docs/README.md).
 Rendering example:
 
 ![image](/screenshot.png)
-

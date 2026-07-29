@@ -1,90 +1,150 @@
-# Core Concepts
-## Layouting
+# Core concepts
 
-Multiple _rows_:
-```vue
- <vuetrex>
-    <row>   <box/> <box/>  </row>
-    <row>   <box/> <box/>  </row>
-    <row>   <box/>         </row>            
-  </vuetrex>
-```
-Rows orientation is from left to right, as if they were rows in the movie theater with the screen on the left side.
-![EXAMPLE 2](/screen2.png)
+## Layout containers
 
-Nested _layers_:
-```vue
- <vuetrex>
-    <row>
-       <layer> <box /> <box /> </layer>   
-    </row>
-    <row> <box/> </row>
-    <row>
-      <layer>
-         <row> <box/> </row>
-         <row> <box/> </row> 
-      </layer>   
-    </row>            
-  </vuetrex>
-```
-Note, that you can use `v-for` to bind elements to your data.
+Vuetrex containers measure their children and place them in local 3D coordinate spaces:
 
-## Connectors and Captions
+| Element | Layout |
+|---|---|
+| `<group>` | Automatic XZ grid |
+| `<row>` | Left-to-right on X |
+| `<layer>` | Front-to-back on Z |
+| `<stack>` | Bottom-to-top on Y |
+| `<ring>` | Circular placement in XZ |
+
+Named containers are convenient aliases. The canonical form is also available when choosing a layout dynamically:
 
 ```vue
- <vuetrex>
-    <box name="a"/>
-    <cylinder name="b" text="Round" connection="a"/>
-  </vuetrex>
+<group layout="row">
+  <box />
+  <box />
+</group>
+
+<group layout="ring" start-angle="45" direction="reverse">
+  <wedge v-for="item in items" :key="item.id" />
+</group>
 ```
 
-![EXAMPLE 3](/screen3.png)
+Supported `layout` values are `grid`, `row`, `depth`, `stack`, and `ring`.
 
-Connections are particle systems running along the connector lines. Both elements need to have a name
-property to connect.
+Containers can be nested freely:
 
-Caption reflects the text property. Caption text is reactive in case of `:text="prop"` syntax.
+```vue
+<layer>
+  <row>
+    <stack>
+      <box text="service" />
+      <cylinder text="pod" />
+    </stack>
+  </row>
+</layer>
+```
+
+### Size, height, and gap
+
+Without an explicit size, a container derives its footprint from its children. `gap` controls the space between
+children. Its fallback is the stage `gap`, then the stage's legacy `distance` setting.
+
+```vue
+<row :gap="0.4">
+  <box />
+  <box />
+</row>
+```
+
+`size` reserves an XZ footprint and `height` reserves Y. A reservation may shrink overflowing container content but
+never enlarges it:
+
+```vue
+<row :size="4" :height="1" />
+<group :size="{ x: 6, y: 2, z: 4 }" />
+```
+
+### Ring options
+
+`start-angle` rotates the first child in degrees. Zero starts at the front (`+Z`); `90` starts at `+X`.
+`direction` is `normal` or `reverse`. Both props are reactive.
+
+```vue
+<ring :start-angle="45" direction="reverse">
+  <wedge v-for="item in items" :key="item.id" />
+</ring>
+```
+
+### Alignment
+
+Alignment shifts a child inside its content-sized slot. Values are `start`, `center`, and `end`; the default is
+`center`, preserving existing scenes.
+
+```vue
+<row align="center" />
+<row align-x="start" align-y="center" align-z="end" />
+<stack align-z="end" />
+```
+
+`align` sets all three axes. `align-x`, `align-y`, and `align-z` override individual axes.
+
+## Custom elements
+
+Use `registerElement()` before mounting to register a node globally:
+
+```ts
+import { registerElement } from '@exceeder/vuetrex'
+import { ServerNode } from './ServerNode'
+
+registerElement('server', ServerNode)
+```
+
+Then use the tag in Vuetrex templates:
+
+```vue
+<vuetrex>
+  <server text="API" />
+</vuetrex>
+```
+
+For one Vuetrex instance, pass an element registry through its `elements` prop instead.
+
+## Connectors and captions
+
+```vue
+<vuetrex>
+  <box name="a" />
+  <cylinder name="b" text="Round" connection="a" />
+  <connector from="a" to="b" type="line" layout="straight" />
+</vuetrex>
+```
+
+Named nodes can be connected through the `connection` shorthand or a `<connector>`. Caption text is reactive.
 
 ## Events
 
+Vuetrex supports `click`, `dblclick`, `pointerenter`, and `pointerleave`. Click and double-click bubble through the
+logical node tree; pointer enter and leave do not.
+
 ```vue
-  <vuetrex>   
-    <box :text="'['+counter+']'" @click="counter++"/>
-  </vuetrex>
+<box
+  :text="String(counter)"
+  @click="counter++"
+  @pointerenter="hovered = true"
+  @pointerleave="hovered = false"
+/>
 ```
-as one would expect, in `setup()` you will need a `const counter = ref(0)` that you return in this case.
-There is only one possible event `click` at the moment.
 
 ## Camera
 
-By setting a `camera` property to the name of the element you want to focus on, you will make Vuetrex zoom in on it.
-If you set it to `"scene"` (default value), it will go back to overview position.
+Set `camera` to a node name to focus it, or to `scene` for the overview:
 
 ```vue
-<template>
- <vuetrex :camera="camera">
-   <row>
-     <box v-for="item in list" :key="item" :text="item" @click="zoomIn"/>
-   </row>
- </vuetrex>
-</template>
-<script>
-//...
-export default {
-  components: { Vuetrex },
-  setup() {
-    const camera = ref("scene") 
-    const list = reactive(["Bravo", "Charlie", "Echo", "Delta"])
-
-    function zoomIn(event) {
-        //zoom in on every clicked item, unless it is already in focus,
-        // in which case zoom out to a full view
-        camera.value = camera.value === event.vxNode.name ? "scene" : event.vxNode.name
-    }
-
-    return { camera, list, zoomIn} 
-  }
-}
-</script> 
+<vuetrex :camera="camera">
+  <row>
+    <box
+      v-for="item in items"
+      :key="item"
+      :name="item"
+      :text="item"
+      @click="camera = camera === item ? 'scene' : item"
+    />
+  </row>
+</vuetrex>
 ```
-![Example](/zoom.gif)

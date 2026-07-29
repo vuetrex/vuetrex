@@ -96,6 +96,22 @@ Children meshes are automatically parented to the nearest ancestor's `THREE.Grou
 
 Adding a new layout: add a factory in `nodes/layouts.ts`, then subclass `GroupNode` with that factory.
 
+### Measure and place
+
+Layout is content-driven and runs bottom-up:
+
+- `Node.measuredSize` is a reactive `Vector3` derived from `intrinsicSize()`.
+- Mesh nodes report their declared `size × height × size` footprint.
+- `GroupNode.contentSize()` asks its pure `Layout` object to measure all child footprints.
+- `layoutPositionOf()` asks the same layout to place a child in the container's local space.
+- `Node.renderOffset()` converts the base-center layout anchor into the mesh's visual center; mesh nodes add half their
+  height on Y.
+- An explicit container `size` or `height` is a maximum reservation. `GroupNode.fitScale()` applies a uniform,
+  shrink-only scale when measured content exceeds that reservation.
+
+The effective gap follows `container state.gap → stage.gap → stage.boxDistance`. `Stack` overrides the stage fallback
+with its tighter `0.05` default while still accepting an explicit `gap`.
+
 ---
 
 ## Reactive sync
