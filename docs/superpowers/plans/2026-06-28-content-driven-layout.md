@@ -60,7 +60,7 @@
   ```
   `place` returns a child's **base-center** position in the container's local frame (container origin = base-center). `measure` returns the total footprint `(width, height, depth)`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `test/unit/verify-layout.spec.ts`:
 
@@ -146,12 +146,12 @@ describe('empty containers', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run test/unit/verify-layout.spec.ts`
 Expected: FAIL — the named exports are still factories, `.measure`/`.place` are undefined.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Replace the entire contents of `src/lib-components/nodes/layouts.ts` with:
 
@@ -266,12 +266,12 @@ export const gridLayout: Layout = {
 };
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run test/unit/verify-layout.spec.ts`
 Expected: PASS (all describe blocks green).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib-components/nodes/layouts.ts test/unit/verify-layout.spec.ts
@@ -289,7 +289,7 @@ git commit -m "feat(layout): pure measure/place layout engine"
 - Consumes: existing `BOX_DISTANCE`, `settings.distance`.
 - Produces: `stage.gap: number` (public field) and `VxSettings.gap?: number`.
 
-- [ ] **Step 1: Add the setting field**
+- [x] **Step 1: Add the setting field**
 
 In the `VxSettings`/settings interface in `src/lib-components/three/stage.ts`, next to `unit?: number` and `distance?: number` (around line 61), add:
 
@@ -297,7 +297,7 @@ In the `VxSettings`/settings interface in `src/lib-components/three/stage.ts`, n
     gap?: number
 ```
 
-- [ ] **Step 2: Add the public stage field**
+- [x] **Step 2: Add the public stage field**
 
 In the same file where `boxRadius`/`boxDistance` are declared (around line 91-92), add a field:
 
@@ -305,7 +305,7 @@ In the same file where `boxRadius`/`boxDistance` are declared (around line 91-92
     gap: number;
 ```
 
-- [ ] **Step 3: Initialize it in the constructor**
+- [x] **Step 3: Initialize it in the constructor**
 
 Right after the lines that set `this.boxRadius`/`this.boxDistance` (around line 99-100), add:
 
@@ -313,12 +313,12 @@ Right after the lines that set `this.boxRadius`/`this.boxDistance` (around line 
         this.gap = settings.gap ?? this.boxDistance
 ```
 
-- [ ] **Step 4: Verify it type-checks**
+- [x] **Step 4: Verify it type-checks**
 
 Run: `npx vitest run test/unit/verify-stage.spec.ts`
 Expected: PASS (no behavior change; field is additive).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib-components/three/stage.ts
@@ -342,7 +342,7 @@ git commit -m "feat(stage): add gap setting (defaults to boxDistance)"
   ```
   Removes `allocatedSizeOf`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `test/unit/verify-nodes.spec.ts` (it currently only imports `Base`/`patchProp`; add an import and a block):
 
@@ -366,12 +366,12 @@ describe('measuredSize / renderOffset', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run test/unit/verify-nodes.spec.ts`
 Expected: FAIL — `measuredSize` / `renderOffset` not defined (Task 4 supplies the `MeshNode` overrides, but the base members must exist first).
 
-- [ ] **Step 3: Edit `Node.ts`**
+- [x] **Step 3: Edit `Node.ts`**
 
 Update the import on line 4 from:
 
@@ -409,12 +409,12 @@ Delete the `allocatedSizeOf` method (currently lines 128-130):
 
 Leave `layoutPositionOf` and everything else unchanged.
 
-- [ ] **Step 4: Run test (still fails until Task 4)**
+- [x] **Step 4: Run test (still fails until Task 4)**
 
 Run: `npx vitest run test/unit/verify-nodes.spec.ts`
 Expected: still FAIL on the footprint assertion (base `intrinsicSize` returns zero). This is expected — Task 4 makes it pass. The earlier "Base tree hierarchy" / "patchProp" tests must still PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib-components/nodes/Node.ts test/unit/verify-nodes.spec.ts
@@ -432,14 +432,14 @@ git commit -m "feat(node): measuredSize/intrinsicSize/renderOffset; drop allocat
 - Consumes: `Node.intrinsicSize`/`renderOffset` (Task 3); `this.state.size`, `this.state.height`.
 - Produces: overridden `intrinsicSize()` and `renderOffset()` on `MeshNode`.
 
-- [ ] **Step 1: Reuse the failing test from Task 3**
+- [x] **Step 1: Reuse the failing test from Task 3**
 
 The `measuredSize / renderOffset` test in `verify-nodes.spec.ts` is the failing test for this task.
 
 Run: `npx vitest run test/unit/verify-nodes.spec.ts`
 Expected: FAIL on the footprint assertion.
 
-- [ ] **Step 2: Edit `MeshNode.ts`**
+- [x] **Step 2: Edit `MeshNode.ts`**
 
 Add `Vector3` to the three.js import on line 5:
 
@@ -459,12 +459,12 @@ Add these two methods to the `MeshNode` class body (place them just below the co
     }
 ```
 
-- [ ] **Step 3: Run test to verify it passes**
+- [x] **Step 3: Run test to verify it passes**
 
 Run: `npx vitest run test/unit/verify-nodes.spec.ts`
 Expected: PASS (footprint `(2,0.5,2)`, offset `0.25`), plus all prior blocks green.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/lib-components/nodes/MeshNode.ts
@@ -482,7 +482,7 @@ git commit -m "feat(mesh): box-equivalent footprint and base anchoring"
 - Consumes: `parent.layoutPositionOf(node)`, `node.renderOffset()` (Task 3/4).
 - Produces: `getPosition()` returning base placement + render offset.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `test/unit/verify-geometry.spec.ts` a block that exercises base anchoring through a real `Stack`:
 
@@ -499,12 +499,12 @@ describe('base anchoring via Element3d.getPosition', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run test/unit/verify-geometry.spec.ts`
 Expected: FAIL — `getPosition().y` is `0` (offset not yet applied).
 
-- [ ] **Step 3: Edit `element3d.ts`**
+- [x] **Step 3: Edit `element3d.ts`**
 
 Replace the body of `getPosition()` (lines 37-41) with:
 
@@ -516,12 +516,12 @@ Replace the body of `getPosition()` (lines 37-41) with:
     }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run test/unit/verify-geometry.spec.ts`
 Expected: PASS (the new block; the existing geometry blocks still pass — they assert relative spacing and centroids, unaffected by the Y offset).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib-components/three/element3d.ts test/unit/verify-geometry.spec.ts
@@ -546,7 +546,7 @@ git commit -m "feat(element3d): anchor meshes at base via renderOffset"
   // allocatedSizeOf / slotSizeOf / requestedBounds removed
   ```
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `test/unit/verify-geometry.spec.ts`:
 
@@ -570,12 +570,12 @@ describe('GroupNode content-driven sizing', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run test/unit/verify-geometry.spec.ts`
 Expected: FAIL — `measuredSize.value.x` reflects the old fixed-box default, not the summed content.
 
-- [ ] **Step 3: Rewrite `GroupNode.ts`**
+- [x] **Step 3: Rewrite `GroupNode.ts`**
 
 Replace the entire contents of `src/lib-components/nodes/GroupNode.ts` with:
 
@@ -718,12 +718,12 @@ export class GroupNode extends Node {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run test/unit/verify-geometry.spec.ts`
 Expected: PASS — row measures `3.5`; the override reports `1`. Other groups still green.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib-components/nodes/GroupNode.ts test/unit/verify-geometry.spec.ts
@@ -741,7 +741,7 @@ git commit -m "feat(group): content-driven measure/arrange with optional size ov
 - Consumes: `GroupNode(stage, layout, stateDefaults)` (Task 6); the layout objects (Task 1).
 - Produces: each subclass passes its `Layout`; `Layer` keeps `scale`/`elevation` and `getIntrinsicScale`.
 
-- [ ] **Step 1: Rewrite `Row.ts`**
+- [x] **Step 1: Rewrite `Row.ts`**
 
 ```ts
 import { GroupNode } from '@/lib-components/nodes/GroupNode.js';
@@ -757,7 +757,7 @@ export class Row extends GroupNode {
 }
 ```
 
-- [ ] **Step 2: Rewrite `Stack.ts`**
+- [x] **Step 2: Rewrite `Stack.ts`**
 
 ```ts
 import { GroupNode } from '@/lib-components/nodes/GroupNode.js';
@@ -773,7 +773,7 @@ export class Stack extends GroupNode {
 }
 ```
 
-- [ ] **Step 3: Rewrite `Ring.ts`** (drop the `size`→radius `normalizeSizeValue` override; radius is now content-driven)
+- [x] **Step 3: Rewrite `Ring.ts`** (drop the `size`→radius `normalizeSizeValue` override; radius is now content-driven)
 
 ```ts
 import { GroupNode } from '@/lib-components/nodes/GroupNode.js';
@@ -789,7 +789,7 @@ export class Ring extends GroupNode {
 }
 ```
 
-- [ ] **Step 4: Rewrite `Layer.ts`** (keep `scale`/`elevation`; drop the 10×5×10 `defaultSize`)
+- [x] **Step 4: Rewrite `Layer.ts`** (keep `scale`/`elevation`; drop the 10×5×10 `defaultSize`)
 
 ```ts
 import {GroupNode, GroupState} from '@/lib-components/nodes/GroupNode.js';
@@ -820,12 +820,12 @@ export class Layer extends GroupNode {
 }
 ```
 
-- [ ] **Step 5: Run the geometry suite**
+- [x] **Step 5: Run the geometry suite**
 
 Run: `npx vitest run test/unit/verify-geometry.spec.ts`
 Expected: PASS — `Ring`/`Stack`/`Row`/`Layer` describe blocks green under the new layouts.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/lib-components/nodes/Row.ts src/lib-components/nodes/Stack.ts src/lib-components/nodes/Ring.ts src/lib-components/nodes/Layer.ts
@@ -843,7 +843,7 @@ git commit -m "feat(containers): pass Layout objects; remove fixed-box magic"
 - Consumes: `gridLayout.place` (Task 1), `child.getElevation()`, `stage.gap` (Task 2).
 - Produces: `Root.layoutPositionOf` placing children on a content-driven grid offset to `ROOT_SPACE_CENTER`. `allocatedSizeOf` removed.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `test/unit/verify-geometry.spec.ts`:
 
@@ -863,12 +863,12 @@ describe('Root.layoutPositionOf', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run test/unit/verify-geometry.spec.ts`
 Expected: FAIL — old `Root` calls `gridLayout(...)` as a factory, which no longer exists (TypeError / undefined).
 
-- [ ] **Step 3: Edit `Root.ts`**
+- [x] **Step 3: Edit `Root.ts`**
 
 Replace the `Root` class (lines 9-28) with:
 
@@ -902,12 +902,12 @@ export class Root extends Node {
 
 The `ROOT_SPACE_SIZE` constant (line 7) is now unused — delete that line. Keep `ROOT_SPACE_CENTER`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run test/unit/verify-geometry.spec.ts`
 Expected: PASS (Root centers the child at `(0, -0.1, 0)`).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib-components/nodes/Root.ts test/unit/verify-geometry.spec.ts
@@ -925,25 +925,25 @@ git commit -m "feat(root): content-driven grid placement; drop allocatedSizeOf"
 - Consumes: every prior task.
 - Produces: a green full suite.
 
-- [ ] **Step 1: Add `gap` to the mock stage**
+- [x] **Step 1: Add `gap` to the mock stage**
 
 In `test/unit/verify-geometry.spec.ts`, add `gap: 1.5,` to the `mockStage` literal (next to `boxDistance: 1.5,`). This makes the gap explicit rather than relying on the `boxDistance` fallback.
 
-- [ ] **Step 2: Run the entire unit suite**
+- [x] **Step 2: Run the entire unit suite**
 
 Run: `npx vitest run`
 Expected: PASS for every file: `verify-layout`, `verify-geometry`, `verify-nodes`, `verify-elements`, `verify-hover`, `verify-scene`, `verify-stage`, `verify-three`.
 
-- [ ] **Step 3: If any file fails, inspect and update assertions to the new model**
+- [x] **Step 3: If any file fails, inspect and update assertions to the new model**
 
 Failures should only be value-level (e.g. an absolute position changed because children now sit on the floor). For each failure: read the assertion, recompute the expected value from the new layout math (see `verify-layout` for the formulas), and update the expected number. Do **not** revert engine logic to satisfy an old hardcoded constant — the new positions are the correct ones. If a test asserts a removed API, delete that assertion.
 
-- [ ] **Step 4: Type-check the build**
+- [x] **Step 4: Type-check the build**
 
 Run: `npx vue-tsc --noEmit` (or `npm run build` if `vue-tsc` is not wired as a standalone script — check `package.json` scripts first).
 Expected: no type errors referencing `allocatedSizeOf`, `slotSizeOf`, `LayoutFactory`, `requestedBounds`, or `layoutSize`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -960,15 +960,15 @@ git commit -m "test: green full suite under content-driven layout"
 **Interfaces:**
 - Consumes: the running demo dev server; the Playwright MCP browser tools.
 
-- [ ] **Step 1: Start the demo dev server**
+- [x] **Step 1: Start the demo dev server**
 
 Run (background): check `package.json` for the dev script (likely `npm run dev` or `npm run serve`); start it and note the local URL.
 
-- [ ] **Step 2: Screenshot TabB ("Nested") and TabC**
+- [x] **Step 2: Screenshot TabB ("Nested") and TabC**
 
 Drive the browser to the Nested tab and the Custom/Stacks tab. Wait for the canvas to settle (~1s after load), then take a screenshot of each. Save under `concepts/` for comparison against `concepts/screenshot1.jpg` (before) and `concepts/stacked1.png` (aspiration).
 
-- [ ] **Step 3: Check the structural invariants against the screenshots**
+- [x] **Step 3: Check the structural invariants against the screenshots**
 
 Confirm, for TabB:
 - Boxes are spaced by `gap`, not scattered across a 10-wide void.
@@ -978,16 +978,33 @@ Confirm, for TabB:
 
 Record any deviation as a written note (file, expected vs observed). Do not tune values yet — list them.
 
-- [ ] **Step 4: If deviations exist, address them as a follow-up TDD cycle**
+- [x] **Step 4: If deviations exist, address them as a follow-up TDD cycle**
 
 For each deviation, add a failing assertion to `verify-layout`/`verify-geometry` that pins the correct number, fix the engine, re-run `npx vitest run`, then re-screenshot. The only "magic number" that should ever be tuned is the global `gap` (in `VxSettings`/demo settings) — everything else is derived.
 
-- [ ] **Step 5: Commit the captured screenshots and any notes**
+- [x] **Step 5: Commit the captured screenshots and any notes**
 
 ```bash
 git add concepts/ docs/superpowers/plans/2026-06-28-content-driven-layout.md
 git commit -m "docs: capture TabB/TabC layout verification screenshots"
 ```
+
+### Visual verification — 2026-07-29
+
+Captured the current demo at:
+
+- `concepts/day2-nested.png` — TabB / **Nested**
+- `concepts/day2-custom.png` — TabC / **Custom**
+
+Compared with `concepts/screenshot1.jpg` and `concepts/stacked1.png`.
+
+1. **Resolved:** TabB's API gateway ring retained a legacy `elevation="-1.65"` from the fixed-box layout and was placed
+   below the floor. The elevation is now `-0.55`, derived from the deployment box height (`0.5`) plus the Stack's
+   default gap (`0.05`), with a regression assertion covering the floor return.
+
+After correction, the content is compact rather than spread across fixed 10-unit containers; deployment stacks share
+X/Z coordinates with their pods; stack bases rest on the floor; and TabC remains grouped around its content-driven
+footprints. No layout-engine deviation remained after the follow-up check.
 
 ---
 

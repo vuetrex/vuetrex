@@ -32,7 +32,7 @@
               @pointerenter="!selected ? (hovered = 'api-gw') : null"
               @pointerleave="!selected ? (hovered = null) : null"
             />
-            <layer :elevation="-1.65">
+            <layer :elevation="-0.55">
               <ring size="2.0">
                 <wedge size="3.5"
                   v-for="i in podCounts['api-gw']"

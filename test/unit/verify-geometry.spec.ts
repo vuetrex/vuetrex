@@ -372,6 +372,10 @@ describe('GroupNode content-driven sizing', () => {
         boxes.forEach(b => { b.setSize(1); row.appendChild(b) })
         row.setStateValue('size', 1)          // declare 1×1 footprint, smaller than 3.5 content
         expect(row.measuredSize.value.x).toBeCloseTo(1, 5)   // reports the reservation
+        row.syncWithThree()
+        expect(row.group.scale.x).toBeCloseTo(1 / 3.5, 5)
+        expect(row.group.scale.y).toBeCloseTo(1 / 3.5, 5)
+        expect(row.group.scale.z).toBeCloseTo(1 / 3.5, 5)
     })
 })
 
@@ -386,6 +390,38 @@ describe('Root.layoutPositionOf', () => {
         expect(p.x).toBeCloseTo(0, 5)
         expect(p.z).toBeCloseTo(0, 5)
         expect(p.y).toBeCloseTo(-0.1, 5)   // ROOT_SPACE_CENTER.y
+    })
+
+    it('distributes two top-level siblings through the root grid', () => {
+        const root = new Root(mockStage)
+        const rows = [new Row(mockStage), new Row(mockStage)]
+        rows.forEach(row => {
+            row.appendChild(new Box(mockStage))
+            root.appendChild(row)
+        })
+
+        const positions = rows.map(row => root.layoutPositionOf(row))
+        expect(positions[0].x).toBeCloseTo(-1.25, 5)
+        expect(positions[1].x).toBeCloseTo(1.25, 5)
+        positions.forEach(position => {
+            expect(position.y).toBeCloseTo(-0.1, 5)
+            expect(position.z).toBeCloseTo(0, 5)
+        })
+    })
+})
+
+describe('GroupNode child elevation', () => {
+    it.each([
+        ['Row', () => new Row(mockStage)],
+        ['Ring', () => new Ring(mockStage)],
+        ['Layer', () => new Layer(mockStage)],
+    ])('applies elevation to a child of %s', (_, makeParent) => {
+        const parent = makeParent()
+        const child = new Layer(mockStage)
+        child.setStateValue('elevation', 0.75)
+        parent.appendChild(child)
+
+        expect(parent.layoutPositionOf(child).y).toBeCloseTo(0.75, 5)
     })
 })
 
@@ -409,5 +445,16 @@ describe('Stack default gap (tight stacking)', () => {
         stack.appendChild(b1)
         stack.setStateValue('gap', 0.5)
         expect(stack.layoutPositionOf(b1).y).toBeCloseTo(0.75, 5)   // 0.25 + 0.5
+    })
+
+    it('lets an elevated child layer return to the stack floor', () => {
+        const stack = new Stack(mockStage)
+        const box = new Box(mockStage)
+        const layer = new Layer(mockStage)
+        layer.setStateValue('elevation', -(0.5 + 0.05))
+        stack.appendChild(box)
+        stack.appendChild(layer)
+
+        expect(stack.layoutPositionOf(layer).y).toBeCloseTo(0, 5)
     })
 })
