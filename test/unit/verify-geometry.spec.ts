@@ -388,3 +388,26 @@ describe('Root.layoutPositionOf', () => {
         expect(p.y).toBeCloseTo(-0.1, 5)   // ROOT_SPACE_CENTER.y
     })
 })
+
+describe('Stack default gap (tight stacking)', () => {
+    it('stacks boxes with a small fixed gap, ignoring the global spacing gap', () => {
+        const stack = new Stack(mockStage)        // mockStage.gap = 1.5 (planar spacing)
+        const b0 = new Box(mockStage); b0.setHeight(0.25)
+        const b1 = new Box(mockStage); b1.setHeight(0.25)
+        stack.appendChild(b0)
+        stack.appendChild(b1)
+        // base of second box = first box height (0.25) + stack gap (0.05) = 0.30,
+        // NOT 0.25 + 1.5 — a Stack must not inherit the planar gap.
+        expect(stack.layoutPositionOf(b1).y).toBeCloseTo(0.30, 5)
+    })
+
+    it('an explicit gap prop still overrides the stack default', () => {
+        const stack = new Stack(mockStage)
+        const b0 = new Box(mockStage); b0.setHeight(0.25)
+        const b1 = new Box(mockStage); b1.setHeight(0.25)
+        stack.appendChild(b0)
+        stack.appendChild(b1)
+        stack.setStateValue('gap', 0.5)
+        expect(stack.layoutPositionOf(b1).y).toBeCloseTo(0.75, 5)   // 0.25 + 0.5
+    })
+})

@@ -10,7 +10,7 @@
         "resolveJsonModule": true,
         "isolatedModules": true,
         "esModuleInterop": true,
-        "lib": ["ESNext", "DOM", "dom.iterable", "scripthost"],
+        "lib": ["ESNext", "DOM", "DOM.Iterable", "scripthost"],
         "skipLibCheck": true,
         "outDir": "dist_types",
         "declaration": true,

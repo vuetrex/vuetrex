@@ -7,8 +7,10 @@
   "module": "dist/vuetrex.js",
   "unpkg": "dist/vuetrex.min.js",
   "sideEffects": false,
+  "packageManager": "pnpm@11.17.0",
   "scripts": {
     "dev": "vite",
+    "preinstall": "npx only-allow pnpm",
     "clean": "rm -rf ./dist && rm -rf ./dist_types && rm -rf ./coverage",
     "build": "vue-tsc --declaration --emitDeclarationOnly && vite build",
     "typecheck": "vue-tsc --noEmit",
@@ -49,25 +51,25 @@
   },
   "homepage": "https://github.com/exceeder/vuetrex#readme",
   "dependencies": {
-    "gsap": "^3.14.2",
-    "three": "^0.183.2",
-    "troika-three-text": "^0.52.4"
+    "gsap": "^3.15.0",
+    "three": "^0.185.1",
+    "troika-three-text": "^0.52.5"
   },
   "devDependencies": {
-    "@types/node": "^25.3.5",
-    "@types/three": "^0.183.1",
-    "@vitejs/plugin-vue": "^6.0.4",
-    "@vitest/coverage-v8": "^4.0.18",
-    "@vitest/ui": "^4.0.18",
-    "@vue/test-utils": "^2.4.6",
-    "happy-dom": "^20.8.3",
+    "@types/node": "^26.1.2",
+    "@types/three": "^0.185.1",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/ui": "^4.1.10",
+    "@vue/test-utils": "^2.4.11",
+    "happy-dom": "^20.11.1",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1",
-    "vite-plugin-glsl": "^1.5.5",
-    "vitepress": "^2.0.0-alpha.16",
-    "vitest": "^4.0.18",
-    "vue": "^3.5.29",
-    "vue-tsc": "^3.2.5"
+    "vite": "^8.1.5",
+    "vite-plugin-glsl": "^1.6.1",
+    "vitepress": "^2.0.0-alpha.18",
+    "vitest": "^4.1.10",
+    "vue": "^3.5.40",
+    "vue-tsc": "^3.3.8"
   },
   "peerDependenciesMeta": {
     "gsap": {
@@ -83,7 +85,7 @@
     "vue": "^3.5.29"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "eslintConfig": {
     "rules": {

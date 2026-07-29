@@ -34,10 +34,13 @@ export class GroupNode extends Node {
         this.element.mesh = this.group as any   // satisfies `Element3d.mesh` type
     }
 
-    protected gap(): number {
-        if (typeof this.state.gap === 'number') return this.state.gap
+    protected defaultGap(): number {
         const g = (this.stage as any).gap
         return typeof g === 'number' ? g : this.stage.boxDistance
+    }
+
+    protected gap(): number {
+        return typeof this.state.gap === 'number' ? this.state.gap : this.defaultGap()
     }
 
     protected childFootprints(): Vector3[] {

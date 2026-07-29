@@ -1,6 +1,6 @@
+import { ElementNamespace, RendererOptions, VNodeProps} from 'vue';
 import { Base } from '@/lib-components/nodes/Base.js';
 import { Comment, TextNode } from '@/lib-components/nodes/Root.js';
-import { ElementNamespace, RendererOptions, VNodeProps} from '@vue/runtime-core';
 import { VuetrexStage } from '@/lib-components/three/stage.js';
 import { types, ElementRegistry, FunctionalComponent, ClassComponent } from '@/lib-components/nodes/types.js';
 
