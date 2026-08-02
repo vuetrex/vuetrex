@@ -13,9 +13,14 @@ export class Box extends MeshNode {
     }
 
     modelGen(): (height: number, size: number) => THREE.Mesh {
+        // Depth defaults to size (square footprint). Any positive `depth` state
+        // yields a non-square footprint: x = size, z = depth.
+        const depthState = this.state.depth
         return (height, size) => {
-            const R = size * this.getScale()
-            const bGeometry = new THREEx.RoundedBoxGeometry(R, height, R, 5, 0.05);
+            const scale = this.getScale()
+            const w = size * scale
+            const d = (depthState > 0 ? depthState : size) * scale
+            const bGeometry = new THREEx.RoundedBoxGeometry(w, height, d, 5, 0.05);
             const mesh = new THREE.Mesh(bGeometry, this.material);
             mesh.castShadow = true;
             mesh.receiveShadow = true;

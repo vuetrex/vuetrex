@@ -9,6 +9,12 @@ export interface MeshState {
     text: string;
     size: number;
     height: number;
+    /**
+     * Depth along the z axis. When 0 (default), the shape falls back to a
+     * square footprint of `size` × `size` in x/z. Only shapes that support
+     * a non-square footprint (e.g. Box) honor this; radial shapes ignore it.
+     */
+    depth: number;
     connection: string | null;
     material?: VxMaterialProps;
     hover?: VxHoverProps;
@@ -69,12 +75,13 @@ export abstract class MeshNode extends Node {
 
     protected constructor(stage: VuetrexStage, stateDefaults: Partial<MeshState> = {}) {
         super(stage);
-        this.state = reactive({ text: '', size: 1.0, height: 0.5, connection: null, material: undefined, hover: undefined, ...stateDefaults });
+        this.state = reactive({ text: '', size: 1.0, height: 0.5, depth: 0, connection: null, material: undefined, hover: undefined, ...stateDefaults });
         this.material = stage.createElementMaterial();
     }
 
     protected override intrinsicSize(): Vector3 {
-        return new Vector3(this.state.size, this.state.height, this.state.size);
+        const z = this.state.depth > 0 ? this.state.depth : this.state.size;
+        return new Vector3(this.state.size, this.state.height, z);
     }
 
     override renderOffset(): Vector3 {
@@ -126,7 +133,8 @@ export abstract class MeshNode extends Node {
             const { myIdx, siblingCount } = this.layoutContext.value;
             if (myIdx >= 0) {
                 void siblingCount;
-                const { height, size } = this.state;
+                const { height, size, depth } = this.state;
+                void depth; // tracked so modelGen() rebuilds when depth changes
                 this.clearMesh();
                 const parentObj = this.nearestAncestorObject()
                 this.stage.renderMesh(this.element, height, size, this.modelGen(), parentObj);
@@ -145,8 +153,9 @@ export abstract class MeshNode extends Node {
 
         // Connection and Text watchEffect
         this.connectionStopHandle = watchEffect(() => {
-            const { connection, text, height, size } = this.state;
+            const { connection, text, height, size, depth } = this.state;
             void text;
+            void depth;
             if (connection) {
                 const key = `${this.name}->${connection}`;
                 if (key !== this.registeredConnection) {
