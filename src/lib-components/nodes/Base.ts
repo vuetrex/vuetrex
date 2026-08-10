@@ -1,4 +1,4 @@
-import {ref, computed, queuePostFlushCb, ComputedRef, Ref, shallowRef} from 'vue';
+import {computed, queuePostFlushCb, ComputedRef, Ref, shallowRef, toRaw, triggerRef} from 'vue';
 
 // defer synchronization until after rendering for all nodes to have complete data about parents and children
 const pendingSyncBase: Base[] = [];
@@ -26,7 +26,12 @@ const registerUpdatedBase = (base: Base) => {
 export abstract class Base {
 
     public parent: Ref<Base | null> = shallowRef(null);
-    protected children: Ref<Base[]> = ref([]);
+    // Vue calls host operations while a component update is in progress. Keep
+    // untracked mirrors for those operations, then notify public reactive views
+    // explicitly so renderer bookkeeping cannot become a render dependency.
+    private parentNodeValue: Base | null = null;
+    private readonly childList: Base[] = [];
+    protected children: Ref<Base[]> = shallowRef(this.childList);
 
     protected abstract get state():  { [id: string] : any };
 
@@ -56,17 +61,39 @@ export abstract class Base {
             return result
     })
 
+    public getHostParent(): Base | null {
+        return this.parentNodeValue;
+    }
+
+    public getHostNextSibling(): Base | null {
+        const parent = this.parentNodeValue;
+        if (parent === null) {
+            return null;
+        }
+        const idx = parent.childList.indexOf(this);
+        return idx >= 0 && idx < parent.childList.length - 1
+            ? parent.childList[idx + 1]
+            : null;
+    }
+
+    private setParent(parent: Base | null): void {
+        this.parentNodeValue = parent;
+        this.parent.value = parent;
+    }
+
     appendChild(child: Base) {
-        child.parent.value = this;
-        this.children.value.push(child);
+        child.setParent(this);
+        this.childList.push(child);
+        triggerRef(this.children);
         this.registerSync();
     }
 
     removeChild(child: Base) {
-        child.parent.value = null;
-        const idx = this.children.value.indexOf(child);
+        const idx = this.childList.indexOf(child);
         if (idx >= 0) {
-            this.children.value.splice(idx, 1);
+            child.setParent(null);
+            this.childList.splice(idx, 1);
+            triggerRef(this.children);
             child.onRemoved();
             if (child.isRenderableNode()) {
                 const node = child as any;
@@ -74,7 +101,7 @@ export abstract class Base {
                     node.stage.connectors.remove(node.element);
                 }
             }
-            const grandChildren = child.children.value;
+            const grandChildren = child.childList;
             while (grandChildren && grandChildren.length > 0)
                 child.removeChild(grandChildren[grandChildren.length - 1]);
             this.registerSync();
@@ -82,13 +109,14 @@ export abstract class Base {
     }
 
     insertBefore(child: Base, anchor: Base) {
-        child.parent.value = this;
-        const anchorIdx = this.children.value.indexOf(anchor);
+        child.setParent(this);
+        const anchorIdx = this.childList.indexOf(anchor);
         if (anchorIdx >= 0) {
-            this.children.value.splice(anchorIdx, 0, child);
+            this.childList.splice(anchorIdx, 0, child);
         } else {
-            this.children.value.push(child);
+            this.childList.push(child);
         }
+        triggerRef(this.children);
         this.registerSync();
     }
 
@@ -100,7 +128,7 @@ export abstract class Base {
     }
 
     applySync(): void {
-        this.children.value.forEach(b => {
+        this.childList.forEach(b => {
             b.syncWithThree()
         })
         this.mustSync = false
@@ -114,11 +142,26 @@ export abstract class Base {
     }
 
     public setStateValue(key: string, value:any): void {
-        if (this.state !== undefined && key in this.state) {
-            switch (typeof this.state[key]) {
-                case 'boolean': this.state[key] = "true" == value; break;
-                case 'number':  this.state[key] = Number.parseFloat(value); break;
-                default: this.state[key] = value;
+        // Vue's custom renderer forwards template attribute names verbatim, so
+        // multi-word bindings arrive as kebab-case (e.g. `label-align`,
+        // `label-font-size`) while our reactive state uses camelCase fields
+        // (`labelAlign`, `labelFontSize`). Normalize once here so every
+        // camelCase state key is addressable from templates without each
+        // subclass having to re-implement the mapping. Direct kebab-case
+        // usage (e.g. `ring.setStateValue('start-angle', 90)` from tests)
+        // keeps working thanks to this same normalization.
+        const stateKey = key.indexOf('-') >= 0
+            ? key.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+            : key;
+        const state = this.state;
+        // Inspect the raw state to avoid subscribing the active component
+        // render to the same property that patchProp is about to update.
+        const rawState = state === undefined ? undefined : toRaw(state);
+        if (rawState !== undefined && stateKey in rawState) {
+            switch (typeof rawState[stateKey]) {
+                case 'boolean': state[stateKey] = "true" == value; break;
+                case 'number':  state[stateKey] = Number.parseFloat(value); break;
+                default: state[stateKey] = value;
             }
         } else {
             (this as any)[key] = value

@@ -65,9 +65,20 @@ never enlarges it:
 `start-angle` rotates the first child in degrees. Zero starts at the front (`+Z`); `90` starts at `+X`.
 `direction` is `normal` or `reverse`. Both props are reactive.
 
+For segmented wedge rings, `gap-ratio` reserves a fraction of each no-gap segment's outer chord as empty space
+without changing the ring radius. Its range is `0` (solid) through values below `1`. For example, `0.25` makes the
+separator width 25% of that full chord. With explicit `radius` and `thickness`, separators are constant-width radial
+slots: their sides follow the ring normals instead of converging toward the inner circle. The ratio describes the
+narrowest finished opening after beveling; the underlying cut and bevel adapt together so every separator retains
+that width. Setting `gap-ratio` selects this spacing mode and ignores the world-unit `gap`.
+
+Set `radius` on the ring to control the exact outer arc radius, and `thickness` on each wedge to control the radial
+distance between its outer and inner arcs. Both use world units and remain constant when the number of wedges changes.
+When these props are omitted, wedges retain their content-driven legacy sizing.
+
 ```vue
-<ring :start-angle="45" direction="reverse">
-  <wedge v-for="item in items" :key="item.id" />
+<ring :radius="1" :start-angle="45" direction="reverse" :gap-ratio="0.25">
+  <wedge v-for="item in items" :key="item.id" :thickness="0.15" />
 </ring>
 ```
 

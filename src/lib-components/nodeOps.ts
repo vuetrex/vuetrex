@@ -15,7 +15,7 @@ export const nodeOps = (stage: VuetrexStage, extraTypes?: ElementRegistry): Omit
   },
 
   remove: (child) => {
-    const parent = child.parent.value;
+    const parent = child.getHostParent();
     if (parent != null) {
       parent.removeChild(child);
     }
@@ -55,8 +55,8 @@ export const nodeOps = (stage: VuetrexStage, extraTypes?: ElementRegistry): Omit
     node.setElementText(text);
   },
 
-  parentNode: (node) => (node.parent.value ? node.parent.value : null),
+  parentNode: (node) => node.getHostParent(),
 
-  nextSibling: (node) => (node.nextSibling.value)
+  nextSibling: (node) => node.getHostNextSibling()
 
 });

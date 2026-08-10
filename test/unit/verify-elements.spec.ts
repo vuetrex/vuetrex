@@ -3,7 +3,9 @@ import { nodeOps } from '@/lib-components/nodeOps.js'
 import { registerElement, types } from '@/lib-components/nodes/types.js'
 import { Comment } from '@/lib-components/nodes/Root.js'
 import { Base } from '@/lib-components/nodes/Base.js'
+import { patchProp } from '@/lib-components/patchProp.js'
 import type { FunctionalComponent, ClassComponent } from '@/lib-components/nodes/types.js'
+import { createRenderer, defineComponent, h, nextTick, reactive, ref } from 'vue'
 
 // ── Minimal test doubles (no Three.js / stage dependency) ────────────────────
 
@@ -25,6 +27,17 @@ class TestClassElement extends Base {
     constructor(_stage: any) { super() }
 }
 (TestClassElement.prototype as any)['__v_skip'] = true
+
+class CompoundElement extends Base {
+    public state = reactive({
+        lines: [] as string[],
+        material: null as Record<string, unknown> | null,
+    })
+
+    constructor(_stage: any) { super() }
+    isRenderableNode(): boolean { return true }
+}
+(CompoundElement.prototype as any)['__v_skip'] = true
 
 // Stage is not touched by our test implementations.
 const mockStage = null as any
@@ -100,6 +113,61 @@ describe('nodeOps', () => {
 })
 
 // ── nodeOps.createElement — per-instance extraTypes ──────────────────────────
+
+describe('compound components in the custom renderer', () => {
+    it('updates nested elements with inline reactive props without rendering recursively', async () => {
+        const label = ref('first')
+        const visible = ref(true)
+        let renderCount = 0
+
+        const CompoundFixture = defineComponent({
+            name: 'CompoundFixture',
+            setup() {
+                return () => {
+                    renderCount++
+                    return h('stack', null, visible.value
+                        ? [h('box', {
+                            lines: [label.value],
+                            material: { color: 0x123456 },
+                        })]
+                        : [])
+                }
+            },
+        })
+
+        const { render } = createRenderer<Base, Base>({
+            patchProp,
+            ...nodeOps(mockStage, {
+                stack: CompoundElement as unknown as ClassComponent,
+                box: CompoundElement as unknown as ClassComponent,
+            }),
+        })
+        const root = new CompoundElement(mockStage)
+
+        render(h(CompoundFixture), root)
+        await nextTick()
+
+        expect(renderCount).toBe(1)
+
+        label.value = 'second'
+        await nextTick()
+
+        expect(renderCount).toBe(2)
+        const stack = root.elements.value[0] as CompoundElement
+        const box = stack.elements.value[0] as CompoundElement
+        expect(box.state.lines).toEqual(['second'])
+        expect(box.state.material).toEqual({ color: 0x123456 })
+
+        visible.value = false
+        await nextTick()
+
+        expect(renderCount).toBe(3)
+        expect(stack.elements.value).toHaveLength(0)
+
+        render(null, root)
+        await nextTick()
+    })
+})
 
 describe('nodeOps.createElement', () => {
 

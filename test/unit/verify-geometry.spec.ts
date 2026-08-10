@@ -148,6 +148,18 @@ describe('Ring.layoutPositionOf', () => {
         expect(reverse.x).toBeLessThan(0)
         expect(reverse.z).toBeCloseTo(0, 6)
     })
+
+    it('does not change radius when angular gap-ratio changes', () => {
+        const noGap = buildRing(3)
+        noGap.ring.setStateValue('gap', 0)
+        const noGapRadius = noGap.ring.layoutPositionOf(noGap.wedges[0]).length()
+
+        const ratioGap = buildRing(3)
+        ratioGap.ring.setStateValue('gap-ratio', 0.25)
+        const ratioGapRadius = ratioGap.ring.layoutPositionOf(ratioGap.wedges[0]).length()
+
+        expect(ratioGapRadius).toBeCloseTo(noGapRadius, 6)
+    })
 })
 
 // ── 2. Stack.layoutPositionOf ─────────────────────────────────────────────────
@@ -389,6 +401,140 @@ describe('Wedge.modelGen geometry centroid', () => {
             // Each segment must have non-trivial XZ extent
             expect(size.x + size.z).toBeGreaterThan(0.1)
         }
+    })
+
+    it('keeps a spaced wedge concentric with its parent ring', () => {
+        const ring = new Ring(mockStage)
+        ring.setStateValue('gap-ratio', 0.25)
+        const wedges = Array.from({ length: 3 }, () => {
+            const wedge = new Wedge(mockStage)
+            wedge.setSize(0.5)
+            ring.appendChild(wedge)
+            return wedge
+        })
+        const wedge = wedges[0]
+        const mesh = wedge.modelGen()(0.35, 0.5) as THREE.Mesh
+        mesh.position.copy(ring.layoutPositionOf(wedge))
+        mesh.updateMatrixWorld(true)
+
+        const positions = meshGeo(mesh).getAttribute('position') as THREE.BufferAttribute
+        const point = new THREE.Vector3()
+        const worldPoints: THREE.Vector3[] = []
+        for (let i = 0; i < positions.count; i++) {
+            point.fromBufferAttribute(positions, i).applyMatrix4(mesh.matrixWorld)
+            worldPoints.push(point.clone())
+        }
+
+        const topY = Math.max(...worldPoints.map(p => p.y))
+        const topFaceRadii = new Set(worldPoints
+            .filter(p => Math.abs(p.y - topY) < 1e-5)
+            .map(p => Math.hypot(p.x, p.z).toFixed(4)))
+
+        // Every point on the top face belongs to either the inner or outer
+        // circle. Before the fix, the same face produced 26 different radii
+        // because its two arcs were centred away from the parent ring centre.
+        expect(topFaceRadii.size).toBe(2)
+
+        const angles = worldPoints
+            .filter(p => Math.abs(p.y - topY) < 1e-5)
+            .map(p => Math.atan2(p.x, p.z))
+        const angularSpan = Math.max(...angles) - Math.min(...angles)
+        expect(angularSpan).toBeCloseTo((Math.PI * 2 / 3) * 0.75, 4)
+    })
+
+    it('keeps explicit outer radius and thickness constant across segment counts', () => {
+        for (const count of [3, 4, 6, 8]) {
+            const ring = new Ring(mockStage)
+            ring.setStateValue('radius', 1)
+            ring.setStateValue('gap-ratio', 0.25)
+            const wedges = Array.from({ length: count }, () => {
+                const wedge = new Wedge(mockStage)
+                wedge.setStateValue('thickness', 0.15)
+                ring.appendChild(wedge)
+                return wedge
+            })
+            const wedge = wedges[0]
+            const mesh = wedge.modelGen()(0.35, 1) as THREE.Mesh
+            mesh.position.copy(ring.layoutPositionOf(wedge))
+            mesh.updateMatrixWorld(true)
+
+            const positions = meshGeo(mesh).getAttribute('position') as THREE.BufferAttribute
+            const point = new THREE.Vector3()
+            const worldPoints: THREE.Vector3[] = []
+            for (let i = 0; i < positions.count; i++) {
+                point.fromBufferAttribute(positions, i).applyMatrix4(mesh.matrixWorld)
+                worldPoints.push(point.clone())
+            }
+
+            const topY = Math.max(...worldPoints.map(p => p.y))
+            const radialBands = [...new Set(worldPoints
+                .filter(p => Math.abs(p.y - topY) < 1e-5)
+                .map(p => Number(Math.hypot(p.x, p.z).toFixed(4))))]
+                .sort((a, b) => a - b)
+
+            expect(radialBands).toEqual([0.85, 1])
+            expect(ring.measuredSize.value.x).toBeCloseTo(2, 6)
+            expect(ring.measuredSize.value.z).toBeCloseTo(2, 6)
+        }
+    })
+
+    it('uses a constant-width normal gap that bevels cannot close', () => {
+        const count = 10
+        const outerRadius = 0.7
+        const thickness = 0.11
+        const gapRatio = 0.05
+        const ring = new Ring(mockStage)
+        ring.setStateValue('radius', outerRadius)
+        ring.setStateValue('gap-ratio', gapRatio)
+        const wedges = Array.from({ length: count }, () => {
+            const wedge = new Wedge(mockStage)
+            wedge.setStateValue('thickness', thickness)
+            ring.appendChild(wedge)
+            return wedge
+        })
+
+        const worldPointsFor = (wedge: Wedge): THREE.Vector3[] => {
+            const mesh = wedge.modelGen()(0.35, 1) as THREE.Mesh
+            mesh.position.copy(ring.layoutPositionOf(wedge))
+            mesh.updateMatrixWorld(true)
+            const positions = meshGeo(mesh).getAttribute('position') as THREE.BufferAttribute
+            const point = new THREE.Vector3()
+            const result: THREE.Vector3[] = []
+            for (let i = 0; i < positions.count; i++) {
+                point.fromBufferAttribute(positions, i).applyMatrix4(mesh.matrixWorld)
+                result.push(point.clone())
+            }
+            return result
+        }
+
+        const allWorldPoints = wedges.map(worldPointsFor)
+        const firstPoints = allWorldPoints[0]
+        const topY = Math.max(...firstPoints.map(point => point.y))
+        const topPoints = firstPoints.filter(point => Math.abs(point.y - topY) < 1e-5)
+        const innerRadius = outerRadius - thickness
+        const outerHalfAngle = Math.max(...topPoints
+            .filter(point => Math.abs(Math.hypot(point.x, point.z) - outerRadius) < 1e-4)
+            .map(point => Math.abs(Math.atan2(point.x, point.z))))
+        const innerHalfAngle = Math.max(...topPoints
+            .filter(point => Math.abs(Math.hypot(point.x, point.z) - innerRadius) < 1e-4)
+            .map(point => Math.abs(Math.atan2(point.x, point.z))))
+        const slotHalfAngle = Math.PI / count
+
+        const outerInset = outerRadius * Math.sin(slotHalfAngle - outerHalfAngle)
+        const innerInset = innerRadius * Math.sin(slotHalfAngle - innerHalfAngle)
+        expect(innerInset).toBeCloseTo(outerInset, 5)
+
+        const requestedGapWidth = gapRatio * 2 * outerRadius * Math.sin(slotHalfAngle)
+        const visibleGaps = allWorldPoints.map((points, index) => {
+            const boundaryAngle = (index + 0.5) * Math.PI * 2 / count
+            const gapTangent = new THREE.Vector2(Math.cos(boundaryAngle), -Math.sin(boundaryAngle))
+            const projection = (point: THREE.Vector3) => point.x * gapTangent.x + point.z * gapTangent.y
+            const nextPoints = allWorldPoints[(index + 1) % count]
+            return Math.min(...nextPoints.map(projection)) - Math.max(...points.map(projection))
+        })
+
+        visibleGaps.forEach(gap => expect(gap).toBeCloseTo(requestedGapWidth, 4))
+        expect(Math.max(...visibleGaps) - Math.min(...visibleGaps)).toBeLessThan(1e-5)
     })
 })
 
