@@ -53,7 +53,7 @@
             </vx-group>
 
             <vx-group layout="depth" :gap="0.74">
-              <K8sWorkload v-bind="workload('traffic-orchestrator')" :width="1.9" @select="selectNode" />
+              <K8sNodeDisplay v-bind="workload('traffic-orchestrator')" :width="1.9" @select="selectNode" />
 
               <K8sPlatform title="Realtime Streaming" :width="3.6" :depth="5.8">
                 <K8sWorkload
@@ -81,14 +81,14 @@
             </vx-group>
 
             <vx-group layout="depth" :gap="0.78">
-              <K8sDatabase v-bind="database('mysql-primary')" :size="1.15" @select="selectNode" />
+              <K8sDatabaseColumns v-bind="database('mysql-primary')" :size="1.15" @select="selectNode" />
               <K8sDatabase v-bind="database('mongo-primary')" :size="1.15" @select="selectNode" />
               <K8sCache v-bind="cache('kraft-coordinator')" kind="coordination" :size="1.05" @select="selectNode" />
             </vx-group>
 
             <K8sPlatform title="Data & Operations" :width="5.5" :depth="5.5">
               <vx-row :gap="0.38">
-                <K8sDatabase v-bind="database('mysql-replica')" @select="selectNode" />
+                <K8sDatabaseColumns v-bind="database('mysql-replica')" :size="1.05" @select="selectNode" />
                 <K8sDatabase v-bind="database('mongo-archive')" @select="selectNode" />
                 <K8sCache v-bind="cache('redis-replica')" @select="selectNode" />
                 <K8sDatabase v-bind="database('cold-snapshots')" @select="selectNode" />
@@ -157,6 +157,8 @@ import { computed, reactive, ref } from 'vue'
 import { Vuetrex, type VuetrexStage, type VxSettings } from '@/lib-components/index.js'
 import K8sCache from './components/K8sCache.vue'
 import K8sDatabase from './components/K8sDatabase.vue'
+import K8sDatabaseColumns from './components/K8sDatabaseColumns.vue'
+import K8sNodeDisplay from './components/K8sNodeDisplay.vue'
 import K8sPlatform from './components/K8sPlatform.vue'
 import K8sWorkload, { type WorkloadStatus } from './components/K8sWorkload.vue'
 
