@@ -310,6 +310,15 @@ describe('Box.modelGen geometry', () => {
 
 describe('Cylinder.modelGen geometry', () => {
 
+    it.each([0.12, 0.33, 0.9])('uses the declared height %s', height => {
+        const cyl = new Cylinder(mockStage)
+        const geo = meshGeo(cyl.modelGen()(height, 1.0) as THREE.Mesh)
+        geo.computeBoundingBox()
+        const { min, max } = geo.boundingBox!
+        expect(max.y - min.y).toBeCloseTo(height, 5)
+        expect((max.y + min.y) / 2).toBeCloseTo(0, 5)
+    })
+
     it('bounding-box centre is on the XZ plane centre (x≈0, z≈0)', () => {
         const cyl  = new Cylinder(mockStage)
         const mesh = cyl.modelGen()(0.33, 1.0) as THREE.Mesh

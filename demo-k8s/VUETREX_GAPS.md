@@ -78,8 +78,8 @@ purpose-built label placement rather than the generic planar face label.
 ### Built-in geometry is too generic for infrastructure diagrams
 
 Boxes, cylinders, and wedges convey the major categories, but the load balancer, Kubernetes pods, Redis, ZooKeeper,
-message queues, and platform boundaries are only approximations. `Cylinder.modelGen()` currently does not use its
-declared `height`, which limits metric-driven database/tower visuals.
+message queues, and platform boundaries are only approximations. Cylinder height is now geometry-driven, enabling
+metric-driven database/tower visuals; infrastructure-specific silhouettes remain a gap.
 
 ### Connector routing still needs hardening
 

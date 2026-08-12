@@ -11,8 +11,14 @@ export class Cylinder extends MeshNode {
         this.material = this.stage.createElementMaterial()
     }
 
-    private beveledCylinder(size: number): THREE.BufferGeometry {
+    private beveledCylinder(height: number, size: number): THREE.BufferGeometry {
         const width = size / 2.5 || 1.0;
+        // ExtrudeGeometry adds bevelThickness beyond both ends of `depth`.
+        // Keep the bevel inside the requested height so the final geometry,
+        // including its bevels, has exactly the declared vertical extent.
+        const safeHeight = Math.max(Number.EPSILON, height);
+        const bevelThickness = Math.min(0.05, safeHeight / 4);
+        const extrusionDepth = Math.max(Number.EPSILON, safeHeight - bevelThickness * 2);
         const shape = new THREE.Shape();
         shape.moveTo(width, 0);
         shape.absarc(0, 0, width, 0, Math.PI / 2, false);
@@ -22,9 +28,9 @@ export class Cylinder extends MeshNode {
         shape.closePath();
         return new THREE.ExtrudeGeometry(shape, {
             steps: 1,
-            depth: this.stage.boxRadius / 6,
+            depth: extrusionDepth,
             bevelEnabled: true,
-            bevelThickness: 0.05,
+            bevelThickness,
             bevelSize: 0.07,
             bevelOffset: 0,
             bevelSegments: 5
@@ -32,10 +38,12 @@ export class Cylinder extends MeshNode {
     }
 
     modelGen(): (height: number, size: number) => THREE.Mesh {
-        return (_height, size) => {
-            const geometry = this.beveledCylinder(size);
+        return (height, size) => {
+            const geometry = this.beveledCylinder(height, size);
             geometry.rotateX(Math.PI / 2);
-            geometry.translate(0, 0.19, 0);
+            // MeshNode positions shapes from their base using height / 2, so
+            // the local geometry must be centred around the mesh origin.
+            geometry.center();
             return new THREE.Mesh(geometry, this.material);
         };
     }
