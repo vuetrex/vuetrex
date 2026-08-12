@@ -4,7 +4,7 @@ import { Segment, ConnectorPath } from '@/lib-components/three/connectors/path.j
 import { ConnectorRenderer } from '@/lib-components/three/connectors/types.js';
 import * as THREE from 'three';
 
-const options: ParticleOptions = {
+const createParticleOptions = (): ParticleOptions => ({
     position: new THREE.Vector3(-2.5, 0.2, -0.5),
     positionRandomness: 1.05,
     velocity: new THREE.Vector3(0.1, 0, 0),
@@ -13,57 +13,77 @@ const options: ParticleOptions = {
     lifetime: 50,
     size: 0.8,
     sizeRandomness: 0.3
-};
+});
 
-const spawnerOptions = {
-    spawnRate: 10,
-    horizontalSpeed: 0.2,
-    verticalSpeed: 0.2,
-    timeScale: 1.0,
-    maxParticles: 12500
-};
+const MAX_PARTICLES = 22500;
 
-const LINE_HEIGHT = -0.05;
+const BASE_PARTICLE_SIZE = 0.3;
+const BASE_SIZE_RANDOMNESS = 0.3;
+
+export function scaledParticleMetrics(scale: number, baseSpread: number) {
+    const normalizedScale = scale > 0 && Number.isFinite(scale) ? scale : 1
+    return {
+        spread: baseSpread * normalizedScale,
+        size: BASE_PARTICLE_SIZE * normalizedScale,
+        sizeRandomness: BASE_SIZE_RANDOMNESS * normalizedScale,
+        velocityScale: normalizedScale,
+    }
+}
 
 export class ParticleRenderer implements ConnectorRenderer {
     private particleSystem: VuetrexParticles;
+    private readonly options = createParticleOptions();
+    private readonly spawnRate: number;
 
     constructor(private stage: VuetrexStage) {
         this.particleSystem = new VuetrexParticles({
             blending: stage.settings.particleBlending,
-            maxParticles: spawnerOptions.maxParticles,
+            maxParticles: MAX_PARTICLES,
             color: stage.settings.particleColor || 0xa0ffff
         });
         this.stage.scene.add(this.particleSystem);
-        options.particleSpread = stage.settings.particleSpread || 0.035;
-        spawnerOptions.spawnRate = stage.settings.particleVolume || 50;
+        this.options.particleSpread = stage.settings.particleSpread || 0.035;
+        this.spawnRate = stage.settings.particleVolume || 10;
     }
 
     update(segments: Segment[], timer: number, tick: number): void {
-        if (segments.length === 0) return;
+        // Keep advancing the shared GPU clock after the last connector is
+        // removed so already-spawned particles finish their lifetime instead
+        // of freezing indefinitely in the scene.
+        if (segments.length === 0) {
+            this.particleSystem.update(tick);
+            return;
+        }
 
         // Create a temporary ConnectorPath to use its sample method
         // In a real refactor, we might want to move sample logic to a shared utility
         const path = new ConnectorPath();
-        (path as any).segments = segments;
-        (path as any).updateLen();
+        path.setSegments(segments);
         const totalLen = path.totaLength();
+        const options = this.options;
 
-        for (let idx = 0; idx < spawnerOptions.spawnRate; idx++) {
+        for (let idx = 0; idx < this.spawnRate; idx++) {
             const rnd = this.particleSystem.random();
             const xys = path.sample(rnd * totalLen);
             const s = xys.s;
             if (s === null) continue;
+            const metrics = scaledParticleMetrics(s.scale, this.stage.settings.particleSpread || 0.035)
 
-            let start = s.s;
-            let end = s.t;
-            options.minMax.set(Math.min(start, end), Math.max(start, end));
-            const len = options.minMax.y - options.minMax.x || 1;
-            options.position.set(xys.x, LINE_HEIGHT, xys.y);
-            if (s.horizontal)
-                options.velocity.set((end - start) / len / 50.0, 0, 0);
-            else
-                options.velocity.set(0, 0, (end - start) / len / 50.0);
+            const dx = s.endX - s.startX;
+            const dz = s.endZ - s.startZ;
+            const len = s.len || 1;
+            options.particleSpread = metrics.spread;
+            options.size = metrics.size;
+            options.sizeRandomness = metrics.sizeRandomness;
+            const clampStart = Math.abs(dz) < 0.0001 ? s.startX : s.startZ;
+            const clampEnd = Math.abs(dz) < 0.0001 ? s.endX : s.endZ;
+            options.minMax.set(Math.min(clampStart, clampEnd), Math.max(clampStart, clampEnd));
+            options.position.set(xys.x, s.elevation, xys.y);
+            options.velocity.set(
+                dx / len / 50.0 * metrics.velocityScale,
+                0,
+                dz / len / 50.0 * metrics.velocityScale,
+            );
             this.particleSystem.spawnParticle(options);
         }
         this.particleSystem.update(tick);

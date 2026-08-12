@@ -1,13 +1,244 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <link rel="icon" href="/favicon.ico">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>Vuetrex Demo and Examples</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10150f" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>Vuetrex Development Hub</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --gold: #959349;
+        --olive: #6e6c34;
+        --leaf: #a4a96a;
+        --teal: #4f8c83;
+        --forest: #1f2a27;
+        --ink: #10150f;
+        --paper: #d9d7c7;
+        --muted: #a8a897;
+        color: var(--paper);
+        background: var(--ink);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(circle at 70% 8%, rgb(149 147 73 / 25%), transparent 34rem),
+          radial-gradient(circle at 8% 90%, rgb(79 140 131 / 10%), transparent 26rem),
+          linear-gradient(145deg, #0b100b 0%, #171b10 48%, #101510 100%);
+      }
+
+      main {
+        width: min(1080px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 72px 0 80px;
+      }
+
+      .eyebrow {
+        margin: 0 0 14px;
+        color: var(--gold);
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 760px;
+        margin: 0;
+        font-size: clamp(2.4rem, 7vw, 5.5rem);
+        line-height: 0.95;
+        letter-spacing: -0.06em;
+      }
+
+      .brand {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 9px;
+        margin-bottom: 54px;
+      }
+
+      .wordmark {
+        color: var(--paper);
+        font-size: 1.65rem;
+        font-weight: 650;
+        letter-spacing: -0.045em;
+      }
+
+      .brand-mark {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        width: 150px;
+      }
+
+      .brand-line {
+        width: 112px;
+        height: 6px;
+        background: linear-gradient(90deg, var(--teal), var(--gold));
+        border-radius: 1px;
+      }
+
+      .brand-node {
+        width: 6px;
+        height: 6px;
+        background: var(--teal);
+        border-radius: 1px;
+        box-shadow: 12px 0 var(--teal), 24px 0 var(--teal);
+      }
+
+      .intro {
+        max-width: 680px;
+        margin: 24px 0 48px;
+        color: var(--muted);
+        font-size: 1.05rem;
+        line-height: 1.65;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        position: relative;
+        min-height: 240px;
+        padding: 26px;
+        overflow: hidden;
+        color: inherit;
+        text-decoration: none;
+        background: linear-gradient(145deg, rgb(24 31 22 / 90%), rgb(12 18 14 / 86%));
+        border: 1px solid rgb(149 147 73 / 38%);
+        border-radius: 18px;
+        transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+      }
+
+      .card::after {
+        position: absolute;
+        right: 24px;
+        bottom: 20px;
+        color: var(--leaf);
+        font-size: 1.4rem;
+        content: "→";
+      }
+
+      .card:hover,
+      .card:focus-visible {
+        outline: none;
+        border-color: var(--teal);
+        background: linear-gradient(145deg, rgb(31 42 39 / 96%), rgb(14 22 17 / 94%));
+        box-shadow: 0 18px 48px rgb(4 8 4 / 34%);
+        transform: translateY(-3px);
+      }
+
+      .tag {
+        display: inline-block;
+        margin-bottom: 54px;
+        color: var(--teal);
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .card h2 {
+        margin: 0 0 10px;
+        font-size: 1.3rem;
+      }
+
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .experiments {
+        margin-top: 42px;
+        padding-top: 24px;
+        border-top: 1px solid rgb(149 147 73 / 28%);
+      }
+
+      .experiments h2 {
+        margin: 0 0 14px;
+        font-size: 0.82rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 18px;
+      }
+
+      .links a {
+        color: var(--muted);
+        text-underline-offset: 4px;
+      }
+
+      .links a:hover,
+      .links a:focus-visible { color: var(--leaf); }
+
+      @media (max-width: 760px) {
+        main { padding-top: 48px; }
+        .grid { grid-template-columns: 1fr; }
+        .card { min-height: 210px; }
+        .tag { margin-bottom: 34px; }
+      }
+    </style>
   </head>
-<body>
-  <div id="app"></div>
-  <script type="module" src="demo/serve.ts"></script>
-</body>
+  <body>
+    <main>
+      <div class="brand" aria-label="Vuetrex">
+        <span class="wordmark">Vuetrex</span>
+        <span class="brand-mark" aria-hidden="true">
+          <span class="brand-line"></span>
+          <span class="brand-node"></span>
+        </span>
+      </div>
+      <p class="eyebrow">VueJS to 3 Dimensions</p>
+      <h1>Reactive diagrams, with depth.</h1>
+      <p class="intro">
+        Explore working scenes or open the documentation. Every example shares the local Vuetrex source while keeping
+        its own focused entry point.
+      </p>
+
+      <section class="grid" aria-label="Vuetrex demos and documentation">
+        <a class="card" href="/demo/">
+          <span class="tag">Component gallery</span>
+          <h2>Original demo</h2>
+          <p>Explore layouts, shapes, animation, interaction, and the existing Vuetrex examples.</p>
+        </a>
+
+        <a class="card" href="/demo-k8s/">
+          <span class="tag">Architecture scene</span>
+          <h2>Kubernetes demo</h2>
+          <p>Open the reactive Kubernetes platform visualization and its connector-heavy topology.</p>
+        </a>
+
+        <a class="card" href="/docs/">
+          <span class="tag">VitePress</span>
+          <h2>Documentation</h2>
+          <p>Read the guide, API reference, architecture notes, and current design proposals.</p>
+        </a>
+      </section>
+
+      <section class="experiments" aria-labelledby="experiments-title">
+        <h2 id="experiments-title">Rendering experiments</h2>
+        <nav class="links" aria-label="Rendering experiments">
+          <a href="/concepts/fbo/">Frame buffer objects</a>
+          <a href="/concepts/r3f/">React Three Fiber</a>
+          <a href="/concepts/particles/particles.html">Particles</a>
+          <a href="/concepts/graphs/dag.html">Directed graphs</a>
+        </nav>
+      </section>
+    </main>
+  </body>
 </html>

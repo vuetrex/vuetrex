@@ -10,6 +10,16 @@ const __dirname = path.dirname(__filename);
 // https://vitejs.dev/config/
 export default defineConfig({
     root: __dirname,
+    server: {
+        port: 5173,
+        strictPort: true,
+        proxy: {
+            '/docs': {
+                target: 'http://127.0.0.1:5174',
+                ws: true,
+            }
+        }
+    },
     resolve: {
         alias: {
             '@': path.resolve(__dirname, 'src/')
@@ -45,7 +55,7 @@ export default defineConfig({
         template: {
             compilerOptions: {
                 isCustomElement: (tag:string) =>
-                    /^(group|layer|row|stack|ring|box|cylinder|wedge|connector)$/.test(tag)
+                    /^(group|layer|row|stack|ring|panel|box|cylinder|wedge|connector)$/.test(tag)
             }
         }}),
         glsl()

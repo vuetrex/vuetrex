@@ -38,6 +38,7 @@ const mockStage = {
     removeObject: () => {},
     getScene: () => mockScene,
     connect: () => {},
+    unregisterConnection: () => {},
     reconcileConnections: () => {},
     connectors: {
         update: () => {},

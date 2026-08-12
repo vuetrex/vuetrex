@@ -39,8 +39,17 @@ export abstract class Base {
 
     isRenderableNode(): boolean { return false; }
 
+    /**
+     * Whether this child reserves space in its parent's layout.
+     *
+     * Most renderable nodes do. Reactive scene records such as connectors still
+     * need renderer lifecycle hooks, but must not change sibling measurement or
+     * placement, so they override this independently from isRenderableNode().
+     */
+    participatesInLayout(): boolean { return this.isRenderableNode(); }
+
     readonly elements = computed(() => {
-        return this.children.value.filter(c => c.isRenderableNode())
+        return this.children.value.filter(c => c.participatesInLayout())
     })
 
     public myIdx: ComputedRef<number> = computed(() => {

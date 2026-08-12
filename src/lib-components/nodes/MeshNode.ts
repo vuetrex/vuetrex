@@ -6,6 +6,8 @@ import { Mesh, MeshStandardMaterial, Color, Vector3 } from 'three';
 import { Text } from 'troika-three-text';
 import gsap from 'gsap';
 
+let meshConnectionRegistrationSequence = 0
+
 export interface MeshState {
     text: string;
     size: number;
@@ -111,6 +113,7 @@ export abstract class MeshNode extends Node {
     private baseProps: VxMaterialProps = {};
     private isHovered = false;
     private registeredConnection?: string;
+    private readonly connectionRegistrationId = `mesh:${++meshConnectionRegistrationSequence}`;
 
     protected layoutContext: ComputedRef<LayoutContext> = computed(() => ({
         myIdx: this.myIdx.value,
@@ -221,10 +224,11 @@ export abstract class MeshNode extends Node {
             if (connection) {
                 const key = `${this.name}->${connection}`;
                 if (key !== this.registeredConnection) {
-                    this.stage.connect(this.name, connection);
+                    this.stage.connect(this.name, connection, undefined, undefined, this.connectionRegistrationId);
                     this.registeredConnection = key;
                 }
             } else {
+                this.stage.unregisterConnection(this.connectionRegistrationId);
                 this.registeredConnection = undefined;
             }
 
@@ -412,6 +416,7 @@ export abstract class MeshNode extends Node {
             this.labelStopHandle = undefined;
         }
         this.clearMesh();
+        this.stage.unregisterConnection(this.connectionRegistrationId);
         this.registeredConnection = undefined;
         this.state.connection = null;
     }

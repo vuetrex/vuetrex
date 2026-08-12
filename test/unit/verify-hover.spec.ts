@@ -45,6 +45,7 @@ function makeMockStage() {
         getScene: vi.fn(() => scene),
         getById: vi.fn(),
         connect: vi.fn(),
+        unregisterConnection: vi.fn(),
         reconcileConnections: vi.fn(),
         connectors: {
             update: vi.fn(),

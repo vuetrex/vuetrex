@@ -6,7 +6,7 @@
         <section>
           <label>
             Boxes in the first row ( {{items.length}} ):
-            <input type="range" min="0" max="5" :value="items.length" @input="e => updateItems(e.target.value)">
+            <input type="range" min="0" max="5" :value="items.length" @input="e => updateItems((e.target as any).value)">
           </label>
           <label><input type="checkbox" id="extraRow" v-model="extraRow"/> hidden row</label>
           <p/>

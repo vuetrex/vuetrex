@@ -1,26 +1,16 @@
-float scaleLinear( float value, vec2 valueDomain ) {
-    return ( value - valueDomain.x ) / ( valueDomain.y - valueDomain.x );
-}
-
-float scaleLinear( float value, vec2 valueDomain, vec2 valueRange ) {
-    return mix( valueRange.x, valueRange.y, scaleLinear( value, valueDomain ) );
-}
-
 varying vec4 vColor;
 varying float lifeLeft;
 
 void main() {
-    float brightness = scaleLinear( lifeLeft, vec2( 1.0, 0.85 ), vec2( 0.0, 2.0 ) );
-    brightness = max(1.0, brightness);
+    vec2 centeredUv = gl_PointCoord - vec2(0.5);
+    float radius = length(centeredUv);
+    if (radius > 0.5) discard;
 
-    vec2 cUv = vec2(gl_PointCoord.x, gl_PointCoord.y) - .5;
+    float core = 1.0 - smoothstep(0.0, 0.16, radius);
+    float glow = 1.0 - smoothstep(0.08, 0.3, radius);
+    float fade = smoothstep(0.0, 0.12, lifeLeft) * min(1.0, lifeLeft * 6.0);
+    float alpha = (core * 0.8 + glow * 0.34) * fade;
+    vec3 color = vColor.rgb * (0.72 + core * 1.35);
 
-    vec3 origCol  = vec3(vColor.r, vColor.g, vColor.b);
-    vec4 col = vec4(0.0015 / length(cUv));
-    col.rgb = min(vec3(0.02), col.rgb);
-    col.rgb *= origCol * 20.0;
-    col.a = 0.003 / length(cUv);
-
-    col.a = smoothstep(0., 0.99, col.a * brightness);
-    gl_FragColor = vec4(col.rgb, col.a);
+    gl_FragColor = vec4(color, alpha);
 }

@@ -2,6 +2,8 @@ import { Node } from '@/lib-components/nodes/Node.js'
 import { VuetrexStage } from '@/lib-components/three/stage.js'
 import {watchEffect, WatchStopHandle, reactive} from 'vue'
 
+let connectorRegistrationSequence = 0
+
 export class ConnectorNode extends Node {
     public readonly type: string = 'Connector'
 
@@ -14,7 +16,7 @@ export class ConnectorNode extends Node {
     })
 
     private stopHandle?: WatchStopHandle
-    private registeredConnection?: string
+    private readonly registrationId = `connector:${++connectorRegistrationSequence}`
 
     constructor(stage: VuetrexStage) {
         super(stage)
@@ -24,19 +26,19 @@ export class ConnectorNode extends Node {
         return true
     }
 
+    participatesInLayout(): boolean {
+        return false
+    }
+
     syncWithThree() {
         if (this.stopHandle) return
         this.stopHandle = watchEffect(() => {
             const { from, to, layout, type } = this.state
             if (from && to) {
-                const key = `${from}->${to}:${layout}:${type}`
-                if (key !== this.registeredConnection) {
-                    this.stage.connect(from, to, layout, type)
-                    this.registeredConnection = key
-                }
+                this.stage.connect(from, to, layout, type, this.registrationId)
                 this.stage.reconcileConnections()
             } else {
-                this.registeredConnection = undefined
+                this.stage.unregisterConnection(this.registrationId)
             }
         }, { flush: 'post' })
     }
@@ -46,11 +48,6 @@ export class ConnectorNode extends Node {
             this.stopHandle()
             this.stopHandle = undefined
         }
-        const { from, to } = this.state
-        this.registeredConnection = undefined
-
-        if (from && to) {
-            this.stage.disconnect(this.stage.getById(from), this.stage.getById(to));
-        }
+        this.stage.unregisterConnection(this.registrationId)
     }
 }

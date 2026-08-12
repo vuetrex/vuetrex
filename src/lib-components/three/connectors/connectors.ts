@@ -1,20 +1,61 @@
 import {VuetrexStage} from '../stage.js';
-import {Segment, ConnectorPath, OrthogonalStrategy, StraightStrategy} from '@/lib-components/three/connectors/path.js';
+import {Segment, ConnectorPath, DirectStrategy, OrthogonalStrategy} from '@/lib-components/three/connectors/path.js';
 import {Element3d} from '@/lib-components/three/element3d.js';
 import {ConnectorRenderer, ConnectorStrategy} from '@/lib-components/three/connectors/types.js';
 import {ParticleRenderer} from '@/lib-components/three/connectors/ParticleRenderer.js';
 import {LineRenderer} from '@/lib-components/three/connectors/LineRenderer.js';
+import * as THREE from 'three';
 
-type ConnectionRecord = [string, string, string, string]
+export interface ConnectionRecord {
+    id: string
+    from: string
+    to: string
+    layout: string
+    type: string
+}
+
+interface ActiveConnection {
+    record: ConnectionRecord
+    fromEl: Element3d
+    toEl: Element3d
+}
+
+let imperativeConnectionSequence = 0
+
 /**
- * The Connectors class is responsible for managing connections between elements in a 3D scene,
- * represented by segments and enhanced with various renderers.
+ * Returns the world scale of the closest Object3D that encloses both endpoints.
+ * Individual mesh/hover scale is deliberately excluded: connector thickness and
+ * particle behavior follow the diagram container, not transient endpoint effects.
+ */
+export function enclosingConnectionScale(el1: Element3d, el2: Element3d): number {
+    const fromAncestors = new Set<THREE.Object3D>()
+    let current = el1.mesh?.parent ?? null
+    while (current) {
+        fromAncestors.add(current)
+        current = current.parent
+    }
+
+    current = el2.mesh?.parent ?? null
+    while (current && !fromAncestors.has(current)) current = current.parent
+    if (!current) return 1
+
+    current.updateWorldMatrix(true, false)
+    const worldScale = current.getWorldScale(new THREE.Vector3())
+    const volumeScale = Math.abs(worldScale.x * worldScale.y * worldScale.z)
+    return Number.isFinite(volumeScale) && volumeScale > 0 ? Math.cbrt(volumeScale) : 1
+}
+
+/**
+ * Connection registry and renderer coordinator.
+ *
+ * Registrations are keyed independently from endpoint pairs, so reactive updates
+ * replace their own record and parallel connections remain distinct. Segments
+ * retain that registration id for targeted rebuild/removal.
  */
 export class Connectors {
-
     stage: VuetrexStage;
-    private connections: Array<ConnectionRecord> = [];
-    private activeConnections = new Map<string, ConnectionRecord>()
+    private connections = new Map<string, ConnectionRecord>()
+    private activeConnections = new Map<string, ActiveConnection>()
 
     private segments: ConnectorPath = new ConnectorPath();
     private renderers: Map<string, ConnectorRenderer> = new Map();
@@ -25,108 +66,144 @@ export class Connectors {
     }
 
     mount() {
-        // Default renderers
         this.renderers.set('particles', new ParticleRenderer(this.stage));
         this.renderers.set('line', new LineRenderer(this.stage));
 
-        // Default strategies
         this.strategies.set('orthogonal', new OrthogonalStrategy());
-        this.strategies.set('straight', new StraightStrategy());
+        const directStrategy = new DirectStrategy()
+        this.strategies.set('direct', directStrategy);
+        this.strategies.set('straight', directStrategy); // backwards-compatible alias
 
         this.stage.registerAnimation(this.animate());
     }
 
-    register(el1: string, el2: string, layout: string = 'orthogonal', type: string = 'particles') {
-        this.connections.push([el1, el2, layout, type]);
+    register(
+        from: string,
+        to: string,
+        layout: string = 'orthogonal',
+        type: string = 'particles',
+        registrationId?: string,
+    ): string {
+        const id = registrationId ?? `imperative:${++imperativeConnectionSequence}`
+        this.connections.set(id, { id, from, to, layout, type })
+        return id
     }
 
-    connect(el1: Element3d, el2: Element3d, layout: string = 'orthogonal', type: string = 'particles') {
-       const strategy = this.strategies.get(layout) || this.strategies.get('orthogonal')!;
-       this.segments.setStrategy(strategy);
-       this.removePair(el1, el2);
-       this.segments.connect(el1, el2, type);
+    unregister(registrationId: string): void {
+        this.connections.delete(registrationId)
+        this.activeConnections.delete(registrationId)
+        this.segments.removeConnection(registrationId)
+    }
+
+    unregisterPair(el1: Element3d, el2: Element3d): void {
+        const fromName = el1.node.name
+        const toName = el2.node.name
+        for (const [id, record] of [...this.connections]) {
+            const sameDirection = record.from === fromName && record.to === toName
+            const reverseDirection = record.from === toName && record.to === fromName
+            if (sameDirection || reverseDirection) this.unregister(id)
+        }
+    }
+
+    private rebuild(record: ConnectionRecord, fromEl: Element3d, toEl: Element3d): void {
+        const strategy = this.strategies.get(record.layout) || this.strategies.get('orthogonal')!;
+        this.segments.setStrategy(strategy);
+        this.segments.removeConnection(record.id)
+        this.segments.connect(
+            fromEl,
+            toEl,
+            record.type,
+            record.id,
+            enclosingConnectionScale(fromEl, toEl),
+        );
+        this.activeConnections.set(record.id, { record, fromEl, toEl })
     }
 
     reconcileConnections() {
-        const next = new Map<string, ConnectionRecord>()
-
-        for (const record of this.connections) {
-          const [a, b, layout, type] = record
-          const fromEl = this.stage.getById(a)
-          const toEl = this.stage.getById(b)
-
-          if (!fromEl || !toEl) continue
-
-          const key = `${a}->${b}`
-          next.set(key, record)
-
-          this.connect(fromEl, toEl, layout, type)
+        for (const activeId of [...this.activeConnections.keys()]) {
+            if (!this.connections.has(activeId)) {
+                this.activeConnections.delete(activeId)
+                this.segments.removeConnection(activeId)
+            }
         }
 
-        for (const key of this.activeConnections.keys()) {
-          if (!next.has(key)) {
-            const [from] = key.split('->')
-            const fromEl = this.stage.getById(from)
-            if (fromEl) this.remove(fromEl)
-          }
+        for (const record of this.connections.values()) {
+            const fromEl = this.stage.getById(record.from)
+            const toEl = this.stage.getById(record.to)
+
+            if (!fromEl || !toEl) {
+                this.activeConnections.delete(record.id)
+                this.segments.removeConnection(record.id)
+                continue
+            }
+
+            this.rebuild(record, fromEl, toEl)
         }
 
-        this.activeConnections = next
         this.segments.updateLen()
     }
 
-    update(el: Element3d) {
-        const removed = this.remove(el);
-        const processed : string[] = [];
-
-        for (let s of removed) {
-            const id = s.sEl.mesh?.name + "~"+s.tEl.mesh?.name
-            if (processed.indexOf(id) >=0 ) continue;
-            processed.push(id);
-            // find original connection record to get layout
-            const record = this.connections.find(c => c[0] === s.sEl.mesh?.name?.substring(3) && c[1] === s.tEl.mesh?.name?.substring(3));
-            const layout = record ? record[2] : 'orthogonal';
-            const type = s.type || 'particles';
-            this.connect(s.sEl, s.tEl, layout, type);
+    private isEndpointWithin(endpoint: Element3d, container: Element3d): boolean {
+        if (endpoint === container) return true
+        const containerObject = container.mesh
+        let current = endpoint.mesh?.parent ?? null
+        while (current) {
+            if (current === containerObject) return true
+            current = current.parent
         }
+        return false
     }
 
-    removePair(el1: Element3d, el2: Element3d) {
-        this.segments.removePair(el1, el2);
+    /** Rebuild every connection affected by an endpoint or enclosing group change. */
+    update(el: Element3d) {
+        for (const active of [...this.activeConnections.values()]) {
+            if (this.isEndpointWithin(active.fromEl, el) || this.isEndpointWithin(active.toEl, el)) {
+                this.rebuild(active.record, active.fromEl, active.toEl)
+            }
+        }
+        this.segments.updateLen()
     }
 
+    /** Remove live segments for a disappearing element while retaining declarations. */
     remove(el: Element3d): Segment[] {
-      return this.segments.remove(el);
+        const removed: Segment[] = []
+        for (const [id, active] of [...this.activeConnections]) {
+            if (this.isEndpointWithin(active.fromEl, el) || this.isEndpointWithin(active.toEl, el)) {
+                removed.push(...this.segments.removeConnection(id))
+                this.activeConnections.delete(id)
+            }
+        }
+        return removed
+    }
+
+    get registrationCount(): number { return this.connections.size }
+    get activeConnectionCount(): number { return this.activeConnections.size }
+    get segmentCount(): number { return this.segments.size() }
+
+    getSegments(): readonly Segment[] {
+        return this.segments.values()
     }
 
     clear() {
         this.renderers.forEach(r => r.dispose());
         this.renderers.clear();
+        this.connections.clear()
+        this.activeConnections.clear()
         this.segments.clear();
     }
 
-    /**
-     * Animates all connector renderers.
-     */
     private animate(): (timer: number, tick: number) => void {
         return (timer, tick) => {
-            if (this.segments.size() === 0) return;
-
             const segmentsByRenderer = new Map<string, Segment[]>();
-            for (let i = 0; i < this.segments.size(); i++) {
-                const s = this.segments.getSegment(i);
-                const type = s.type || 'particles';
-                if (!segmentsByRenderer.has(type)) {
-                    segmentsByRenderer.set(type, []);
-                }
-                segmentsByRenderer.get(type)!.push(s);
+            for (const segment of this.segments.values()) {
+                const type = segment.type || 'particles';
+                if (!segmentsByRenderer.has(type)) segmentsByRenderer.set(type, []);
+                segmentsByRenderer.get(type)!.push(segment);
             }
 
             this.renderers.forEach((renderer, name) => {
-                const segments = segmentsByRenderer.get(name) || [];
-                renderer.update(segments, timer, tick);
+                renderer.update(segmentsByRenderer.get(name) || [], timer, tick);
             });
         }
     }
-
 }

@@ -17,6 +17,11 @@
         <row>
           <box name="d1" size="4"/>
         </row>
+        <panel name="panel-1" size="2" depth="1" :lines="['Panel']" label-region="south">
+          <stack>
+            <box size="0.4" height="0.15"/>
+          </stack>
+        </panel>
       </layer>
     </Vuetrex>
   </div>

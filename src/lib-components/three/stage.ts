@@ -337,8 +337,12 @@ export class VuetrexStage extends Scene implements VxStage {
         this.connectors.update(el);
     }
 
-    connect(el1: string, el2: string, layout?: string, type?: string) {
-        this.connectors.register(el1, el2, layout, type);
+    connect(el1: string, el2: string, layout?: string, type?: string, registrationId?: string): string {
+        return this.connectors.register(el1, el2, layout, type, registrationId);
+    }
+
+    unregisterConnection(registrationId: string) {
+        this.connectors.unregister(registrationId);
     }
 
     public reconcileConnections() {
@@ -346,8 +350,7 @@ export class VuetrexStage extends Scene implements VxStage {
     }
 
     disconnect(el1: Element3d, el2: Element3d) {
-        el1 && this.connectors.remove(el1);
-        el2 && this.connectors.remove(el2);
+        if (el1 && el2) this.connectors.unregisterPair(el1, el2);
     }
 
     animateTo(id: string, props: VxAnimProps, opts: VxAnimOptions = {}) {

@@ -8,4 +8,5 @@ export type { ClassComponent, FunctionalComponent, ElementRegistry } from '@/lib
 
 export { Node } from '@/lib-components/nodes/Node.js';
 export { Base } from '@/lib-components/nodes/Base.js';
+export { Panel } from '@/lib-components/nodes/Panel.js';
 export type { VuetrexStage } from '@/lib-components/three/stage.js';

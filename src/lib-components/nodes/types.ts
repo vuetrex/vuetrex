@@ -6,6 +6,7 @@ import {Row} from '@/lib-components/nodes/Row.js';
 import {Stack} from '@/lib-components/nodes/Stack.js';
 import {Ring} from '@/lib-components/nodes/Ring.js';
 import {ConnectorNode} from '@/lib-components/nodes/ConnectorNode.js';
+import {Panel} from '@/lib-components/nodes/Panel.js';
 
 import {Box} from '@/lib-components/nodes/shapes/Box.js';
 import {Cylinder} from '@/lib-components/nodes/shapes/Cylinder.js';
@@ -33,6 +34,7 @@ const builtins: ElementRegistry = {
     stack: Stack,
     ring: Ring,
     connector: ConnectorNode,
+    panel: Panel,
     //models
     box: Box,
     cylinder: Cylinder,

@@ -95,6 +95,34 @@ Alignment shifts a child inside its content-sized slot. Values are `start`, `cen
 
 `align` sets all three axes. `align-x`, `align-y`, and `align-z` override individual axes.
 
+## Panels
+
+`panel` is a visual rounded-box container that divides its top face between a label and child content. By default the
+label uses the south 40% and children are fitted into the north 60%.
+
+```vue
+<panel
+  name="api"
+  :size="1.6"
+  :depth="0.9"
+  :height="0.22"
+  :lines="['API service']"
+  label-region="south"
+  :label-share="0.4"
+  :material="{ color: 0x174f88 }"
+>
+  <stack :gap="0.025">
+    <box :size="0.4" :height="0.12" />
+    <box :size="0.4" :height="0.12" />
+    <box :size="0.4" :height="0.12" />
+  </stack>
+</panel>
+```
+
+Use `label-region="north"` to reverse the split. `label-share` is clamped to `0.1–0.9`; `content-padding` controls the
+inset inside the child region. `layout` accepts `grid`, `row`, `depth`, `stack`, or `ring`. `lines`, label font/color/
+alignment props, material, hover, events, names, nesting, and connector endpoints are reactive.
+
 ## Custom elements
 
 Use `registerElement()` before mounting to register a node globally:
@@ -122,7 +150,7 @@ For one Vuetrex instance, pass an element registry through its `elements` prop i
 <vuetrex>
   <box name="a" />
   <cylinder name="b" text="Round" connection="a" />
-  <connector from="a" to="b" type="line" layout="straight" />
+  <connector from="a" to="b" type="line" layout="direct" />
 </vuetrex>
 ```
 

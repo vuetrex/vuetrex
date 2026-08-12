@@ -9,7 +9,9 @@
   "sideEffects": false,
   "packageManager": "pnpm@11.17.0",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently --kill-others --names demos,docs --prefix-colors cyan,magenta \"pnpm run dev:demos\" \"pnpm run dev:docs\"",
+    "dev:demos": "vite --host 127.0.0.1 --port 5173 --strictPort",
+    "dev:docs": "vitepress dev docs --host 127.0.0.1 --port 5174 --strictPort --base /docs/",
     "preinstall": "npx only-allow pnpm",
     "clean": "rm -rf ./dist && rm -rf ./dist_types && rm -rf ./coverage",
     "build": "vue-tsc --declaration --emitDeclarationOnly && vite build",
@@ -20,12 +22,13 @@
     "test:coverage": "vitest run --coverage",
     "test:esm-project": "node test/esm-module/testNewProject.js",
     "tsc": "tsc",
-    "docs:dev": "vite build && vitepress dev docs",
+    "docs:dev": "pnpm run dev:docs",
     "docs:build": "vitepress build docs",
     "docs:serve": "vitepress serve docs"
   },
   "files": [
-    "dist", "dist_types"
+    "dist",
+    "dist_types"
   ],
   "exports": {
     ".": {
@@ -62,6 +65,7 @@
     "@vitest/coverage-v8": "^4.1.10",
     "@vitest/ui": "^4.1.10",
     "@vue/test-utils": "^2.4.11",
+    "concurrently": "^10.0.4",
     "happy-dom": "^20.11.1",
     "typescript": "^5.9.3",
     "vite": "^8.1.5",

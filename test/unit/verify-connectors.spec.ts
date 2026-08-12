@@ -1,0 +1,324 @@
+import { describe, it, expect, vi } from 'vitest'
+import { nextTick } from 'vue'
+import { flushPromises } from '@vue/test-utils'
+import * as THREE from 'three'
+import { ConnectorNode } from '@/lib-components/nodes/ConnectorNode.js'
+import { Row } from '@/lib-components/nodes/Row.js'
+import { Box } from '@/lib-components/nodes/shapes/Box.js'
+import { Node } from '@/lib-components/nodes/Node.js'
+import { Connectors, enclosingConnectionScale } from '@/lib-components/three/connectors/connectors.js'
+import { LineRenderer } from '@/lib-components/three/connectors/LineRenderer.js'
+import { scaledParticleMetrics } from '@/lib-components/three/connectors/ParticleRenderer.js'
+import { ConnectorPath, DirectStrategy, OrthogonalStrategy, Segment } from '@/lib-components/three/connectors/path.js'
+import type { Element3d } from '@/lib-components/three/element3d.js'
+import type { VuetrexStage } from '@/lib-components/three/stage.js'
+
+class EndpointNode extends Node {
+    constructor(stage: VuetrexStage) { super(stage) }
+}
+
+function makeRegistryHarness() {
+    const scene = new THREE.Scene()
+    const elements = new Map<string, Element3d>()
+    const stage = {
+        scene,
+        settings: {},
+        boxDistance: 1,
+        registerAnimation: vi.fn(),
+        getById: (id: string) => elements.get(id),
+    } as unknown as VuetrexStage
+    const connectors = new Connectors(stage)
+    connectors.mount()
+
+    const addEndpoint = (id: string, parent: THREE.Object3D = scene): Element3d => {
+        const node = new EndpointNode(stage)
+        node.name = id
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1))
+        mesh.name = `el-${id}`
+        parent.add(mesh)
+        node.element.mesh = mesh
+        elements.set(id, node.element)
+        return node.element
+    }
+
+    return { scene, elements, stage, connectors, addEndpoint }
+}
+
+describe('connector layout participation', () => {
+    it('synchronizes as a renderable record without reserving layout space', async () => {
+        const scene = new THREE.Scene()
+        const stage = {
+            boxRadius: 1,
+            boxDistance: 0.5,
+            gap: 0.5,
+            createElementMaterial: () => new THREE.MeshStandardMaterial(),
+            getScene: () => scene,
+            renderMesh: vi.fn(),
+            removeObject: vi.fn(),
+            connect: vi.fn(),
+            unregisterConnection: vi.fn(),
+            reconcileConnections: vi.fn(),
+            connectors: { update: vi.fn(), remove: vi.fn(() => []) },
+        } as unknown as VuetrexStage
+        const row = new Row(stage)
+        const left = new Box(stage)
+        const connector = new ConnectorNode(stage)
+        const right = new Box(stage)
+
+        row.appendChild(left)
+        row.appendChild(connector)
+        row.appendChild(right)
+
+        expect(connector.isRenderableNode()).toBe(true)
+        expect(connector.participatesInLayout()).toBe(false)
+        expect(row.elements.value).toEqual([left, right])
+        expect(left.myIdx.value).toBe(0)
+        expect(connector.myIdx.value).toBe(-1)
+        expect(right.myIdx.value).toBe(1)
+        expect(row.measuredSize.value.x).toBeCloseTo(2.5, 6)
+        await flushPromises()
+    })
+})
+
+describe('ConnectorNode registration lifecycle', () => {
+    it('updates one stable registration and removes it on unmount', async () => {
+        const stage = {
+            connect: vi.fn(),
+            unregisterConnection: vi.fn(),
+            reconcileConnections: vi.fn(),
+        } as unknown as VuetrexStage
+        const connector = new ConnectorNode(stage)
+        connector.state.from = 'a'
+        connector.state.to = 'b'
+        connector.state.layout = 'straight'
+        connector.state.type = 'line'
+        connector.syncWithThree()
+        await flushPromises()
+
+        expect(stage.connect).toHaveBeenCalledTimes(1)
+        const registrationId = vi.mocked(stage.connect).mock.calls[0][4]
+        expect(registrationId).toMatch(/^connector:/)
+
+        connector.state.to = 'c'
+        await nextTick()
+        await flushPromises()
+        expect(stage.connect).toHaveBeenCalledTimes(2)
+        expect(vi.mocked(stage.connect).mock.calls[1][4]).toBe(registrationId)
+
+        connector.onRemoved()
+        expect(stage.unregisterConnection).toHaveBeenLastCalledWith(registrationId)
+    })
+
+    it('gives MeshNode shorthand connections the same update/removal safety', async () => {
+        const scene = new THREE.Scene()
+        const stage = {
+            boxRadius: 1,
+            boxDistance: 0.5,
+            gap: 0.5,
+            createElementMaterial: () => new THREE.MeshStandardMaterial(),
+            getScene: () => scene,
+            renderMesh: vi.fn(),
+            removeObject: vi.fn(),
+            connect: vi.fn(),
+            unregisterConnection: vi.fn(),
+            reconcileConnections: vi.fn(),
+            connectors: { update: vi.fn(), remove: vi.fn(() => []) },
+        } as unknown as VuetrexStage
+        const row = new Row(stage)
+        const box = new Box(stage)
+        box.name = 'source'
+        box.setStateValue('connection', 'first-target')
+        row.appendChild(box)
+        await flushPromises()
+
+        expect(stage.connect).toHaveBeenCalledTimes(1)
+        const registrationId = vi.mocked(stage.connect).mock.calls[0][4]
+        expect(registrationId).toMatch(/^mesh:/)
+
+        box.setStateValue('connection', 'second-target')
+        await flushPromises()
+        expect(stage.connect).toHaveBeenCalledTimes(2)
+        expect(vi.mocked(stage.connect).mock.calls[1][4]).toBe(registrationId)
+
+        box.onRemoved()
+        expect(stage.unregisterConnection).toHaveBeenLastCalledWith(registrationId)
+    })
+})
+
+describe('keyed connector registry', () => {
+    it('renders and samples a straight connector across both world axes', () => {
+        const { scene, addEndpoint } = makeRegistryHarness()
+        const a = addEndpoint('a')
+        const b = addEndpoint('b')
+        a.mesh!.position.set(-2, 0, -1)
+        b.mesh!.position.set(2, 0, 2)
+        scene.updateMatrixWorld(true)
+
+        const path = new ConnectorPath()
+        path.setStrategy(new DirectStrategy())
+        path.connect(a, b, 'line', 'diagonal')
+        const segment = path.getSegment(0)
+        expect(segment.len).toBeCloseTo(5)
+        expect(path.sample(segment.len / 2)).toMatchObject({ x: 0, y: 0.5 })
+
+        const renderer = new LineRenderer({ scene } as unknown as VuetrexStage)
+        renderer.update([segment], 0, 0)
+        const mesh = ((renderer as any).group as THREE.Group).children[0] as THREE.Mesh
+        expect(mesh.position.x).toBeCloseTo(0)
+        expect(mesh.position.z).toBeCloseTo(0.5)
+        expect(mesh.rotation.y).not.toBe(0)
+        renderer.dispose()
+    })
+
+    it('keeps every bend of a three-segment orthogonal line route', () => {
+        const { scene, connectors, addEndpoint } = makeRegistryHarness()
+        const a = addEndpoint('a')
+        const b = addEndpoint('b')
+        a.mesh!.position.set(-2, 0, -2)
+        b.mesh!.position.set(2, 0, 2)
+        scene.updateMatrixWorld(true)
+
+        connectors.register('a', 'b', 'orthogonal', 'line', 'bent-line')
+        connectors.reconcileConnections()
+        const segments = [...connectors.getSegments()]
+        expect(segments).toHaveLength(3)
+        expect(segments.every(segment =>
+            segment.startX === segment.endX || segment.startZ === segment.endZ,
+        )).toBe(true)
+        expect(segments[0].endX).toBe(segments[1].startX)
+        expect(segments[0].endZ).toBe(segments[1].startZ)
+        expect(segments[1].endX).toBe(segments[2].startX)
+        expect(segments[1].endZ).toBe(segments[2].startZ)
+        expect(new Set(segments.map(segment => segment.elevation)).size).toBe(1)
+        expect(segments[0].elevation).toBeGreaterThan(0)
+
+        const renderer = new LineRenderer({ scene } as unknown as VuetrexStage)
+        renderer.update(segments, 0, 0)
+        expect(((renderer as any).group as THREE.Group).children).toHaveLength(3)
+        renderer.dispose()
+        connectors.clear()
+    })
+
+    it('keeps direct and orthogonal routing geometrically distinct', () => {
+        const { scene, addEndpoint } = makeRegistryHarness()
+        const a = addEndpoint('a')
+        const b = addEndpoint('b')
+        a.mesh!.position.set(-2, 0, -2)
+        b.mesh!.position.set(2, 0, 2)
+        scene.updateMatrixWorld(true)
+
+        const direct = new DirectStrategy().calculatePath(a, b)
+        const orthogonal = new OrthogonalStrategy().calculatePath(a, b)
+
+        expect(direct).toHaveLength(1)
+        expect(direct[0].startX).not.toBe(direct[0].endX)
+        expect(direct[0].startZ).not.toBe(direct[0].endZ)
+        expect(orthogonal).toHaveLength(3)
+        expect(orthogonal.every(segment =>
+            segment.startX === segment.endX || segment.startZ === segment.endZ,
+        )).toBe(true)
+    })
+
+    it('preserves parallel edges and removes only the requested registration', () => {
+        const { connectors, addEndpoint } = makeRegistryHarness()
+        addEndpoint('a')
+        addEndpoint('b')
+
+        connectors.register('a', 'b', 'straight', 'line', 'edge-1')
+        connectors.register('a', 'b', 'straight', 'particles', 'edge-2')
+        connectors.reconcileConnections()
+
+        expect(connectors.registrationCount).toBe(2)
+        expect(connectors.activeConnectionCount).toBe(2)
+        expect(connectors.segmentCount).toBe(2)
+        expect(new Set(connectors.getSegments().map(segment => segment.connectionId))).toEqual(new Set(['edge-1', 'edge-2']))
+
+        connectors.unregister('edge-1')
+        expect(connectors.registrationCount).toBe(1)
+        expect(connectors.activeConnectionCount).toBe(1)
+        expect(connectors.getSegments().map(segment => segment.connectionId)).toEqual(['edge-2'])
+        connectors.clear()
+    })
+
+    it('replaces a reactive registration without leaving its old route behind', () => {
+        const { connectors, addEndpoint } = makeRegistryHarness()
+        addEndpoint('a')
+        const b = addEndpoint('b')
+        const c = addEndpoint('c')
+
+        connectors.register('a', 'b', 'straight', 'line', 'edge')
+        connectors.reconcileConnections()
+        expect(connectors.getSegments()[0].tEl).toBe(b)
+
+        connectors.register('a', 'c', 'straight', 'line', 'edge')
+        connectors.reconcileConnections()
+        expect(connectors.registrationCount).toBe(1)
+        expect(connectors.segmentCount).toBe(1)
+        expect(connectors.getSegments()[0].tEl).toBe(c)
+        connectors.clear()
+    })
+
+    it('retains unresolved declarations and connects them when endpoints appear', () => {
+        const { connectors, addEndpoint } = makeRegistryHarness()
+        addEndpoint('a')
+        connectors.register('a', 'later', 'straight', 'particles', 'deferred')
+        connectors.reconcileConnections()
+        expect(connectors.registrationCount).toBe(1)
+        expect(connectors.activeConnectionCount).toBe(0)
+
+        addEndpoint('later')
+        connectors.reconcileConnections()
+        expect(connectors.activeConnectionCount).toBe(1)
+        expect(connectors.segmentCount).toBe(1)
+        connectors.clear()
+    })
+})
+
+describe('connector enclosing scale', () => {
+    it('uses the closest common parent and updates after an enclosing group scales', () => {
+        const { scene, connectors, addEndpoint } = makeRegistryHarness()
+        const layer = new THREE.Group()
+        layer.scale.setScalar(0.1)
+        scene.add(layer)
+        const leftGroup = new THREE.Group()
+        const rightGroup = new THREE.Group()
+        layer.add(leftGroup, rightGroup)
+        const a = addEndpoint('a', leftGroup)
+        const b = addEndpoint('b', rightGroup)
+        scene.updateMatrixWorld(true)
+
+        expect(enclosingConnectionScale(a, b)).toBeCloseTo(0.1, 6)
+        connectors.register('a', 'b', 'straight', 'particles', 'scaled-edge')
+        connectors.reconcileConnections()
+        expect(connectors.getSegments()[0].scale).toBeCloseTo(0.1, 6)
+
+        layer.scale.setScalar(0.05)
+        scene.updateMatrixWorld(true)
+        connectors.update({ mesh: layer } as Element3d)
+        expect(connectors.getSegments()[0].scale).toBeCloseTo(0.05, 6)
+        connectors.clear()
+    })
+
+    it('applies the segment scale to world-space lines and particle behavior', () => {
+        const scene = new THREE.Scene()
+        const stage = { scene } as unknown as VuetrexStage
+        const renderer = new LineRenderer(stage)
+        const endpoint = {} as Element3d
+        const segment = new Segment(true, 0, -1, 1, endpoint, endpoint, 'line', 'scaled', 0.1)
+        renderer.update([segment], 0, 0)
+
+        const lineGroup = (renderer as any).group as THREE.Group
+        const geometry = (lineGroup.children[0] as THREE.Mesh).geometry as THREE.BoxGeometry
+        expect(geometry.parameters.height).toBeCloseTo(0.0012, 8)
+        expect(geometry.parameters.depth).toBeCloseTo(0.0012, 8)
+
+        const baseParticleMetrics = scaledParticleMetrics(1, 0.035)
+        expect(scaledParticleMetrics(0.1, 0.035)).toEqual({
+            spread: expect.closeTo(0.0035, 8),
+            size: expect.closeTo(baseParticleMetrics.size * 0.1, 8),
+            sizeRandomness: expect.closeTo(baseParticleMetrics.sizeRandomness * 0.1, 8),
+            velocityScale: 0.1,
+        })
+        renderer.dispose()
+    })
+})

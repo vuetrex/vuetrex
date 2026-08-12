@@ -11,15 +11,39 @@ export class Segment {
     sEl: Element3d
     tEl: Element3d
     type: string
-    constructor(horizontal: boolean, mid: number, s: number, t: number, sEl: Element3d, tEl: Element3d, type: string = 'particles') {
+    connectionId: string
+    scale: number
+    elevation: number
+    startX: number
+    startZ: number
+    endX: number
+    endZ: number
+    constructor(horizontal: boolean, mid: number, s: number, t: number, sEl: Element3d, tEl: Element3d, type: string = 'particles', connectionId: string = '', scale: number = 1, elevation: number = -0.05) {
         this.horizontal = horizontal;
         this.mid = mid
         this.s = s
         this.t = t
-        this.len = Math.abs(t-s);
+        this.startX = horizontal ? s : mid
+        this.startZ = horizontal ? mid : s
+        this.endX = horizontal ? t : mid
+        this.endZ = horizontal ? mid : t
+        this.len = Math.hypot(this.endX - this.startX, this.endZ - this.startZ);
         this.sEl = sEl;
         this.tEl = tEl;
         this.type = type;
+        this.connectionId = connectionId;
+        this.scale = scale;
+        this.elevation = elevation;
+    }
+
+    static between(start: Vector3, end: Vector3, sEl: Element3d, tEl: Element3d, type: string = 'particles'): Segment {
+        const segment = new Segment(true, start.z, start.x, end.x, sEl, tEl, type)
+        segment.startX = start.x
+        segment.startZ = start.z
+        segment.endX = end.x
+        segment.endZ = end.z
+        segment.len = Math.hypot(end.x - start.x, end.z - start.z)
+        return segment
     }
 }
 
@@ -79,23 +103,11 @@ export class OrthogonalStrategy implements ConnectorStrategy {
     }
 }
 
-export class StraightStrategy implements ConnectorStrategy {
+export class DirectStrategy implements ConnectorStrategy {
     calculatePath(el1: Element3d, el2: Element3d, type: string = 'particles'): Segment[] {
         const p1 = el1.getWorldPosition();
         const p2 = el2.getWorldPosition();
-        const sx = p1.x;
-        const sy = p1.z;
-        const tx = p2.x;
-        const ty = p2.z;
-
-        // For a straight line in 2D (XZ plane), we can use a single segment.
-        // If it's not strictly horizontal or vertical, we'll mark it horizontal
-        // but it will be slightly "wrong" for the current Segment/sample logic.
-        // Actually, Segment is designed for orthogonal lines (horizontal/vertical).
-        // For general straight lines, we might need to enhance Segment or use a different sampling.
-        // Keeping it orthogonal-first for now as per current Segment design.
-        // TODO: improve Segment for non-orthogonal
-        return [new Segment(true, sy, sx, tx, el1, el2, type)];
+        return [Segment.between(p1, p2, el1, el2, type)];
     }
 
     getPoints(el1: Element3d, el2: Element3d): Vector3[] {
@@ -103,16 +115,15 @@ export class StraightStrategy implements ConnectorStrategy {
     }
 }
 
+/** @deprecated Use DirectStrategy. Retained for the public `straight` layout alias. */
+export class StraightStrategy extends DirectStrategy {}
+
 export class BezierStrategy implements ConnectorStrategy {
     calculatePath(el1: Element3d, el2: Element3d, type: string = 'particles'): Segment[] {
         // Fallback to straight line for now, but placeholder for Catmull-Rom or similar
         const p1 = el1.getWorldPosition();
         const p2 = el2.getWorldPosition();
-        const sx = p1.x;
-        const sy = p1.z;
-        const tx = p2.x;
-        const ty = p2.z;
-        return [new Segment(true, sy, sx, tx, el1, el2, type)];
+        return [Segment.between(p1, p2, el1, el2, type)];
     }
 
     getPoints(el1: Element3d, el2: Element3d): Vector3[] {
@@ -132,8 +143,15 @@ export class ConnectorPath {
         this.strategy = strategy;
     }
 
-    connect(el1: Element3d, el2: Element3d, type: string = 'particles') {
+    connect(el1: Element3d, el2: Element3d, type: string = 'particles', connectionId: string = '', scale: number = 1) {
         const newSegments = this.strategy.calculatePath(el1, el2, type);
+        const endpointElevation = Math.min(el1.getWorldPosition().y, el2.getWorldPosition().y)
+        const elevation = Math.max(-0.025, endpointElevation) + 0.005 * scale
+        newSegments.forEach(segment => {
+            segment.connectionId = connectionId
+            segment.scale = scale
+            segment.elevation = elevation
+        })
         this.segments.push(...newSegments);
         this.updateLen();
     }
@@ -180,6 +198,22 @@ export class ConnectorPath {
         return this.segments[idx];
     }
 
+    values(): readonly Segment[] {
+        return this.segments
+    }
+
+    setSegments(segments: readonly Segment[]): void {
+        this.segments = [...segments]
+        this.updateLen()
+    }
+
+    removeConnection(connectionId: string): Segment[] {
+        const removed = this.segments.filter(s => s.connectionId === connectionId)
+        this.segments = this.segments.filter(s => s.connectionId !== connectionId)
+        this.updateLen()
+        return removed
+    }
+
     /**
      * Sample a position and direction by distance along the polyline.
      * Distance wraps around [0,totalLen).
@@ -189,6 +223,7 @@ export class ConnectorPath {
             return { x: 0, y: 0, s: null };
         }
         const totalLen = this.totalLength;
+        if (totalLen <= 0) return { x: 0, y: 0, s: this.segments[0] ?? null };
 
         // Wrap into [0, totalLen)
         let d = ((distance % totalLen) + totalLen) % totalLen;
@@ -196,15 +231,11 @@ export class ConnectorPath {
         for (const seg of this.segments) {
             if (d <= seg.len) {
                 const t = seg.len === 0 ? 0 : d / seg.len;
-                const currentPos = seg.s + (seg.t - seg.s) * t;
-
-                if (seg.horizontal) {
-                    // Horizontal segment: vary X, fixed Z (mid)
-                    return { x: currentPos, y: seg.mid, s: seg };
-                } else {
-                    // Vertical segment: vary Z, fixed X (mid)
-                    return { x: seg.mid, y: currentPos, s: seg };
-                }
+                return {
+                    x: seg.startX + (seg.endX - seg.startX) * t,
+                    y: seg.startZ + (seg.endZ - seg.startZ) * t,
+                    s: seg,
+                };
             }
             d -= seg.len;
         }

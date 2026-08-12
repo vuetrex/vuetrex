@@ -3,41 +3,67 @@ import { Segment } from '@/lib-components/three/connectors/path.js';
 import { ConnectorRenderer } from '@/lib-components/three/connectors/types.js';
 import * as THREE from 'three';
 
-const LINE_HEIGHT = -0.1;
+const BASE_LINE_THICKNESS = 0.012;
+
+/**
+ * World-space line renderer. Box segments keep thickness proportional to the
+ * enclosing diagram group, unlike WebGL LineBasicMaterial's fixed pixel width.
+ * Moving the camera closer to a downscaled scene therefore restores the same
+ * apparent thickness as its larger equivalent.
+ */
 export class LineRenderer implements ConnectorRenderer {
     private group = new THREE.Group();
-    private material = new THREE.LineBasicMaterial({ color: 0xa0ffff });
+    private material = new THREE.MeshBasicMaterial({ color: 0xa0ffff });
+    private signature = ''
 
     constructor(private stage: VuetrexStage) {
         this.stage.scene.add(this.group);
     }
 
-    update(segments: Segment[], timer: number, tick: number): void {
-        // Simple implementation: rebuild lines every frame or only when segments change
-        // For efficiency, we'll clear and rebuild for now
-        this.group.clear();
-
-        const points: THREE.Vector3[] = [];
-        for (const s of segments) {
-            if (s.horizontal) {
-                points.push(new THREE.Vector3(s.s, LINE_HEIGHT, s.mid));
-                points.push(new THREE.Vector3(s.t, LINE_HEIGHT, s.mid));
-            } else {
-                points.push(new THREE.Vector3(s.mid, LINE_HEIGHT, s.s));
-                points.push(new THREE.Vector3(s.mid, LINE_HEIGHT, s.t));
-            }
+    private clearGeometry(): void {
+        for (const child of this.group.children) {
+            const mesh = child as THREE.Mesh
+            mesh.geometry?.dispose()
         }
+        this.group.clear()
+    }
 
-        if (points.length > 0) {
-            const geometry = new THREE.BufferGeometry().setFromPoints(points);
-            const line = new THREE.LineSegments(geometry, this.material);
-            this.group.add(line);
+    update(segments: Segment[], _timer: number, _tick: number): void {
+        const signature = segments.map(segment => [
+            segment.connectionId,
+            segment.startX,
+            segment.startZ,
+            segment.endX,
+            segment.endZ,
+            segment.scale,
+            segment.elevation,
+        ].join(':')).join('|')
+        if (signature === this.signature) return
+        this.signature = signature
+        this.clearGeometry()
+
+        for (const segment of segments) {
+            const dx = segment.endX - segment.startX
+            const dz = segment.endZ - segment.startZ
+            const length = Math.hypot(dx, dz)
+            if (length === 0) continue
+            const scale = segment.scale > 0 && Number.isFinite(segment.scale) ? segment.scale : 1
+            const thickness = BASE_LINE_THICKNESS * scale
+            const geometry = new THREE.BoxGeometry(length, thickness, thickness)
+            const mesh = new THREE.Mesh(geometry, this.material)
+            mesh.position.set(
+                (segment.startX + segment.endX) / 2,
+                segment.elevation,
+                (segment.startZ + segment.endZ) / 2,
+            )
+            mesh.rotation.y = -Math.atan2(dz, dx)
+            this.group.add(mesh)
         }
     }
 
     dispose(): void {
-        this.group.clear();
-        this.stage.scene.remove(this.group);
-        this.material.dispose();
+        this.clearGeometry()
+        this.stage.scene.remove(this.group)
+        this.material.dispose()
     }
 }

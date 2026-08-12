@@ -4,5 +4,5 @@ import App from './App.vue';
 
 const app = createApp(App);
 //helps only if running via in-browser sfc loader; here for demo purposes
-app.config.compilerOptions.isCustomElement = (tag: string) => /^layer|^box|^row|^cylinder|^wedge|^ring/.test(tag);
+app.config.compilerOptions.isCustomElement = (tag: string) => /^(group|layer|row|stack|ring|panel|box|cylinder|wedge|connector)$/.test(tag);
 app.mount('#app');
