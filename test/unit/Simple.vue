@@ -1,13 +1,13 @@
 <template>
   <vuetrex>
-    <layer>
-      <row>
-        <box name="b1" text="I'm b1"/>
-        <box name="b2" text="I'm b1" />
-        <box name="b3" />
-        <box name="b4" />
-      </row>
-    </layer>
+    <vx-layer>
+      <vx-row>
+        <vx-box name="b1" text="I'm b1"/>
+        <vx-box name="b2" text="I'm b1" />
+        <vx-box name="b3" />
+        <vx-box name="b4" />
+      </vx-row>
+    </vx-layer>
   </vuetrex>
 </template>
 

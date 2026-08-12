@@ -1,27 +1,27 @@
 <template>
   <vuetrex :camera="camera" height="75vh">
-    <layer>
-      <row>
-        <box v-for="(el,i) in items" :key="i" :name="'a'+i" :text="'dynamic '+el" connection="b2" @click="dBoxClick"/>
-      </row>
-      <row>
-        <box name="b1" text="I'm lost" @click="dBoxClick"/>
-        <box name="b2" text="busy bee" @click="dBoxClick" connection="a0"/>
-        <box name="b3" @click="dBoxClick"  connection="b2"/>
-        <box name="b4" @click="dBoxClick" text="bot"/>
-      </row>
-      <row>
-        <box name="c1" />
-        <cylinder name="c2" :text="'clicks: ' + counter" @click="cylinderClick" connection="b3"/>
-        <cylinder name="c3" text="new" />
-      </row>
-      <row>
-        <box name="d1" size="1.2" @click="dBoxClick" connection="c2" />
-      </row>
-      <row v-if="extraRow">
-        <box name="e1" size="1" connection="d1"/>
-      </row>
-    </layer>
+    <vx-layer>
+      <vx-row>
+        <vx-box v-for="(el,i) in items" :key="i" :name="'a'+i" :text="'dynamic '+el" connection="b2" @click="dBoxClick"/>
+      </vx-row>
+      <vx-row>
+        <vx-box name="b1" text="I'm lost" @click="dBoxClick"/>
+        <vx-box name="b2" text="busy bee" @click="dBoxClick" connection="a0"/>
+        <vx-box name="b3" @click="dBoxClick"  connection="b2"/>
+        <vx-box name="b4" @click="dBoxClick" text="bot"/>
+      </vx-row>
+      <vx-row>
+        <vx-box name="c1" />
+        <vx-cylinder name="c2" :text="'clicks: ' + counter" @click="cylinderClick" connection="b3"/>
+        <vx-cylinder name="c3" text="new" />
+      </vx-row>
+      <vx-row>
+        <vx-box name="d1" size="1.2" @click="dBoxClick" connection="c2" />
+      </vx-row>
+      <vx-row v-if="extraRow">
+        <vx-box name="e1" size="1" connection="d1"/>
+      </vx-row>
+    </vx-layer>
   </vuetrex>
 </template>
 

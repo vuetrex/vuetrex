@@ -1,5 +1,5 @@
 <template>
-  <panel
+  <vx-panel
     :name="id"
     :size="width"
     :depth="depth"
@@ -13,8 +13,8 @@
     :hover="{ color: 0x318fee, emissive: 0x103d66, emissiveIntensity: 0.35, scale: 1.04, transition: 0.16 }"
     @click="$emit('select', id)"
   >
-    <stack :gap="0.025">
-      <box
+    <vx-stack :gap="0.025">
+      <vx-box
         v-for="layer in visiblePodLayers"
         :key="layer"
         :size="0.42"
@@ -23,8 +23,8 @@
         :material="podMaterial"
         :hover="{ color: 0x42a5ff, emissive: 0x0b4578, emissiveIntensity: 0.45, transition: 0.16 }"
       />
-    </stack>
-  </panel>
+    </vx-stack>
+  </vx-panel>
 </template>
 
 <script setup lang="ts">

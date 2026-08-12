@@ -21,20 +21,20 @@
     </div>
 
     <vuetrex height="80vh" :camera="camera"  @ready="onStageReady">
-      <layer>
+      <vx-layer>
         <!-- API Gateway -->
-        <row>
-          <stack>
-            <box name="api-gw" text="api-gateway" size="1.5"
+        <vx-row>
+          <vx-stack>
+            <vx-box name="api-gw" text="api-gateway" size="1.5"
               :hover="{ scale: 1.05, transition: 0.22, color: 0x4c7fb2 }"
               @click="onDeployClick"
               @dblclick="onDeployBurst"
               @pointerenter="!selected ? (hovered = 'api-gw') : null"
               @pointerleave="!selected ? (hovered = null) : null"
             />
-            <layer :elevation="-0.55">
-              <ring size="2.0" start-angle="45" direction="reverse">
-                <wedge size="3.5"
+            <vx-layer :elevation="-0.55">
+              <vx-ring size="2.0" start-angle="45" direction="reverse">
+                <vx-wedge size="3.5"
                   v-for="i in podCounts['api-gw']"
                   :key="'api-gw-pod-' + i"
                   :name="'api-gw-pod-' + i"
@@ -42,23 +42,23 @@
                   :hover="{ scale: 1.18, transition: 0.18, color: 0x4c7fb2 }"
                   @click="onPodClick"
                 />
-              </ring>
-            </layer>
+              </vx-ring>
+            </vx-layer>
 
-          </stack>
-        </row>
+          </vx-stack>
+        </vx-row>
 
         <!-- Microservices -->
-        <row align-x="start">
-          <stack>
-            <box name="auth-svc" text="auth-svc" connection="api-gw"
+        <vx-row align-x="start">
+          <vx-stack>
+            <vx-box name="auth-svc" text="auth-svc" connection="api-gw"
               :hover="{ scale: 1.05, transition: 0.22, color: 0x4c7fb2 }"
               @click="onDeployClick"
               @dblclick="onDeployBurst"
               @pointerenter="!selected ? (hovered = 'auth-svc') : null"
               @pointerleave="!selected ? (hovered = null) : null"
             />
-            <cylinder
+            <vx-cylinder
               v-for="i in podCounts['auth-svc']"
               :key="'auth-svc-pod-' + i"
               :name="'auth-svc-pod-' + i"
@@ -66,16 +66,16 @@
               :hover="{ scale: 1.18, transition: 0.18 }"
               @click="onPodClick"
             />
-          </stack>
-          <stack>
-            <box name="product-svc" text="product-svc"
+          </vx-stack>
+          <vx-stack>
+            <vx-box name="product-svc" text="product-svc"
               :hover="{ scale: 1.05, transition: 0.22, color: 0x4c7fb2 }"
               @click="onDeployClick"
               @dblclick="onDeployBurst"
               @pointerenter="!selected ? (hovered = 'product-svc') : null"
               @pointerleave="!selected ? (hovered = null) : null"
             />
-            <cylinder
+            <vx-cylinder
               v-for="i in podCounts['product-svc']"
               :key="'product-svc-pod-' + i"
               :name="'product-svc-pod-' + i"
@@ -83,16 +83,16 @@
               :hover="{ scale: 1.18, transition: 0.18 }"
               @click="onPodClick"
             />
-          </stack>
-          <stack>
-            <box name="order-svc" text="order-svc"
+          </vx-stack>
+          <vx-stack>
+            <vx-box name="order-svc" text="order-svc"
               :hover="{ scale: 1.05, transition: 0.22, color: 0x4c7fb2 }"
               @click="onDeployClick"
               @dblclick="onDeployBurst"
               @pointerenter="!selected ? (hovered = 'order-svc') : null"
               @pointerleave="!selected ? (hovered = null) : null"
             />
-            <cylinder
+            <vx-cylinder
               v-for="i in podCounts['order-svc']"
               :key="'order-svc-pod-' + i"
               :name="'order-svc-pod-' + i"
@@ -100,13 +100,13 @@
               :hover="{ scale: 1.18, transition: 0.18 }"
               @click="onPodClick"
             />
-          </stack>
-        </row>
+          </vx-stack>
+        </vx-row>
 
         <!-- Data layer -->
-        <row>
-          <stack>
-            <box name="mongo" text="MongoDB" size="1.4"
+        <vx-row>
+          <vx-stack>
+            <vx-box name="mongo" text="MongoDB" size="1.4"
                  :material="{color:0x333333}"
                  :hover="{ scale: 1.05, transition: 0.22, color: 0x4c7fb2 }"
               @click="onDeployClick"
@@ -114,7 +114,7 @@
               @pointerenter="!selected ? (hovered = 'mongo') : null"
               @pointerleave="!selected ? (hovered = null) : null"
             />
-            <cylinder
+            <vx-cylinder
               v-for="i in podCounts['mongo']"
               :key="'mongo-pod-' + i"
               :name="'mongo-pod-' + i"
@@ -122,16 +122,16 @@
               :hover="{ scale: 1.18, transition: 0.18, color: 0x4c7fb2 }"
               @click="onPodClick"
             />
-          </stack>
-          <stack>
-            <box name="redis" text="Redis" size="1.4"
+          </vx-stack>
+          <vx-stack>
+            <vx-box name="redis" text="Redis" size="1.4"
                  :hover="{ scale: 1.05, transition: 0.22, color: 0x4c7fb2 }"
               @click="onDeployClick"
               @dblclick="onDeployBurst"
               @pointerenter="!selected ? (hovered = 'redis') : null"
               @pointerleave="!selected ? (hovered = null) : null"
             />
-            <cylinder
+            <vx-cylinder
               v-for="i in podCounts['redis']"
               :key="'redis-pod-' + i"
               :name="'redis-pod-' + i"
@@ -139,10 +139,10 @@
               :hover="{ scale: 1.18, transition: 0.18 }"
               @click="onPodClick"
             />
-            <connector from="order-svc" to="mongo" type="line" layout="linear" />
-          </stack>
-        </row>
-      </layer>
+            <vx-connector from="order-svc" to="mongo" type="line" layout="linear" />
+          </vx-stack>
+        </vx-row>
+      </vx-layer>
     </vuetrex>
   </div>
 </template>

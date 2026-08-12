@@ -3,14 +3,14 @@
   designed to look like a Blender-style node graph card.
 
   The middle slab renders its labels as SDF text on the +Z face via the shared
-  `lines` prop on <box>. See MeshNode's label watchEffect for the mechanism —
+  `lines` prop on <vx-box>. See MeshNode's label watchEffect for the mechanism —
   it lazily creates a troika-three-text Text parented to the box mesh, so it
   inherits transforms (including hover scale) and disposes with the mesh.
 -->
 <template>
-  <stack :gap="0.02">
+  <vx-stack :gap="0.02">
     <!-- footer -->
-    <box
+    <vx-box
       :size="1.8"
       :depth="0.2"
       :height="0.5"
@@ -24,7 +24,7 @@
     />
 
     <!-- body -->
-    <box
+    <vx-box
       :size="1.8"
       :height="2.0"
       :depth="0.2"
@@ -38,7 +38,7 @@
     />
 
     <!-- header -->
-    <box
+    <vx-box
       :size="1.8"
       :depth="0.2"
       :height="0.5"
@@ -49,7 +49,7 @@
       :material="{ color: 0x2f7a3a, roughness: 0.45, metalness: 0.05 }"
       :hover="{ color: 0x49a457, transition: 0.2 }"
     />
-  </stack>
+  </vx-stack>
 </template>
 
 <script lang="ts">

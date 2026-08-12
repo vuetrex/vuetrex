@@ -10,7 +10,7 @@ Consider an example:
 ```xml
 <template>
   <vuetrex>
-    <box/> <cylinder/>
+    <vx-box/> <vx-cylinder/>
   </vuetrex>
 </template>
 ```
@@ -42,7 +42,7 @@ open `src/components/HelloWorld.vue` and add
 <template>
   ...
   <vuetrex>
-    <box />
+    <vx-box />
   </vuetrex>
   ...
 </template>

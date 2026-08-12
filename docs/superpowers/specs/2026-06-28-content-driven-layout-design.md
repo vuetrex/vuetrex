@@ -14,7 +14,7 @@ its slot is `fitScale()`, which can *only shrink* (`Math.min(1.0, ...ratios)`) a
 Consequences, visible in `concepts/screenshot1.jpg`:
 
 - With a large box and few children, everything spreads to the corners of a `10×5×10` void — the scatter.
-- A `<box size="1.5">` has no influence on where it lands; slot width is unrelated to box width.
+- A `<vx-box size="1.5">` has no influence on where it lands; slot width is unrelated to box width.
 - Nesting (layer → row → stack → layer → ring) compounds the mismatch.
 - `stackLayout` has no floor reference (`baseY = containerPos.y`), and the `//todo` comments in `layouts.ts`
   show the `childHeight/2 + elevation` Y-offset was dropped from horizontal/depth/ring — stacks float.
@@ -139,7 +139,7 @@ unit-testable. This is the point of the change.
 - `MeshNode` hover / GSAP animation, material sync.
 - Connector renderers and strategies.
 - `patchProp.ts`, `nodeOps.ts`, `renderer.ts`.
-- Template authoring: `<layer>`, `<row>`, `<stack>`, `<ring>`, `<box>`, etc. continue to work; authors simply
+- Template authoring: `<vx-layer>`, `<vx-row>`, `<vx-stack>`, `<vx-ring>`, `<vx-box>`, etc. continue to work; authors simply
   stop computing container sizes.
 
 ---

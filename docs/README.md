@@ -9,7 +9,7 @@ Consider an example:
 ```xml
 <template>
   <vuetrex>
-    <box/> <cylinder/>
+    <vx-box/> <vx-cylinder/>
   </vuetrex>
 </template>
 ```
@@ -41,7 +41,7 @@ open `src/components/HelloWorld.vue` and add
 <template>
   ...
   <vuetrex>
-    <box />
+    <vx-box />
   </vuetrex>
   ...
 </template>
@@ -65,9 +65,9 @@ For a full example, take a look at [test/esm-module/TestApp.vue].
 Multiple _rows_:
 ```vue
  <vuetrex>
-    <row>   <box/> <box/>  </row>
-    <row>   <box/> <box/>  </row>
-    <row>   <box/>         </row>            
+    <vx-row>   <vx-box/> <vx-box/>  </vx-row>
+    <vx-row>   <vx-box/> <vx-box/>  </vx-row>
+    <vx-row>   <vx-box/>         </vx-row>
   </vuetrex>
 ```
 Rows orientation is from left to right, as if they were rows in the movie theater with the screen on the left side.
@@ -76,16 +76,16 @@ Rows orientation is from left to right, as if they were rows in the movie theate
 Nested _layers_:
 ```vue
  <vuetrex>
-    <row>
-       <layer> <box /> <box /> </layer>   
-    </row>
-    <row> <box/> </row>
-    <row>
-      <layer>
-         <row> <box/> </row>
-         <row> <box/> </row> 
-      </layer>   
-    </row>            
+    <vx-row>
+       <vx-layer> <vx-box /> <vx-box /> </vx-layer>
+    </vx-row>
+    <vx-row> <vx-box/> </vx-row>
+    <vx-row>
+      <vx-layer>
+         <vx-row> <vx-box/> </vx-row>
+         <vx-row> <vx-box/> </vx-row>
+      </vx-layer>
+    </vx-row>
   </vuetrex>
 ```
 Note, that you can use `v-for` to bind elements to your data.
@@ -94,8 +94,8 @@ Note, that you can use `v-for` to bind elements to your data.
 
 ```vue
  <vuetrex>
-    <box name="a"/>
-    <cylinder name="b" text="Round" connection="a"/>
+    <vx-box name="a"/>
+    <vx-cylinder name="b" text="Round" connection="a"/>
   </vuetrex>
 ```
 
@@ -110,7 +110,7 @@ Caption reflects the text property. Caption text is reactive in case of `:text="
 
 ```vue
   <vuetrex>   
-    <box :text="'['+counter+']'" @click="counter++"/>
+    <vx-box :text="'['+counter+']'" @click="counter++"/>
   </vuetrex>
 ```
 as one would expect, in `setup()` you will need a `const counter = ref(0)` that you return in this case.
@@ -124,9 +124,9 @@ If you set it to `"scene"` (default value), it will go back to overview position
 ```vue
 <template>
  <vuetrex :camera="camera">
-   <row>
-     <box v-for="item in list" :key="item" :text="item" @click="zoomIn"/>
-   </row>
+   <vx-row>
+     <vx-box v-for="item in list" :key="item" :text="item" @click="zoomIn"/>
+   </vx-row>
  </vuetrex>
 </template>
 <script>
@@ -156,7 +156,7 @@ If you need to dive deeper, you have access to the ThreeJS scene like this:
 ```vue
 <template>
   <vuetrex  @ready="onStageReady">    
-    <box text="Example"/>
+    <vx-box text="Example"/>
   </vuetrex>
 </template>
 
@@ -202,4 +202,3 @@ setup() {
   return {settings}
 }
 ```
-

@@ -6,23 +6,23 @@ Vuetrex containers measure their children and place them in local 3D coordinate 
 
 | Element | Layout |
 |---|---|
-| `<group>` | Automatic XZ grid |
-| `<row>` | Left-to-right on X |
-| `<layer>` | Front-to-back on Z |
-| `<stack>` | Bottom-to-top on Y |
-| `<ring>` | Circular placement in XZ |
+| `<vx-group>` | Automatic XZ grid |
+| `<vx-row>` | Left-to-right on X |
+| `<vx-layer>` | Front-to-back on Z |
+| `<vx-stack>` | Bottom-to-top on Y |
+| `<vx-ring>` | Circular placement in XZ |
 
 Named containers are convenient aliases. The canonical form is also available when choosing a layout dynamically:
 
 ```vue
-<group layout="row">
-  <box />
-  <box />
-</group>
+<vx-group layout="row">
+  <vx-box />
+  <vx-box />
+</vx-group>
 
-<group layout="ring" start-angle="45" direction="reverse">
-  <wedge v-for="item in items" :key="item.id" />
-</group>
+<vx-group layout="ring" start-angle="45" direction="reverse">
+  <vx-wedge v-for="item in items" :key="item.id" />
+</vx-group>
 ```
 
 Supported `layout` values are `grid`, `row`, `depth`, `stack`, and `ring`.
@@ -30,14 +30,14 @@ Supported `layout` values are `grid`, `row`, `depth`, `stack`, and `ring`.
 Containers can be nested freely:
 
 ```vue
-<layer>
-  <row>
-    <stack>
-      <box text="service" />
-      <cylinder text="pod" />
-    </stack>
-  </row>
-</layer>
+<vx-layer>
+  <vx-row>
+    <vx-stack>
+      <vx-box text="service" />
+      <vx-cylinder text="pod" />
+    </vx-stack>
+  </vx-row>
+</vx-layer>
 ```
 
 ### Size, height, and gap
@@ -46,18 +46,18 @@ Without an explicit size, a container derives its footprint from its children. `
 children. Its fallback is the stage `gap`, then the stage's legacy `distance` setting.
 
 ```vue
-<row :gap="0.4">
-  <box />
-  <box />
-</row>
+<vx-row :gap="0.4">
+  <vx-box />
+  <vx-box />
+</vx-row>
 ```
 
 `size` reserves an XZ footprint and `height` reserves Y. A reservation may shrink overflowing container content but
 never enlarges it:
 
 ```vue
-<row :size="4" :height="1" />
-<group :size="{ x: 6, y: 2, z: 4 }" />
+<vx-row :size="4" :height="1" />
+<vx-group :size="{ x: 6, y: 2, z: 4 }" />
 ```
 
 ### Ring options
@@ -77,9 +77,9 @@ distance between its outer and inner arcs. Both use world units and remain const
 When these props are omitted, wedges retain their content-driven legacy sizing.
 
 ```vue
-<ring :radius="1" :start-angle="45" direction="reverse" :gap-ratio="0.25">
-  <wedge v-for="item in items" :key="item.id" :thickness="0.15" />
-</ring>
+<vx-ring :radius="1" :start-angle="45" direction="reverse" :gap-ratio="0.25">
+  <vx-wedge v-for="item in items" :key="item.id" :thickness="0.15" />
+</vx-ring>
 ```
 
 ### Alignment
@@ -88,9 +88,9 @@ Alignment shifts a child inside its content-sized slot. Values are `start`, `cen
 `center`, preserving existing scenes.
 
 ```vue
-<row align="center" />
-<row align-x="start" align-y="center" align-z="end" />
-<stack align-z="end" />
+<vx-row align="center" />
+<vx-row align-x="start" align-y="center" align-z="end" />
+<vx-stack align-z="end" />
 ```
 
 `align` sets all three axes. `align-x`, `align-y`, and `align-z` override individual axes.
@@ -101,7 +101,7 @@ Alignment shifts a child inside its content-sized slot. Values are `start`, `cen
 label uses the south 40% and children are fitted into the north 60%.
 
 ```vue
-<panel
+<vx-panel
   name="api"
   :size="1.6"
   :depth="0.9"
@@ -111,12 +111,12 @@ label uses the south 40% and children are fitted into the north 60%.
   :label-share="0.4"
   :material="{ color: 0x174f88 }"
 >
-  <stack :gap="0.025">
-    <box :size="0.4" :height="0.12" />
-    <box :size="0.4" :height="0.12" />
-    <box :size="0.4" :height="0.12" />
-  </stack>
-</panel>
+  <vx-stack :gap="0.025">
+    <vx-box :size="0.4" :height="0.12" />
+    <vx-box :size="0.4" :height="0.12" />
+    <vx-box :size="0.4" :height="0.12" />
+  </vx-stack>
+</vx-panel>
 ```
 
 Use `label-region="north"` to reverse the split. `label-share` is clamped to `0.1–0.9`; `content-padding` controls the
@@ -131,14 +131,14 @@ Use `registerElement()` before mounting to register a node globally:
 import { registerElement } from '@exceeder/vuetrex'
 import { ServerNode } from './ServerNode'
 
-registerElement('server', ServerNode)
+registerElement('vx-server', ServerNode)
 ```
 
 Then use the tag in Vuetrex templates:
 
 ```vue
 <vuetrex>
-  <server text="API" />
+  <vx-server text="API" />
 </vuetrex>
 ```
 
@@ -148,13 +148,13 @@ For one Vuetrex instance, pass an element registry through its `elements` prop i
 
 ```vue
 <vuetrex>
-  <box name="a" />
-  <cylinder name="b" text="Round" connection="a" />
-  <connector from="a" to="b" type="line" layout="direct" />
+  <vx-box name="a" />
+  <vx-cylinder name="b" text="Round" connection="a" />
+  <vx-connector from="a" to="b" type="line" layout="direct" />
 </vuetrex>
 ```
 
-Named nodes can be connected through the `connection` shorthand or a `<connector>`. Caption text is reactive.
+Named nodes can be connected through the `connection` shorthand or a `<vx-connector>`. Caption text is reactive.
 
 ## Events
 
@@ -162,7 +162,7 @@ Vuetrex supports `click`, `dblclick`, `pointerenter`, and `pointerleave`. Click 
 logical node tree; pointer enter and leave do not.
 
 ```vue
-<box
+<vx-box
   :text="String(counter)"
   @click="counter++"
   @pointerenter="hovered = true"
@@ -176,14 +176,14 @@ Set `camera` to a node name to focus it, or to `scene` for the overview:
 
 ```vue
 <vuetrex :camera="camera">
-  <row>
-    <box
+  <vx-row>
+    <vx-box
       v-for="item in items"
       :key="item"
       :name="item"
       :text="item"
       @click="camera = camera === item ? 'scene' : item"
     />
-  </row>
+  </vx-row>
 </vuetrex>
 ```

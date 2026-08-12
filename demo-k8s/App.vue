@@ -24,10 +24,10 @@
         :settings="settings"
         @ready="onStageReady"
       >
-        <layer :scale="0.82" :gap="0">
-          <row :gap="0.7">
-            <group layout="depth" :gap="0.62">
-              <box
+        <vx-layer :scale="0.82" :gap="0">
+          <vx-row :gap="0.7">
+            <vx-group layout="depth" :gap="0.62">
+              <vx-box
                 name="city-edge-lb"
                 text="city edge"
                 :size="0.26"
@@ -39,20 +39,20 @@
               />
 
               <K8sPlatform title="City Edge & Ingress" :width="5.3" :depth="3.3">
-                <row :gap="0.42">
+                <vx-row :gap="0.42">
                   <K8sWorkload v-bind="workload('public-api')" @select="selectNode" />
                   <K8sWorkload v-bind="workload('municipal-feed')" @select="selectNode" />
                   <K8sWorkload v-bind="workload('service-registry')" @select="selectNode" />
-                </row>
-                <row :gap="0.5">
+                </vx-row>
+                <vx-row :gap="0.5">
                   <K8sWorkload v-bind="workload('auth-service')" @select="selectNode" />
                   <K8sWorkload v-bind="workload('notification-dispatcher')" @select="selectNode" />
                   <K8sWorkload v-bind="workload('config-server')" @select="selectNode" />
-                </row>
+                </vx-row>
               </K8sPlatform>
-            </group>
+            </vx-group>
 
-            <group layout="depth" :gap="0.74">
+            <vx-group layout="depth" :gap="0.74">
               <K8sWorkload v-bind="workload('traffic-orchestrator')" :width="1.9" @select="selectNode" />
 
               <K8sPlatform title="Realtime Streaming" :width="3.6" :depth="5.8">
@@ -78,42 +78,42 @@
                   @select="selectNode"
                 />
               </K8sPlatform>
-            </group>
+            </vx-group>
 
-            <group layout="depth" :gap="0.78">
+            <vx-group layout="depth" :gap="0.78">
               <K8sDatabase v-bind="database('mysql-primary')" :size="1.15" @select="selectNode" />
               <K8sDatabase v-bind="database('mongo-primary')" :size="1.15" @select="selectNode" />
               <K8sCache v-bind="cache('kraft-coordinator')" kind="coordination" :size="1.05" @select="selectNode" />
-            </group>
+            </vx-group>
 
             <K8sPlatform title="Data & Operations" :width="5.5" :depth="5.5">
-              <row :gap="0.38">
+              <vx-row :gap="0.38">
                 <K8sDatabase v-bind="database('mysql-replica')" @select="selectNode" />
                 <K8sDatabase v-bind="database('mongo-archive')" @select="selectNode" />
                 <K8sCache v-bind="cache('redis-replica')" @select="selectNode" />
                 <K8sDatabase v-bind="database('cold-snapshots')" @select="selectNode" />
-              </row>
-              <row :gap="0.45">
+              </vx-row>
+              <vx-row :gap="0.45">
                 <K8sWorkload v-bind="workload('cron-optimizer')" @select="selectNode" />
                 <K8sWorkload v-bind="workload('dlq-handler')" @select="selectNode" />
                 <K8sWorkload v-bind="workload('backup-daemon')" @select="selectNode" />
-              </row>
-              <row :gap="0.45">
+              </vx-row>
+              <vx-row :gap="0.45">
                 <K8sWorkload v-bind="workload('prometheus')" @select="selectNode" />
                 <K8sWorkload v-bind="workload('grafana')" @select="selectNode" />
                 <K8sWorkload v-bind="workload('log-aggregator')" @select="selectNode" />
-              </row>
-              <row :gap="0.45">
+              </vx-row>
+              <vx-row :gap="0.45">
                 <K8sWorkload v-bind="workload('tracing-agent')" @select="selectNode" />
                 <K8sWorkload v-bind="workload('metrics-collector')" @select="selectNode" />
                 <K8sWorkload v-bind="workload('health-api')" @select="selectNode" />
-              </row>
+              </vx-row>
             </K8sPlatform>
-          </row>
+          </vx-row>
 
-        </layer>
+        </vx-layer>
 
-        <connector
+        <vx-connector
           v-for="edge in edges"
           :key="`${edge.from}-${edge.to}`"
           :from="edge.from"

@@ -11,17 +11,17 @@
   <h1>Testing Vuetrex</h1>
   <span>{{msg}}</span>
   <Vuetrex>
-    <layer>
-      <row>
-        <box name="a1" @click="myClick"/>
-      </row>
-      <row>
-        <box name="a2" size="2.0"/>
-      </row>
-      <row>
-        <cylinder name="a3" size="2.0"/>
-      </row>
-    </layer>
+    <vx-layer>
+      <vx-row>
+        <vx-box name="a1" @click="myClick"/>
+      </vx-row>
+      <vx-row>
+        <vx-box name="a2" size="2.0"/>
+      </vx-row>
+      <vx-row>
+        <vx-cylinder name="a3" size="2.0"/>
+      </vx-row>
+    </vx-layer>
   </Vuetrex>
 </div>
 <script type="module">

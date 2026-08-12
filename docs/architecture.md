@@ -196,7 +196,7 @@ semantics
 1. Create `nodes/shapes/MyShape.ts`, `extends MeshNode`
 2. Implement `modelGen()` returning a `(height, size) => THREE.Object3D` factory
 3. Override `protected readonly flushMode` if sync timing matters
-4. Register in `nodes/types.ts`: `myshape: MyShape`
+4. Register in `nodes/types.ts`: `'vx-myshape': MyShape`
 
 For a new container layout: `extends GroupNode`, override `layoutPositionOf(child)`. For a new container layout:
 `extends GroupNode` with a new `LayoutFactory`.

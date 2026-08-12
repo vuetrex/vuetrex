@@ -9,9 +9,9 @@
   SSE grows / recolours a wedge in place without renderer-side patching.
 -->
 <template>
-  <stack :gap="0.04">
+  <vx-stack :gap="0.04">
     <!-- footer plinth: repo @ sha -->
-    <box
+    <vx-box
       :size="1.8"
       :depth="0.9"
       :height="0.35"
@@ -23,8 +23,8 @@
     />
 
     <!-- stage dial: one wedge per stage, colour = status -->
-    <ring :radius="1" :gap-ratio="0.05" start-angle="90">
-      <wedge
+    <vx-ring :radius="1" :gap-ratio="0.05" start-angle="90">
+      <vx-wedge
         v-for="s in stages"
         :key="s.name"
         :height="0.3"
@@ -32,17 +32,17 @@
         :material="{ color: stageColor(s), roughness: 0.5, metalness: 0.2 }"
         :hover="{ color: 0x4c7fb2, transition: 0.18 }"
       />
-    </ring>
+    </vx-ring>
 
     <!-- header disc: overall progress -->
-    <cylinder
+    <vx-cylinder
       :text="`${passed}/${stages.length}  ${percent}%`"
       :size="1.7"
       :height="0.28"
       :material="{ color: overallColor, roughness: 0.35, metalness: 0.25 }"
       :hover="{ color: 0x3d7ce0, transition: 0.2 }"
     />
-  </stack>
+  </vx-stack>
 </template>
 
 <script lang="ts">

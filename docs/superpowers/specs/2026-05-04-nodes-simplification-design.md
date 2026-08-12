@@ -102,7 +102,7 @@ watchEffect (connection + text, flush: 'post'):
 `GroupNode.syncWithThree()` becomes an idempotent watchEffect that re-runs when the group's position or parent changes.
 `Root.afterFlush` and its `nextTick(() => reconcileConnections())` are removed.
 
-`Layer` loses its `modelGen` / `renderMesh` calls. A visible floor plane is expressed as `<box v-if="visible" />` in the
+`Layer` loses its `modelGen` / `renderMesh` calls. A visible floor plane is expressed as `<vx-box v-if="visible" />` in the
 Vue template — the renderer handles tree changes; no hybrid MeshNode/GroupNode behavior inside the class.
 
 ### 4. Resulting class structure
@@ -127,7 +127,7 @@ Base              tree ops, registerSync/applySync, myIdx, elements
 
 ### 5. Template authoring — unchanged
 
-`TabB.vue` and all existing templates continue to use `<layer>`, `<row>`, `<stack>`, `<box>`, etc. The element type
+`TabB.vue` and all existing templates continue to use `<vx-layer>`, `<vx-row>`, `<vx-stack>`, `<vx-box>`, etc. The element type
 registry (`nodes/types.ts`) maps these names to the appropriate constructors. Authors of new reusable components express
 them as Vue components containing `<vx-group>` or the named aliases — from the parent scene's perspective they are just
 a node with a declared `size` and `height`.

@@ -7,7 +7,7 @@ If you need to dive deeper, you have access to the ThreeJS scene like this:
 ```vue
 <template>
   <vuetrex  @ready="onStageReady">    
-    <box text="Example"/>
+    <vx-box text="Example"/>
   </vuetrex>
 </template>
 

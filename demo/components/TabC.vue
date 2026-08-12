@@ -4,19 +4,19 @@
    </div>
 
    <vuetrex height="79vh" width="100%" :camera="camera" :stopped="paused" :settings="vsSettings" @ready="onStageReady">
-     <layer>
-      <row>
-        <box name="xx" :text="'['+counter1+']'" @click="counter1++"/>
-        <box name="yy" :text="'('+counter2+')'" @click="counter2++"/>
-      </row>
-      <row>
-          <cylinder ref="centralC" name="cc" text="click me" connection="abc" @click="cylClick" size="0.1"/>
-      </row>
-      <row>
-       <box text="singleton" connection="abc" />
-       <box name="abc" text="abc" size="0.5" />
-     </row>
-     </layer>
+     <vx-layer>
+      <vx-row>
+        <vx-box name="xx" :text="'['+counter1+']'" @click="counter1++"/>
+        <vx-box name="yy" :text="'('+counter2+')'" @click="counter2++"/>
+      </vx-row>
+      <vx-row>
+          <vx-cylinder ref="centralC" name="cc" text="click me" connection="abc" @click="cylClick" size="0.1"/>
+      </vx-row>
+      <vx-row>
+       <vx-box text="singleton" connection="abc" />
+       <vx-box name="abc" text="abc" size="0.5" />
+     </vx-row>
+     </vx-layer>
    </vuetrex>
 </template>
 

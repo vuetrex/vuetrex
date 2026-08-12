@@ -1,5 +1,5 @@
 <template>
-  <panel
+  <vx-panel
       :size="width"
       :depth="depth"
       :height="0.08"
@@ -10,7 +10,7 @@
       :label-color="0xffffff"
       :material="{ color: 0x172330, roughness: 0.56, metalness: 0.28, transparent: true, opacity: 0.82 }"
   >
-  <stack :gap="0.08">
+  <vx-stack :gap="0.08">
 <!--    <box-->
 <!--      :size="width"-->
 <!--      :depth="depth"-->
@@ -21,11 +21,11 @@
 <!--      :label-color="0xf5f8fb"-->
 <!--      :material="{ color: 0x172330, roughness: 0.56, metalness: 0.28, transparent: true, opacity: 0.82 }"-->
 <!--    />-->
-    <group layout="depth" :gap="0.35">
+    <vx-group layout="depth" :gap="0.35">
       <slot />
-    </group>
-  </stack>
-  </panel>
+    </vx-group>
+  </vx-stack>
+  </vx-panel>
 </template>
 
 <script setup lang="ts">

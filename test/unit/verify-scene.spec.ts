@@ -54,13 +54,13 @@ const ReactiveFixture = defineComponent({
     },
     template: `
         <vuetrex @ready="onReady">
-          <layer :visible="shown">
-            <row>
-              <box name="b1" :text="label" />
-              <box v-for="(item, i) in items" :key="i"
+          <vx-layer :visible="shown">
+            <vx-row>
+              <vx-box name="b1" :text="label" />
+              <vx-box v-for="(item, i) in items" :key="i"
                    :name="'item-'+i" :text="String(item)" />
-            </row>
-          </layer>
+            </vx-row>
+          </vx-layer>
         </vuetrex>
     `
 })

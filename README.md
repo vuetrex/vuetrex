@@ -41,22 +41,22 @@ Vue template example with reactive features fully supported:
 ```vue
 <template>
  <Vuetrex>
-    <layer>
-      <row v-if="items.length > 0">
-        <box v-for="(el,i) in items" :key="i" :name="'a'+el"/>
-      </row>
-      <row>
-        <box name="b1" size="2"/>
-        <box name="b2"/>
-      </row>
-      <row>
-        <box name="c1"/>
-        <cylinder name="c2" @click="cylinderClick"/>
-      </row>
-      <row>
-        <box name="d1" size="4"/>
-      </row>
-    </layer>
+    <vx-layer>
+      <vx-row v-if="items.length > 0">
+        <vx-box v-for="(el,i) in items" :key="i" :name="'a'+el"/>
+      </vx-row>
+      <vx-row>
+        <vx-box name="b1" size="2"/>
+        <vx-box name="b2"/>
+      </vx-row>
+      <vx-row>
+        <vx-box name="c1"/>
+        <vx-cylinder name="c2" @click="cylinderClick"/>
+      </vx-row>
+      <vx-row>
+        <vx-box name="d1" size="4"/>
+      </vx-row>
+    </vx-layer>
  </Vuetrex>
 </template>
 ```

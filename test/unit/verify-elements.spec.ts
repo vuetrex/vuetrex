@@ -125,8 +125,8 @@ describe('compound components in the custom renderer', () => {
             setup() {
                 return () => {
                     renderCount++
-                    return h('stack', null, visible.value
-                        ? [h('box', {
+                    return h('vx-stack', null, visible.value
+                        ? [h('vx-box', {
                             lines: [label.value],
                             material: { color: 0x123456 },
                         })]
@@ -138,8 +138,8 @@ describe('compound components in the custom renderer', () => {
         const { render } = createRenderer<Base, Base>({
             patchProp,
             ...nodeOps(mockStage, {
-                stack: CompoundElement as unknown as ClassComponent,
-                box: CompoundElement as unknown as ClassComponent,
+                'vx-stack': CompoundElement as unknown as ClassComponent,
+                'vx-box': CompoundElement as unknown as ClassComponent,
             }),
         })
         const root = new CompoundElement(mockStage)
@@ -184,9 +184,9 @@ describe('nodeOps.createElement', () => {
 
     it('extraTypes take priority over built-in tags for the same tag name', () => {
         const { impl, node } = makeFunctional()
-        // Override the built-in 'row' for this instance only — no other instance is affected.
-        const { createElement } = nodeOps(mockStage, { row: impl })
-        expect(createElement('row')).toBe(node)
+        // Override the built-in 'vx-row' for this instance only — no other instance is affected.
+        const { createElement } = nodeOps(mockStage, { 'vx-row': impl })
+        expect(createElement('vx-row')).toBe(node)
     })
 
     it('falls back to the global registry when tag is absent from extraTypes', () => {

@@ -51,44 +51,44 @@ Every prop maps to exactly one of these questions. The question is noted beside 
 
 ## Containers
 
-Named containers are authoring aliases for `<group layout="...">`. The layout engine is the same for all of them. Layout-specific props are valid on the `<group layout="...">` form as well as the named alias.
+Named containers are authoring aliases for `<vx-group layout="...">`. The layout engine is the same for all of them. Layout-specific props are valid on the `<vx-group layout="...">` form as well as the named alias.
 
 | Alias | `layout` value | Primary axis | `normal` direction |
 |-------|---------------|-------------|-------------------|
-| `<group>` | `grid` | XZ plane | left-to-right, then front-to-back |
-| `<row>` | `row` | X | left → right |
-| `<layer>` | `depth` | Z | front → back |
-| `<stack>` | `stack` | Y | bottom → top |
-| `<ring>` | `ring` | XZ circle | clockwise from front (+Z) |
+| `<vx-group>` | `grid` | XZ plane | left-to-right, then front-to-back |
+| `<vx-row>` | `row` | X | left → right |
+| `<vx-layer>` | `depth` | Z | front → back |
+| `<vx-stack>` | `stack` | Y | bottom → top |
+| `<vx-ring>` | `ring` | XZ circle | clockwise from front (+Z) |
 
 ### Group
 
 - Auto-computes columns and rows from child count and container aspect ratio (X/Z).
 - Fills the XZ footprint completely; row-major order (left-to-right, then front-to-back).
-- `<group>` is equivalent to `<group layout="grid">`.
+- `<vx-group>` is equivalent to `<vx-group layout="grid">`.
 
 ### Row
 
 - Places children along X, left-to-right by default. No wrapping by default.
-- `<row>` is equivalent to `<group layout="row">`.
-- `<row wrap="grid">` produces the same result as `<group layout="grid">`. Both forms are valid; `<row>` lets authors discover wrapping incrementally without changing element types.
+- `<vx-row>` is equivalent to `<vx-group layout="row">`.
+- `<vx-row wrap="grid">` produces the same result as `<vx-group layout="grid">`. Both forms are valid; `<vx-row>` lets authors discover wrapping incrementally without changing element types.
 
 ### Layer
 
 - Places children along Z, front-to-back by default. No wrapping by default.
-- `<layer>` is equivalent to `<group layout="depth">`.
+- `<vx-layer>` is equivalent to `<vx-group layout="depth">`.
 
 ### Stack
 
 - Places children upward along Y.
 - Slots are content-sized by default (each slot height = child `bounds.y`).
-- `<stack>` is equivalent to `<group layout="stack">`.
+- `<vx-stack>` is equivalent to `<vx-group layout="stack">`.
 
 ### Ring
 
 - Places children around an XZ circle.
 - Radius is `min(size.x, size.z) / 2`.
-- `<ring>` is equivalent to `<group layout="ring">`.
+- `<vx-ring>` is equivalent to `<vx-group layout="ring">`.
 - Accepts `start-angle` (degrees, default `0` = front/+Z) in addition to shared props.
 
 ---
@@ -100,8 +100,8 @@ Named containers are authoring aliases for `<group layout="...">`. The layout en
 The container's available local space.
 
 ```vue
-<group :size="{ x: 10, z: 6 }" height="4" />
-<row :size="{ x: 8 }" />
+<vx-group :size="{ x: 10, z: 6 }" height="4" />
+<vx-row :size="{ x: 8 }" />
 ```
 
 Rules:
@@ -114,7 +114,7 @@ Rules:
 Shorthand for the Y extent. Normalizes to `size.y` internally.
 
 ```vue
-<stack height="3" />
+<vx-stack height="3" />
 ```
 
 ### `direction` — *Placement*
@@ -122,9 +122,9 @@ Shorthand for the Y extent. Normalizes to `size.y` internally.
 Controls child order along the primary axis.
 
 ```vue
-<row direction="reverse" />
-<stack direction="reverse" />
-<ring direction="reverse" start-angle="90" />
+<vx-row direction="reverse" />
+<vx-stack direction="reverse" />
+<vx-ring direction="reverse" start-angle="90" />
 ```
 
 Values: `normal` (default) | `reverse`
@@ -138,8 +138,8 @@ Values: `normal` (default) | `reverse`
 Fixed spacing between adjacent slots in world units. Default: `0`.
 
 ```vue
-<row :gap="0.5" />
-<stack :gap="0.2" />
+<vx-row :gap="0.5" />
+<vx-stack :gap="0.2" />
 ```
 
 Rules:
@@ -154,9 +154,9 @@ Rules:
 Controls how each slot's size is computed.
 
 ```vue
-<row slot-size="equal" />
-<stack slot-size="content" />
-<row :slot-size="{ x: 2, z: 1 }" />
+<vx-row slot-size="equal" />
+<vx-stack slot-size="content" />
+<vx-row :slot-size="{ x: 2, z: 1 }" />
 ```
 
 Values:
@@ -171,9 +171,9 @@ When `slot-size="content"` and the child has no declared bounds, the full contai
 Controls child position inside its slot. Default: `center`.
 
 ```vue
-<row align="center" />
-<row align-x="start" align-y="center" align-z="center" />
-<stack align-x="center" align-z="end" />
+<vx-row align="center" />
+<vx-row align-x="start" align-y="center" align-z="center" />
+<vx-stack align-x="center" align-z="end" />
 ```
 
 Values: `start` | `center` | `end`
@@ -191,10 +191,10 @@ Per-axis props (`align-x`, `align-y`, `align-z`) override the shorthand.
 Controls behavior when a child's `bounds` exceed its slot.
 
 ```vue
-<group fit="shrink" />
-<group fit="none" />
-<group fit="contain" />
-<group fit="overflow" />
+<vx-group fit="shrink" />
+<vx-group fit="none" />
+<vx-group fit="contain" />
+<vx-group fit="overflow" />
 ```
 
 Values:
@@ -208,9 +208,9 @@ Values:
 Controls multi-line behavior for 1-D layouts.
 
 ```vue
-<row wrap="none" />
-<row wrap="grid" />
-<layer wrap="grid" />
+<vx-row wrap="none" />
+<vx-row wrap="grid" />
+<vx-layer wrap="grid" />
 ```
 
 Values: `none` (default for `row`, `layer`) | `grid`
@@ -224,7 +224,7 @@ When `wrap="grid"`, the primary axis fills first, then the container's secondary
 Controls the container's local anchor. Default: `center`.
 
 ```vue
-<group origin="center" />
+<vx-group origin="center" />
 ```
 
 Values:
@@ -244,28 +244,28 @@ Each child node may declare an `elevation` Y-delta. The layout engine applies `e
 
 ```vue
 <!-- Horizontal row with gaps, children float to center vertically -->
-<row :gap="0.5" align-y="center" fit="none">
-  <box />
-  <box />
-  <box />
-</row>
+<vx-row :gap="0.5" align-y="center" fit="none">
+  <vx-box />
+  <vx-box />
+  <vx-box />
+</vx-row>
 
 <!-- Auto-grid container; nested containers scale down to fit -->
-<group :size="{ x: 8, z: 6 }" height="3" fit="shrink">
-  <stack />
-  <ring />
-  <box />
-</group>
+<vx-group :size="{ x: 8, z: 6 }" height="3" fit="shrink">
+  <vx-stack />
+  <vx-ring />
+  <vx-box />
+</vx-group>
 
-<!-- Row that wraps into a grid; equivalent to <group wrap is implied> -->
-<row wrap="grid" :gap="0.4">
-  <box v-for="item in items" :key="item.id" />
-</row>
+<!-- Row that wraps into a grid; equivalent to <vx-group wrap is implied> -->
+<vx-row wrap="grid" :gap="0.4">
+  <vx-box v-for="item in items" :key="item.id" />
+</vx-row>
 
 <!-- Canonical layout form; ring props are valid here too -->
-<group layout="ring" :size="{ x: 6, z: 6 }" direction="reverse" start-angle="45">
-  <box v-for="item in items" :key="item.id" />
-</group>
+<vx-group layout="ring" :size="{ x: 6, z: 6 }" direction="reverse" start-angle="45">
+  <vx-box v-for="item in items" :key="item.id" />
+</vx-group>
 ```
 
 ---

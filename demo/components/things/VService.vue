@@ -9,9 +9,9 @@
   – a thin latency-coloured disc caps the top with the p99 reading.
 -->
 <template>
-  <stack :gap="0.04">
+  <vx-stack :gap="0.04">
     <!-- footer plinth: service name + health -->
-    <box
+    <vx-box
       :size="1.8"
       :depth="0.9"
       :height="0.35"
@@ -23,8 +23,8 @@
     />
 
     <!-- replica ring: one wedge per desired replica -->
-    <ring :radius="0.9" :gap-ratio="0.45" start-angle="90">
-      <wedge
+    <vx-ring :radius="0.9" :gap-ratio="0.45" start-angle="90">
+      <vx-wedge
         v-for="i in desiredReplicas"
         :key="i"
 
@@ -33,10 +33,10 @@
         :material="{ color: replicaColor(i), roughness: 0.5, metalness: 0.2 }"
         :hover="{ color: 0x4c7fb2, transition: 0.18 }"
       />
-    </ring>
+    </vx-ring>
 
     <!-- load tower: cylinder whose height reflects current RPS -->
-    <cylinder
+    <vx-cylinder
       :text="`${rps.toFixed(0)} rps`"
       :size="1.1"
       :height="barHeight"
@@ -45,14 +45,14 @@
     />
 
     <!-- latency disc -->
-    <cylinder
+    <vx-cylinder
       :text="`p99 ${p99Ms} ms`"
       :size="1.5"
       :height="0.2"
       :material="{ color: latencyColor, roughness: 0.35, metalness: 0.25 }"
       :hover="{ color: 0x3d7ce0, transition: 0.2 }"
     />
-  </stack>
+  </vx-stack>
 </template>
 
 <script lang="ts">

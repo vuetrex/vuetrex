@@ -9,9 +9,9 @@
   Kubernetes watch stream without any imperative wiring.
 -->
 <template>
-  <stack :gap="0.04">
+  <vx-stack :gap="0.04">
     <!-- footer plinth: name · namespace -->
-    <box
+    <vx-box
       :size="1.8"
       :depth="0.9"
       :height="0.35"
@@ -23,7 +23,7 @@
     />
 
     <!-- body: one cylindrical tank per container -->
-    <cylinder
+    <vx-cylinder
       v-for="c in containers"
       :key="c.name"
       :text="`${namespace}`"
@@ -34,14 +34,14 @@
     />
 
     <!-- header disc: pod phase -->
-    <cylinder
+    <vx-cylinder
 
       :size="1.7"
       :height="0.22"
       :material="{ color: phaseColor, roughness: 0.35, metalness: 0.25 }"
       :hover="{ color: 0x49a457, transition: 0.2 }"
     />
-  </stack>
+  </vx-stack>
 </template>
 
 <script lang="ts">

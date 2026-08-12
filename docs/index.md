@@ -13,11 +13,11 @@ import Hello from './examples/src/Hello.vue';
 
 [comment]: <> (<Vuetrex>)
 
-[comment]: <> (<row>)
+[comment]: <> (<vx-row>)
 
-[comment]: <> (<box/>)
+[comment]: <> (<vx-box/>)
 
-[comment]: <> (</row>)
+[comment]: <> (</vx-row>)
 
 [comment]: <> (</Vuetrex>)
 

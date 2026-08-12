@@ -1,6 +1,6 @@
 <template>
-  <stack :gap="0.025" @click="$emit('select', id)">
-    <box
+  <vx-stack :gap="0.025" @click="$emit('select', id)">
+    <vx-box
       v-for="level in 2"
       :key="level"
       :name="level === 1 ? id : `${id}-layer-${level}`"
@@ -14,7 +14,7 @@
       :material="material"
       :hover="{ color: hoverColor, emissive: hoverColor, emissiveIntensity: 0.35, scale: 1.05, transition: 0.16 }"
     />
-  </stack>
+  </vx-stack>
 </template>
 
 <script setup lang="ts">

@@ -1,29 +1,29 @@
 <template>
   <vuetrex height="79vh" width="100%">
-    <layer :gap="1">
-      <row align-x="start" :gap="0.4">
-        <box text="align: start" size="1.2" />
-        <box text="row" size="0.8" />
-        <box text="+X slots" size="1" />
-      </row>
+    <vx-layer :gap="1">
+      <vx-row align-x="start" :gap="0.4">
+        <vx-box text="align: start" size="1.2" />
+        <vx-box text="row" size="0.8" />
+        <vx-box text="+X slots" size="1" />
+      </vx-row>
 
-      <ring :radius="0.7" start-angle="15" direction="reverse" :gap-ratio="0.5">
-        <wedge
+      <vx-ring :radius="0.7" start-angle="15" direction="reverse" :gap-ratio="0.5">
+        <vx-wedge
           v-for="item in 4"
           :key="item"
           :text="String(item)"
           height="0.35"
           :thickness="0.11"
         />
-      </ring>
+      </vx-ring>
 
-      <group layout="depth" :gap="0.35">
-        <cylinder text="group" size="0.7" height="0.3" />
-        <cylinder text="layout=depth" size="0.7" height="0.3" />
-      </group>
+      <vx-group layout="depth" :gap="0.35">
+        <vx-cylinder text="group" size="0.7" height="0.3" />
+        <vx-cylinder text="layout=depth" size="0.7" height="0.3" />
+      </vx-group>
 
        Concept previews: concepts/stacked1.png (VColumns) and concepts/stacked2.png (VNode).
-      <row :gap="1.4">
+      <vx-row :gap="1.4">
         <VColumns />
         <VNode body=
 "        Geometry
@@ -69,8 +69,8 @@
             { name: 'deploy', status: 'pending', durationS: 0 },
           ]"
         />
-      </row>
-    </layer>
+      </vx-row>
+    </vx-layer>
   </vuetrex>
 </template>
 

@@ -27,18 +27,18 @@ export type ElementRegistry = Record<string, ClassComponent | FunctionalComponen
  * prop to <vuetrex> for per-instance registration.
  */
 const builtins: ElementRegistry = {
-    group: GroupNode,
-    layer: Layer,
+    'vx-group': GroupNode,
+    'vx-layer': Layer,
     //layout
-    row: Row,
-    stack: Stack,
-    ring: Ring,
-    connector: ConnectorNode,
-    panel: Panel,
+    'vx-row': Row,
+    'vx-stack': Stack,
+    'vx-ring': Ring,
+    'vx-connector': ConnectorNode,
+    'vx-panel': Panel,
     //models
-    box: Box,
-    cylinder: Cylinder,
-    wedge: Wedge,
+    'vx-box': Box,
+    'vx-cylinder': Cylinder,
+    'vx-wedge': Wedge,
 }
 
 /**

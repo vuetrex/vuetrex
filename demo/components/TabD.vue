@@ -1,59 +1,59 @@
 <template>
   <vuetrex :camera="camera" >
-    <layer @click="click3d">
-      <row>
-        <stack >
-          <box size="1.3" height="0.25" name="s1" text="stack 1"/>
-          <box size="0.5" height="0.25"/>
-          <box size="0.5" height="0.25"/>
-          <box size="0.5" height="0.25"/>
-          <box size="0.5" height="0.25"/>
-        </stack>
-        <stack >
-          <box size="1.5" height="0.25" name="s2"  text="stack 2"/>
-          <box size="0.5"/>
-        </stack>
-        <stack >
-          <box size="1.5" height="0.25" name="s3"  text="stack 2"/>
-          <box size="0.5"/>
-        </stack>
-        <stack >
-          <box size="1.5" height="0.25" name="s4"  text="stack 2"/>
-          <box size="0.5"/>
-        </stack>
-      </row>
-      <row>
-        <layer :elevation="0.05" visible="false" size="5.5">
-          <ring>
-            <box text="a1" />
-            <box text="a2" />
-            <box text="a3" />
-          </ring>
-        </layer>
-      </row>
-      <row>
-        <stack >
-          <box size="1.3" height="0.25" name="t1" text="Empty Spot" connection="s1"/>
+    <vx-layer @click="click3d">
+      <vx-row>
+        <vx-stack >
+          <vx-box size="1.3" height="0.25" name="s1" text="stack 1"/>
+          <vx-box size="0.5" height="0.25"/>
+          <vx-box size="0.5" height="0.25"/>
+          <vx-box size="0.5" height="0.25"/>
+          <vx-box size="0.5" height="0.25"/>
+        </vx-stack>
+        <vx-stack >
+          <vx-box size="1.5" height="0.25" name="s2"  text="stack 2"/>
+          <vx-box size="0.5"/>
+        </vx-stack>
+        <vx-stack >
+          <vx-box size="1.5" height="0.25" name="s3"  text="stack 2"/>
+          <vx-box size="0.5"/>
+        </vx-stack>
+        <vx-stack >
+          <vx-box size="1.5" height="0.25" name="s4"  text="stack 2"/>
+          <vx-box size="0.5"/>
+        </vx-stack>
+      </vx-row>
+      <vx-row>
+        <vx-layer :elevation="0.05" visible="false" size="5.5">
+          <vx-ring>
+            <vx-box text="a1" />
+            <vx-box text="a2" />
+            <vx-box text="a3" />
+          </vx-ring>
+        </vx-layer>
+      </vx-row>
+      <vx-row>
+        <vx-stack >
+          <vx-box size="1.3" height="0.25" name="t1" text="Empty Spot" connection="s1"/>
 
-        </stack>
-        <stack >
-          <box size="1.5" height="0.25" name="t2"  text="Small Deploy"/>
-          <box size="0.5"/>
-        </stack>
-        <stack >
-          <box size="1.5" height="0.25" name="t3"  text="Complex set"/>
-          <box size="0.5" height="0.2"/>
-          <box size="0.5" height="0.3"/>
-          <box size="0.5" height="0.3"/>
-          <box size="0.5" height="0.3"/>
-          <box size="0.5" height="0.1"/>
-        </stack>
-        <stack >
-          <box size="1.5" height="0.25" name="t4"  text="Lebowsky" connection="s4"/>
-          <box size="0.5"/>
-        </stack>
-      </row>
-    </layer>
+        </vx-stack>
+        <vx-stack >
+          <vx-box size="1.5" height="0.25" name="t2"  text="Small Deploy"/>
+          <vx-box size="0.5"/>
+        </vx-stack>
+        <vx-stack >
+          <vx-box size="1.5" height="0.25" name="t3"  text="Complex set"/>
+          <vx-box size="0.5" height="0.2"/>
+          <vx-box size="0.5" height="0.3"/>
+          <vx-box size="0.5" height="0.3"/>
+          <vx-box size="0.5" height="0.3"/>
+          <vx-box size="0.5" height="0.1"/>
+        </vx-stack>
+        <vx-stack >
+          <vx-box size="1.5" height="0.25" name="t4"  text="Lebowsky" connection="s4"/>
+          <vx-box size="0.5"/>
+        </vx-stack>
+      </vx-row>
+    </vx-layer>
   </vuetrex>
 </template>
 

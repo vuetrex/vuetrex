@@ -4,16 +4,16 @@
   Used as a Vue subcomponent inside a <vuetrex> slot.
 -->
 <template>
-  <stack :gap="0">
-    <box
+  <vx-stack :gap="0">
+    <vx-box
       text="databases"
       :size="2.4"
       :height="0.4"
       :material="{ color: 0x1e1e1e, roughness: 0.55, metalness: 0.05 }"
       :hover="{ color: 0x2f7a3a, transition: 0.2 }"
     />
-    <group layout="grid" :gap="0.15">
-      <box
+    <vx-group layout="grid" :gap="0.15">
+      <vx-box
         v-for="(h, i) in columnHeights"
         :key="i"
         :size="0.42"
@@ -21,8 +21,8 @@
         :material="{ color: 0x333333, roughness: 0.5, metalness: 0.08 }"
         :hover="{ color: 0x4c7fb2, transition: 0.18, scale: 1.05 }"
       />
-    </group>
-  </stack>
+    </vx-group>
+  </vx-stack>
 </template>
 
 <script lang="ts">

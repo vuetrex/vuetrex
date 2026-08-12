@@ -15,7 +15,7 @@
 - Box-equivalent footprint: a `Box`, `Cylinder`, and `Wedge` of declared `size` all occupy `size × height × size`.
 - Anchoring is universal: every node is anchored at the center of its base. Container local origin is its base-center, Y=0.
 - Layout factories operate on `Vector3[]` footprints only — no `Node` import in `layouts.ts`.
-- Existing public template authoring (`<layer>`, `<row>`, `<stack>`, `<ring>`, `<box>`, …) keeps working.
+- Existing public template authoring (`<vx-layer>`, `<vx-row>`, `<vx-stack>`, `<vx-ring>`, `<vx-box>`, …) keeps working.
 - Run tests with `npx vitest run <file>` (CI) — never the watch mode.
 - Commit after every task. Branch is `group-nodes`.
 
