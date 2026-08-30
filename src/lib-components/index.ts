@@ -1,6 +1,15 @@
 export type { VxStage, VxSettings, VxMouseEvent } from '@/lib-components/vuetrex.js';
 export type { VxAnimProps, VxAnimOptions } from '@/lib-components/three/stage.js';
 export type { VxMaterialProps, VxHoverProps } from '@/lib-components/nodes/material.js';
+export { InstanceNode } from '@/lib-components/nodes/InstanceNode.js';
+export type {
+    InstanceAnchor,
+    InstanceEncoding,
+    InstanceGeometry,
+    InstanceHit,
+    InstanceItem,
+    InstanceKey,
+} from '@/lib-components/nodes/InstanceNode.js';
 export { default as Vuetrex } from '@/lib-components/vuetrex.js';
 
 export { registerElement } from '@/lib-components/nodes/types.js';

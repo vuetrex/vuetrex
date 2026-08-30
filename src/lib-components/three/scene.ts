@@ -29,6 +29,7 @@ export default class Scene extends LifeCycle {
     readonly scene: THREE.Scene
     renderer: THREE.WebGLRenderer
     selectedObject: (THREE.Mesh | null) = null
+    protected selectedInstanceId: number | undefined
 
     private composer: THREEx.EffectComposer;
     private readonly renderPass: THREEx.RenderPass;
@@ -253,22 +254,27 @@ export default class Scene extends LifeCycle {
             // create an array containing all objects in the scene with which the ray intersects
             const intersects = ray.intersectObjects(this.scene.children, true);
             let found: (undefined | THREE.Intersection);
-            if (intersects.length > 1) {
+            if (intersects.length > 0) {
                 found = intersects.find(
                     x => x.object && x.object.name.startsWith("el-")
                 );
                 const labelObject = <THREE.Mesh> (found && found.object);
-                if (labelObject && labelObject !== this.selectedObject) {
+                const instanceId = found?.instanceId
+                if (labelObject && (
+                    labelObject !== this.selectedObject || instanceId !== this.selectedInstanceId
+                )) {
                     if (this.selectedObject) {
                         if (this.lastMouseEvent) this.onMouseOut(this.selectedObject, this.lastMouseEvent);
                     }
                     this.selectedObject = labelObject;
+                    this.selectedInstanceId = instanceId;
                     if (this.lastMouseEvent) this.onMouseOver(labelObject, this.lastMouseEvent);
                 }
             }
             if (!found && this.selectedObject) {
                 if (this.lastMouseEvent) this.onMouseOut(this.selectedObject, this.lastMouseEvent);
                 this.selectedObject = null;
+                this.selectedInstanceId = undefined;
             }
         };
     }

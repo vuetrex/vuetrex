@@ -159,6 +159,7 @@ describe('keyed connector registry', () => {
         path.connect(a, b, 'line', 'diagonal')
         const segment = path.getSegment(0)
         expect(segment.len).toBeCloseTo(5)
+        expect(segment.endInset).toBeCloseTo(0.645, 3)
         expect(path.sample(segment.len / 2)).toMatchObject({ x: 0, y: 0.5 })
 
         const renderer = new LineRenderer({ scene } as unknown as VuetrexStage)
@@ -167,6 +168,13 @@ describe('keyed connector registry', () => {
         expect(mesh.position.x).toBeCloseTo(0)
         expect(mesh.position.z).toBeCloseTo(0.5)
         expect(mesh.rotation.y).not.toBe(0)
+        const lineGroup = (renderer as any).group as THREE.Group
+        expect(lineGroup.children).toHaveLength(2)
+        const arrow = lineGroup.children[1] as THREE.Mesh
+        expect(arrow.userData.connectorPart).toBe('arrowhead')
+        const arrowDirection = new THREE.Vector3(0, 1, 0).applyQuaternion(arrow.quaternion)
+        expect(arrowDirection.x).toBeCloseTo(4 / 5, 6)
+        expect(arrowDirection.z).toBeCloseTo(3 / 5, 6)
         renderer.dispose()
     })
 
@@ -197,6 +205,23 @@ describe('keyed connector registry', () => {
         expect(((renderer as any).group as THREE.Group).children).toHaveLength(3)
         renderer.dispose()
         connectors.clear()
+    })
+
+    it('does not add an arrowhead to direct particle segments', () => {
+        const { scene, addEndpoint } = makeRegistryHarness()
+        const a = addEndpoint('a')
+        const b = addEndpoint('b')
+        a.mesh!.position.set(-1, 0, 0)
+        b.mesh!.position.set(1, 0, 0)
+        scene.updateMatrixWorld(true)
+
+        const segment = new DirectStrategy().calculatePath(a, b, 'particles')[0]
+        const renderer = new LineRenderer({ scene } as unknown as VuetrexStage)
+        renderer.update([segment], 0, 0)
+        const parts = ((renderer as any).group as THREE.Group).children
+        expect(parts).toHaveLength(1)
+        expect(parts[0].userData.connectorPart).toBe('shaft')
+        renderer.dispose()
     })
 
     it('keeps direct and orthogonal routing geometrically distinct', () => {
@@ -311,6 +336,20 @@ describe('connector enclosing scale', () => {
         const geometry = (lineGroup.children[0] as THREE.Mesh).geometry as THREE.BoxGeometry
         expect(geometry.parameters.height).toBeCloseTo(0.0012, 8)
         expect(geometry.parameters.depth).toBeCloseTo(0.0012, 8)
+
+        const direct = Segment.between(
+            new THREE.Vector3(-1, 0, 0),
+            new THREE.Vector3(1, 0, 0),
+            endpoint,
+            endpoint,
+            'line',
+        )
+        direct.scale = 0.1
+        direct.endInset = 0.05
+        renderer.update([direct], 0, 0)
+        const arrowGeometry = (lineGroup.children[1] as THREE.Mesh).geometry as THREE.ConeGeometry
+        expect(arrowGeometry.parameters.height).toBeCloseTo(0.016, 8)
+        expect(arrowGeometry.parameters.radius).toBeCloseTo(0.0065, 8)
 
         const baseParticleMetrics = scaledParticleMetrics(1, 0.035)
         expect(scaledParticleMetrics(0.1, 0.035)).toEqual({

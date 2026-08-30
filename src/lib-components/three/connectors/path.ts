@@ -1,6 +1,6 @@
 import {Element3d} from '@/lib-components/three/element3d.js';
 import {ConnectorStrategy} from '@/lib-components/three/connectors/types.js';
-import {Vector3} from 'three';
+import {Box3, Vector3} from 'three';
 
 export class Segment {
     horizontal: boolean
@@ -18,7 +18,9 @@ export class Segment {
     startZ: number
     endX: number
     endZ: number
-    constructor(horizontal: boolean, mid: number, s: number, t: number, sEl: Element3d, tEl: Element3d, type: string = 'particles', connectionId: string = '', scale: number = 1, elevation: number = -0.05) {
+    layout: string
+    endInset: number
+    constructor(horizontal: boolean, mid: number, s: number, t: number, sEl: Element3d, tEl: Element3d, type: string = 'particles', connectionId: string = '', scale: number = 1, elevation: number = -0.05, layout: string = 'orthogonal') {
         this.horizontal = horizontal;
         this.mid = mid
         this.s = s
@@ -34,10 +36,12 @@ export class Segment {
         this.connectionId = connectionId;
         this.scale = scale;
         this.elevation = elevation;
+        this.layout = layout;
+        this.endInset = 0;
     }
 
-    static between(start: Vector3, end: Vector3, sEl: Element3d, tEl: Element3d, type: string = 'particles'): Segment {
-        const segment = new Segment(true, start.z, start.x, end.x, sEl, tEl, type)
+    static between(start: Vector3, end: Vector3, sEl: Element3d, tEl: Element3d, type: string = 'particles', layout: string = 'direct'): Segment {
+        const segment = new Segment(true, start.z, start.x, end.x, sEl, tEl, type, '', 1, -0.05, layout)
         segment.startX = start.x
         segment.startZ = start.z
         segment.endX = end.x
@@ -123,7 +127,7 @@ export class BezierStrategy implements ConnectorStrategy {
         // Fallback to straight line for now, but placeholder for Catmull-Rom or similar
         const p1 = el1.getWorldPosition();
         const p2 = el2.getWorldPosition();
-        return [Segment.between(p1, p2, el1, el2, type)];
+        return [Segment.between(p1, p2, el1, el2, type, 'bezier')];
     }
 
     getPoints(el1: Element3d, el2: Element3d): Vector3[] {
@@ -143,6 +147,34 @@ export class ConnectorPath {
         this.strategy = strategy;
     }
 
+    /** Distance from the target centre to the source-facing edge of its XZ bounds. */
+    private targetInset(segment: Segment, scale: number): number {
+        const target = segment.tEl.mesh
+        if (!target || segment.len <= 0) return 0.3 * scale
+
+        const bounds = new Box3().setFromObject(target)
+        const x = segment.endX
+        const z = segment.endZ
+        if (bounds.isEmpty() || x < bounds.min.x || x > bounds.max.x || z < bounds.min.z || z > bounds.max.z) {
+            return 0.3 * scale
+        }
+
+        // Trace backwards from the target centre along the connector. Using
+        // XZ bounds keeps the calculation valid even when endpoints sit at
+        // different Y elevations.
+        const reverseX = (segment.startX - segment.endX) / segment.len
+        const reverseZ = (segment.startZ - segment.endZ) / segment.len
+        const distances: number[] = []
+        if (Math.abs(reverseX) > 1e-9) {
+            distances.push((reverseX > 0 ? bounds.max.x - x : x - bounds.min.x) / Math.abs(reverseX))
+        }
+        if (Math.abs(reverseZ) > 1e-9) {
+            distances.push((reverseZ > 0 ? bounds.max.z - z : z - bounds.min.z) / Math.abs(reverseZ))
+        }
+        const inset = Math.min(...distances.filter(distance => distance >= 0 && Number.isFinite(distance)))
+        return Number.isFinite(inset) ? inset + 0.02 * scale : 0.3 * scale
+    }
+
     connect(el1: Element3d, el2: Element3d, type: string = 'particles', connectionId: string = '', scale: number = 1) {
         const newSegments = this.strategy.calculatePath(el1, el2, type);
         const endpointElevation = Math.min(el1.getWorldPosition().y, el2.getWorldPosition().y)
@@ -151,6 +183,7 @@ export class ConnectorPath {
             segment.connectionId = connectionId
             segment.scale = scale
             segment.elevation = elevation
+            if (segment.layout === 'direct') segment.endInset = this.targetInset(segment, scale)
         })
         this.segments.push(...newSegments);
         this.updateLen();

@@ -7,6 +7,7 @@ import {Stack} from '@/lib-components/nodes/Stack.js';
 import {Ring} from '@/lib-components/nodes/Ring.js';
 import {ConnectorNode} from '@/lib-components/nodes/ConnectorNode.js';
 import {Panel} from '@/lib-components/nodes/Panel.js';
+import {InstanceNode} from '@/lib-components/nodes/InstanceNode.js';
 
 import {Box} from '@/lib-components/nodes/shapes/Box.js';
 import {Cylinder} from '@/lib-components/nodes/shapes/Cylinder.js';
@@ -35,6 +36,7 @@ const builtins: ElementRegistry = {
     'vx-ring': Ring,
     'vx-connector': ConnectorNode,
     'vx-panel': Panel,
+    'vx-instances': InstanceNode,
     //models
     'vx-box': Box,
     'vx-cylinder': Cylinder,

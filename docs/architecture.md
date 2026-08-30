@@ -54,6 +54,13 @@ Extends `Node`. Base for all geometry nodes. Provides reactive `state` (`text`, 
 happens inside the geometry watchEffect after the mesh exists. **To add a new shape: extend `MeshNode`, implement
 `modelGen()`.**
 
+### `InstanceNode` (`nodes/InstanceNode.ts`)
+
+Extends `Node` and realizes a keyed semantic collection as one `THREE.InstancedMesh`. It keeps stable GPU slots for
+item IDs, applies one transform and color encoding per item, reports the encoded batch bounds to parent layouts, and
+maps raycast `instanceId` values back to `VxMouseEvent.vxInstance`. It is intentionally one logical node: the first
+draft has one shared geometry/material and one whole-batch connector endpoint.
+
 ### `ConnectorNode` (`nodes/ConnectorNode.ts`)
 
 Extends `Node`. Declarative connector record independent of any shape node. Reactive `from`, `to`, `layout`, and `type`
@@ -83,6 +90,7 @@ which is still the shorthand for "connect this node to target id".
 | `Ring`          | Circular layout container             | `ringLayout`                         |
 | `Panel`         | Visual top-surface container          | Split label/content regions          |
 | `ConnectorNode` | Declarative link between nodes        | `syncWithThree()`                    |
+| `InstanceNode`  | Keyed GPU-instanced semantic repeater | `InstanceEncoding`, `instanceHitAt()`|
 | `Root`          | Tree root, owns destroy               | —                                    |
 
 ### `Element3d` (`three/element3d.ts`)
@@ -110,6 +118,11 @@ every orthogonal segment above platform/base meshes instead of hiding bends at a
 explicit X/Z start and end coordinates: the orthogonal strategy emits a contiguous, axis-aligned zigzag, while the
 direct strategy emits one true endpoint-to-endpoint span. Sampling is coordinate-independent, so line geometry and
 particle velocity use the same complete route.
+
+Direct `line` connectors include a scale-aware cone marker pointing toward the `to` endpoint. The marker is inset to
+the source-facing edge of the target's world-space XZ bounds so it remains visible instead of being buried at the node
+centre. Particle and orthogonal connectors intentionally remain unmarked until they have edge-local flow controls and
+port-aware end routing.
 
 - **`VxAnimProps`:** target transform values for `animateTo()` (positionY, scale, etc.)
 - **`VxAnimOptions`:** animation timing and easing (duration, ease, delay, onComplete)
@@ -188,6 +201,10 @@ DOM event → raycast → Three.js mesh event → node dispatch → bubbles up t
 Driven by the existing per-frame hover tracker in mouseAnimationFn (maintains selectedObject). They call new
 onMouseOver/onMouseOut hooks that stage.ts overrides, keeping scene.ts generic. These don't bubble, matching DOM
 semantics
+
+For `vx-instances`, moving between members of the same `InstancedMesh` also produces leave/enter transitions because
+the hover tracker compares both the selected object and Three.js `instanceId`. Click, double-click, enter, and leave
+events carry `{ id, item, instanceIndex }` in `event.vxInstance`.
 
 ---
 

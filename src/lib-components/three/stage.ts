@@ -3,6 +3,7 @@ import * as THREEx from '@/lib-components/three/three.imports.js';
 import Scene from '@/lib-components/three/scene.js';
 import {Element3d, VxEventMap} from '@/lib-components/three/element3d.js';
 import {Node} from '@/lib-components/nodes/Node.js';
+import type {InstanceHit} from '@/lib-components/nodes/InstanceNode.js';
 import {Connectors} from '@/lib-components/three/connectors/connectors.js';
 import gsap from 'gsap';
 
@@ -66,6 +67,7 @@ export interface VxSettings {
 export interface VxMouseEvent extends MouseEvent {
     vxNode: Node;
     vxPosition: any;
+    vxInstance?: InstanceHit<unknown>;
 }
 
 let BOX_RADIUS = 1.0;
@@ -208,7 +210,9 @@ export class VuetrexStage extends Scene implements VxStage {
                 '#'+(this.settings.captionColor || 0xffffff).toString(16))
         })
 
-        //grid lines
+        // Grid color must not depend on whether drawText() happened to run.
+        // Instance batches do not create floor captions, unlike ordinary meshes.
+        texture.fillStyle = '#' + (this.settings.captionColor || 0xffffff).toString(16)
         texture.setGlobalAlpha(0.02)
         for (let i=0; i<100; i++) {
             texture.fillRect(100, 100 + 20*i, 1897, 2)
@@ -389,14 +393,28 @@ export class VuetrexStage extends Scene implements VxStage {
 
     // --- events ---
 
+    private mouseEventFor(mesh: THREE.Mesh, event: MouseEvent): VxMouseEvent | undefined {
+        const el3d = mesh.userData.el as Element3d | undefined;
+        if (!el3d) return undefined;
+
+        const ev = event as VxMouseEvent;
+        ev.vxNode = el3d.node;
+        ev.vxPosition = el3d.mesh?.position.clone();
+        const instanceNode = el3d.node as Node & {
+            instanceHitAt?: (instanceIndex: number) => InstanceHit<unknown> | undefined
+        };
+        ev.vxInstance = this.selectedInstanceId === undefined
+            ? undefined
+            : instanceNode.instanceHitAt?.(this.selectedInstanceId);
+        return ev;
+    }
+
     onCanvasClick(event: MouseEvent) {
         event.preventDefault();
         if (this.selectedObject) {
             const el3d = this.selectedObject.userData.el as Element3d;
-            const ev = event as VxMouseEvent;
-            ev.vxNode = el3d.node;
-            ev.vxPosition = el3d.mesh?.position.clone();
-            el3d.mesh?.dispatchEvent({ type: 'click', originalEvent: ev });
+            const ev = this.mouseEventFor(this.selectedObject, event);
+            if (ev) el3d.mesh?.dispatchEvent({ type: 'click', originalEvent: ev });
         }
     }
 
@@ -404,29 +422,21 @@ export class VuetrexStage extends Scene implements VxStage {
         event.preventDefault();
         if (this.selectedObject) {
             const el3d = this.selectedObject.userData.el as Element3d;
-            const ev = event as VxMouseEvent;
-            ev.vxNode = el3d.node;
-            ev.vxPosition = el3d.mesh?.position.clone();
-            el3d.mesh?.dispatchEvent({ type: 'dblclick', originalEvent: ev });
+            const ev = this.mouseEventFor(this.selectedObject, event);
+            if (ev) el3d.mesh?.dispatchEvent({ type: 'dblclick', originalEvent: ev });
         }
     }
 
     protected onMouseOver(mesh: THREE.Mesh, event: MouseEvent) {
-        const el3d = mesh.userData.el as Element3d;
-        if (!el3d) return;
-        const ev = event as VxMouseEvent;
-        ev.vxNode = el3d.node;
-        ev.vxPosition = el3d.mesh?.position.clone();
-        el3d.mesh?.dispatchEvent({ type: 'mouseOver', originalEvent: ev });
+        const el3d = mesh.userData.el as Element3d | undefined;
+        const ev = this.mouseEventFor(mesh, event);
+        if (ev) el3d?.mesh?.dispatchEvent({ type: 'mouseOver', originalEvent: ev });
     }
 
     protected onMouseOut(mesh: THREE.Mesh, event: MouseEvent) {
-        const el3d = mesh.userData.el as Element3d;
-        if (!el3d) return;
-        const ev = event as VxMouseEvent;
-        ev.vxNode = el3d.node;
-        ev.vxPosition = el3d.mesh?.position.clone();
-        el3d.mesh?.dispatchEvent({ type: 'mouseOut', originalEvent: ev });
+        const el3d = mesh.userData.el as Element3d | undefined;
+        const ev = this.mouseEventFor(mesh, event);
+        if (ev) el3d?.mesh?.dispatchEvent({ type: 'mouseOut', originalEvent: ev });
     }
 
     onShowAnnotation(mesh: THREE.Mesh) {

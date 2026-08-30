@@ -4,6 +4,9 @@ import { ConnectorRenderer } from '@/lib-components/three/connectors/types.js';
 import * as THREE from 'three';
 
 const BASE_LINE_THICKNESS = 0.012;
+const BASE_ARROW_LENGTH = 0.16;
+const BASE_ARROW_RADIUS = 0.065;
+const UP = new THREE.Vector3(0, 1, 0);
 
 /**
  * World-space line renderer. Box segments keep thickness proportional to the
@@ -37,6 +40,9 @@ export class LineRenderer implements ConnectorRenderer {
             segment.endZ,
             segment.scale,
             segment.elevation,
+            segment.layout,
+            segment.type,
+            segment.endInset,
         ].join(':')).join('|')
         if (signature === this.signature) return
         this.signature = signature
@@ -57,7 +63,33 @@ export class LineRenderer implements ConnectorRenderer {
                 (segment.startZ + segment.endZ) / 2,
             )
             mesh.rotation.y = -Math.atan2(dz, dx)
+            mesh.userData.connectorPart = 'shaft'
             this.group.add(mesh)
+
+            // Direction markers intentionally start with the least ambiguous
+            // route: a single direct, non-particle connector. Orthogonal paths
+            // need bend/port rules before an end marker can be positioned well.
+            if (segment.type === 'line' && segment.layout === 'direct') {
+                const arrowLength = Math.min(BASE_ARROW_LENGTH * scale, length * 0.35)
+                const arrowRadius = Math.min(BASE_ARROW_RADIUS * scale, arrowLength * 0.45)
+                const direction = new THREE.Vector3(dx / length, 0, dz / length)
+                const arrowGeometry = new THREE.ConeGeometry(arrowRadius, arrowLength, 12)
+                const arrow = new THREE.Mesh(arrowGeometry, this.material)
+                // ConeGeometry points along local +Y. Stop just outside the
+                // target bounds so the marker is not hidden inside the node.
+                const endInset = Math.min(
+                    Math.max(segment.endInset || 0.3 * scale, arrowLength),
+                    length * 0.45,
+                )
+                arrow.quaternion.setFromUnitVectors(UP, direction)
+                arrow.position.set(
+                    segment.endX - direction.x * (endInset + arrowLength / 2),
+                    segment.elevation,
+                    segment.endZ - direction.z * (endInset + arrowLength / 2),
+                )
+                arrow.userData.connectorPart = 'arrowhead'
+                this.group.add(arrow)
+            }
         }
     }
 

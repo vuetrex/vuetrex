@@ -84,21 +84,22 @@ metric-driven database/tower visuals; infrastructure-specific silhouettes remain
 ### Connector routing still needs hardening
 
 - Orthogonal routes have no obstacle avoidance, port selection, lane allocation, or edge-specific elevation.
-- Direction is not visually explicit.
+- Direction is explicit for direct line connectors; orthogonal and particle routes still have no end markers.
 - Dense fan-out creates overlapping segments with no shared-bus representation.
 
 ## Proposed connector additions
 
-### 1. `arrow` renderer
+### 1. Directional connector styling
 
-Highest priority. Add a low-cost directional renderer with per-edge props:
+The first low-cost step is implemented: direct `line` connectors receive a scale-aware arrowhead immediately before
+the source-facing edge of the `to` endpoint.
+The remaining work is per-edge styling and explicit marker control:
 
 ```vue
-
-<connector
-    from="gateway"
-    to="api-auth"
-    type="arrow"
+<vx-connector
+    from="city-edge-lb"
+    to="public-api"
+    type="line"
     color="0x44aaff"
     width="0.025"
     :opacity="0.9"
@@ -107,7 +108,8 @@ Highest priority. Add a low-cost directional renderer with per-edge props:
 />
 ```
 
-It should support `start`, `end`, and `both` direction markers, dashed status lines, and reactive color/opacity/width.
+It should support `start`, `end`, `both`, and `none` direction markers, dashed status lines, and reactive
+color/opacity/width. Orthogonal markers should wait for port-aware routing so arrowheads do not terminate inside nodes.
 
 ### 2. `flow` renderer
 
