@@ -89,7 +89,8 @@ export default defineComponent({
 
             watch(
                 () => props.camera,
-                (camera) => stage.sendCameraTo(camera)
+                (camera) => stage.sendCameraTo(camera),
+                { immediate: true }
             );
 
             nextTick().then(() => {

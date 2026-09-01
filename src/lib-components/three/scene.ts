@@ -284,11 +284,13 @@ export default class Scene extends LifeCycle {
     startTime: number = -1;
     startCameraPos: any = null;
     endCameraPos: any = null;
+    cameraTransitionDuration = 1000;
 
-    retargetCamera(lookAt: THREE.Vector3, atPosition: THREE.Vector3) {
+    retargetCamera(lookAt: THREE.Vector3, atPosition: THREE.Vector3, duration = 1) {
         this.startCameraPos = this.camera.position.clone();
         this.endCameraPos = atPosition.clone();
         this.cameraTarget.copy(lookAt);
+        this.cameraTransitionDuration = Math.max(0, duration * 1000);
 
         this.startCameraRotation.copy(this.camera.quaternion);
         //determine target camera rotation
@@ -300,7 +302,16 @@ export default class Scene extends LifeCycle {
         this.targetCameraRotation.copy(this.camera.quaternion);
         this.camera.position.copy(pos);
         this.camera.quaternion.copy(this.startCameraRotation);
-        this.startTime = this.lifecycle.timer.current
+        if (this.cameraTransitionDuration === 0) {
+            this.camera.position.copy(atPosition);
+            this.cameraBase.copy(atPosition);
+            this.camera.lookAt(lookAt);
+            this.startCameraRotation.copy(this.camera.quaternion);
+            this.targetCameraRotation.copy(this.camera.quaternion);
+            this.startTime = -1;
+        } else {
+            this.startTime = this.lifecycle.timer.current
+        }
 
     }
 
@@ -311,11 +322,14 @@ export default class Scene extends LifeCycle {
 
     cameraAnimationFn() {
         return (timer:number, tick:number) => {
-            if (this.startTime > 0 && timer < this.startTime + 1000) {
-                this.camera.position.lerpVectors(this.startCameraPos, this.endCameraPos, this.easeInOut((timer-this.startTime)/1000))
+            if (this.startTime >= 0 && timer < this.startTime + this.cameraTransitionDuration) {
+                const progress = this.cameraTransitionDuration === 0
+                    ? 1
+                    : (timer - this.startTime) / this.cameraTransitionDuration;
+                this.camera.position.lerpVectors(this.startCameraPos, this.endCameraPos, this.easeInOut(progress))
 
                 this.camera.quaternion.slerpQuaternions(this.startCameraRotation, this.targetCameraRotation,
-                    this.easeInOut((timer-this.startTime)/1000)
+                    this.easeInOut(progress)
                 )
             } else {
                 //todo make camera move a little when idle for 5 seconds

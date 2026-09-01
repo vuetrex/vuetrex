@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "concurrently --kill-others --names demos,docs --prefix-colors cyan,magenta \"pnpm run dev:demos\" \"pnpm run dev:docs\"",
     "dev:demos": "vite --host 127.0.0.1 --port 5173 --strictPort",
-    "dev:docs": "vitepress dev docs --host 127.0.0.1 --port 5174 --strictPort --base /docs/",
+    "dev:docs": "pnpm run build && vitepress dev docs --host 127.0.0.1 --port 5174 --strictPort --base /docs/",
     "health:server": "node demo-health/server.mjs",
     "preinstall": "npx only-allow pnpm",
     "clean": "rm -rf ./dist && rm -rf ./dist_types && rm -rf ./coverage",
@@ -25,7 +25,7 @@
     "test:health-server": "vitest run test/unit/verify-health-server.spec.ts",
     "tsc": "tsc",
     "docs:dev": "pnpm run dev:docs",
-    "docs:build": "vitepress build docs",
+    "docs:build": "pnpm run build && vitepress build docs",
     "docs:serve": "vitepress serve docs"
   },
   "files": [

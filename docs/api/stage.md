@@ -1,0 +1,141 @@
+---
+title: Stage API
+description: Configure scene rendering, camera framing, animation, and low-level access.
+---
+
+# Stage API
+
+## Obtain the stage
+
+`<Vuetrex>` emits `ready` after the renderer and Three.js scene are mounted.
+
+```vue
+<script setup lang="ts">
+import type { VxStage } from '@exceeder/vuetrex'
+
+let stage: VxStage | undefined
+
+function onReady(value: VxStage) {
+  stage = value
+}
+</script>
+
+<template>
+  <Vuetrex @ready="onReady">
+    <!-- scene -->
+  </Vuetrex>
+</template>
+```
+
+## Methods
+
+### `fitToContent(options?)`
+
+Measures all authored scene roots in world space and frames them in the perspective camera.
+
+```ts
+stage.fitToContent({ padding: 1, duration: 0.35 })
+```
+
+```ts
+interface VxFitOptions {
+  padding?: number   // world units; default 0.75
+  duration?: number  // seconds; default 0.6
+}
+```
+
+Returns `false` when no measurable authored content exists. The options remain active for later automatic refits.
+
+### `sendCameraTo(name)`
+
+Frames a named node's measured world bounds. Use `scene` to return to the complete fitted overview.
+
+```ts
+stage.sendCameraTo('orders')
+stage.sendCameraTo('scene')
+```
+
+In most Vue components, bind the `<Vuetrex camera>` prop instead of calling this directly.
+
+### `animateTo(name, props, options?)`
+
+Animates the transform of a named node without exposing its Three.js object.
+
+```ts
+stage.animateTo('orders', { positionY: 0.4, scale: 1.08 }, {
+  duration: 0.35,
+  ease: 'power2.out',
+})
+```
+
+Supported targets are `positionY`, `scale`, `scaleX`, `scaleY`, and `scaleZ`. Per-axis scale values override the uniform
+`scale`. Options are `duration`, `ease`, `delay`, and `onComplete`.
+
+### `onEachFrame(callback)`
+
+Registers a callback with the stage animation loop:
+
+```ts
+stage.onEachFrame((time, tick) => {
+  // Reserve for integration work that cannot be expressed reactively.
+})
+```
+
+Prefer reactive props for normal scene updates. A per-frame callback couples application code to render frequency.
+
+### `getScene()`
+
+Returns the underlying `THREE.Scene`. This is an escape hatch for integrations that Vuetrex cannot represent.
+
+Objects added directly are outside the logical Vuetrex tree. Vuetrex will not automatically measure, remove, connect,
+or dispatch logical events through them.
+
+## Settings
+
+Pass settings through the `<Vuetrex :settings>` prop.
+
+```ts
+import type { VxSettings } from '@exceeder/vuetrex'
+
+const settings: VxSettings = {
+  backgroundColor: 0x101719,
+  floorColor: 0x263338,
+  color: 0x3d8295,
+  highlightColor: 0x58b7c0,
+  captionColor: 0xe7eef0,
+  particleColor: 0x73cad1,
+  gap: 0.35,
+}
+```
+
+| Setting | Purpose |
+|---|---|
+| `color` | Default node material color |
+| `backgroundColor` | Renderer background |
+| `floorColor` | Floor and floor texture color |
+| `mirrorOpacity` | Floor reflection strength |
+| `highlightColor` | Default interactive highlight |
+| `captionColor` | Shared caption color |
+| `particleColor` | Connector particle color |
+| `lightColor1..3` | Stage light colors |
+| `particleSpread` | Particle route spread |
+| `particleVolume` | Number/density of particles |
+| `particleBlending` | Three.js blending mode |
+| `unit` | Base geometry unit |
+| `distance` | Legacy stage spacing |
+| `gap` | Default container gap |
+| `wall` | Legacy generated background wall settings |
+
+For live charts and text, prefer [`<vx-display-wall>`](/guide/display-walls) over `settings.wall`.
+
+## Lifecycle controls
+
+The `<Vuetrex :stopped>` prop pauses and resumes the stage animation loop reactively.
+
+```vue
+<Vuetrex :stopped="paused">
+  <!-- scene -->
+</Vuetrex>
+```
+
+Unmounting `<Vuetrex>` destroys its logical root, event bindings, and scene resources owned by Vuetrex.

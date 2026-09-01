@@ -32,6 +32,13 @@ export interface VxAnimOptions {
     onComplete?: () => void
 }
 
+export interface VxFitOptions {
+    /** World-space margin added around the measured bounds. */
+    padding?: number
+    /** Camera transition duration in seconds. */
+    duration?: number
+}
+
 export interface VxStage {
     getScene(): THREE.Scene
     onEachFrame(fn: (time: number, tick:number) => void): void
@@ -41,10 +48,15 @@ export interface VxStage {
      * accessing mesh.position / mesh.scale directly.
      */
     animateTo(id: string, props: VxAnimProps, opts?: VxAnimOptions): void
+    /** Frame all authored scene geometry and keep that framing reactive. */
+    fitToContent(options?: VxFitOptions): boolean
+    /** Focus a named node's world bounds, or use `scene` for the fitted overview. */
+    sendCameraTo(camera: string): void
 }
 
 export interface VxSettings {
     color?: number
+    backgroundColor?: number
     mirrorOpacity?: number
     floorColor?: number
     highlightColor?: number
@@ -62,6 +74,22 @@ export interface VxSettings {
     unit?: number
     distance?: number
     gap?: number
+    wall?: VxWallSettings
+}
+
+export interface VxWallSettings {
+    shape?: 'flat' | 'curved'
+    color?: number
+    gridColor?: number
+    opacity?: number
+    width?: number
+    height?: number
+    radius?: number
+    arc?: number
+    y?: number
+    z?: number
+    title?: string
+    subtitle?: string
 }
 
 export interface VxMouseEvent extends MouseEvent {
@@ -72,6 +100,164 @@ export interface VxMouseEvent extends MouseEvent {
 
 let BOX_RADIUS = 1.0;
 let BOX_DISTANCE = 1.0;
+const FLOOR_Y = -0.2495;
+const FLOOR_REFLECTOR_Y = -0.251;
+
+/**
+ * Keep the floor decal inside the reflector subtree. Reflector hides itself
+ * while rendering its texture, which must also hide the nearly coplanar decal
+ * to avoid feeding the floor back into its own reflection.
+ */
+export function attachFloorOverlay(
+    scene: THREE.Scene,
+    overlay: THREE.Mesh,
+    reflector?: THREE.Object3D,
+): void {
+    const materials = Array.isArray(overlay.material) ? overlay.material : [overlay.material]
+    for (const material of materials) {
+        material.depthWrite = reflector === undefined
+        material.polygonOffset = reflector !== undefined
+        material.polygonOffsetFactor = -1
+        material.polygonOffsetUnits = -1
+    }
+
+    overlay.name = 'vx-floor-overlay'
+    overlay.castShadow = false
+    overlay.receiveShadow = true
+
+    if (reflector) {
+        // Reflector's local +Z is world +Y after its -90 degree X rotation.
+        overlay.position.set(0, 0, FLOOR_Y - FLOOR_REFLECTOR_Y)
+        overlay.rotation.set(0, 0, 0)
+        overlay.renderOrder = 1
+        reflector.add(overlay)
+        return
+    }
+
+    overlay.rotation.x = -Math.PI / 2
+    overlay.position.y = FLOOR_Y
+    scene.add(overlay)
+}
+
+export function createBackgroundWallGeometry(settings: VxWallSettings): THREE.BufferGeometry {
+    const height = settings.height ?? 5
+    if (settings.shape === 'curved') {
+        const radius = settings.radius ?? 7
+        const arc = THREE.MathUtils.degToRad(settings.arc ?? 110)
+        return new THREE.CylinderGeometry(
+            radius,
+            radius,
+            height,
+            128,
+            1,
+            true,
+            Math.PI - arc / 2,
+            arc,
+        )
+    }
+    return new THREE.PlaneGeometry(settings.width ?? 11, height, 32, 1)
+}
+
+function cssColor(color: number): string {
+    return `#${new THREE.Color(color).getHexString()}`
+}
+
+function cssColorWithAlpha(color: number, opacity: number): string {
+    const alpha = Math.round(THREE.MathUtils.clamp(opacity, 0, 1) * 255)
+        .toString(16)
+        .padStart(2, '0')
+    return `${cssColor(color)}${alpha}`
+}
+
+export interface CameraFrame {
+    target: THREE.Vector3
+    position: THREE.Vector3
+}
+
+/** Return visible world bounds for an authored object and all of its descendants. */
+export function worldBoundsOf(object: THREE.Object3D): THREE.Box3 {
+    object.updateWorldMatrix(true, true)
+    const bounds = new THREE.Box3()
+    const geometryBounds = new THREE.Box3()
+
+    const expandVisible = (current: THREE.Object3D) => {
+        if (!current.visible) return
+
+        const mesh = current as THREE.Mesh & {
+            boundingBox?: THREE.Box3 | null
+            computeBoundingBox?: () => void
+        }
+        const geometry = mesh.geometry
+        if (geometry) {
+            if ((mesh as THREE.InstancedMesh).isInstancedMesh) {
+                if (mesh.boundingBox === null) mesh.computeBoundingBox?.()
+                if (mesh.boundingBox) {
+                    geometryBounds.copy(mesh.boundingBox).applyMatrix4(current.matrixWorld)
+                    bounds.union(geometryBounds)
+                }
+            } else {
+                if (geometry.boundingBox === null) geometry.computeBoundingBox()
+                if (geometry.boundingBox) {
+                    geometryBounds.copy(geometry.boundingBox).applyMatrix4(current.matrixWorld)
+                    bounds.union(geometryBounds)
+                }
+            }
+        }
+
+        current.children.forEach(expandVisible)
+    }
+
+    expandVisible(object)
+    return bounds
+}
+
+/**
+ * Fit a perspective camera around a world-space box while preserving a chosen
+ * viewing direction. Depth is included, so near corners cannot be clipped by
+ * fitting only the box width and height at its centre plane.
+ */
+export function cameraFrameForBounds(
+    camera: THREE.PerspectiveCamera,
+    bounds: THREE.Box3,
+    direction: THREE.Vector3,
+    padding = 0,
+): CameraFrame | null {
+    if (bounds.isEmpty()) return null
+
+    const framedBounds = bounds.clone().expandByScalar(Math.max(0, padding))
+    const target = framedBounds.getCenter(new THREE.Vector3())
+    const viewDirection = direction.clone()
+    if (viewDirection.lengthSq() < 1e-8) viewDirection.set(0, 0.65, 1)
+    viewDirection.normalize()
+
+    const orientationCamera = camera.clone()
+    orientationCamera.position.copy(target).add(viewDirection)
+    orientationCamera.lookAt(target)
+    orientationCamera.updateMatrixWorld(true)
+    const inverseOrientation = orientationCamera.quaternion.clone().invert()
+
+    const verticalTangent = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)
+    const horizontalTangent = verticalTangent * Math.max(1e-6, camera.aspect)
+    let distance = 0.1
+
+    for (const x of [framedBounds.min.x, framedBounds.max.x]) {
+        for (const y of [framedBounds.min.y, framedBounds.max.y]) {
+            for (const z of [framedBounds.min.z, framedBounds.max.z]) {
+                const local = new THREE.Vector3(x, y, z).sub(target).applyQuaternion(inverseOrientation)
+                distance = Math.max(
+                    distance,
+                    local.z + Math.abs(local.x) / horizontalTangent,
+                    local.z + Math.abs(local.y) / verticalTangent,
+                )
+            }
+        }
+    }
+
+    return {
+        target,
+        position: target.clone().addScaledVector(viewDirection, distance),
+    }
+}
 
 /**
  * Stage is a top level container of Vue-connected nodes. It literally sets the stage for everything happening in 3D.
@@ -91,9 +277,17 @@ export class VuetrexStage extends Scene implements VxStage {
         updateFn: () => {}
     }
     private captions: Array<{x:number, y:number, text:string}> = []
+    private groundMirror?: THREE.Object3D
     boxRadius: number;
     boxDistance: number;
     gap: number;
+    private activeCameraTarget = 'scene'
+    private fitOptions: Required<VxFitOptions> = { padding: 0.75, duration: 0.6 }
+    private focusOptions: Required<VxFitOptions> = { padding: 0.45, duration: 0.6 }
+    private refitQueued = false
+    private refitFrame?: number
+    private destroyed = false
+    private lastFraming?: { target: string, bounds: THREE.Box3, aspect: number }
 
     constructor(domParent: HTMLElement, settings:VxSettings) {
         super(domParent)
@@ -105,6 +299,7 @@ export class VuetrexStage extends Scene implements VxStage {
         this.gap = settings.gap ?? this.boxDistance
         this.colorMain = new THREE.Color(settings.color || 0x555555);
         this.colorHighlight = new THREE.Color(settings.highlightColor || 0x4c7fb2);
+        this.scene.background = new THREE.Color(settings.backgroundColor ?? 0x808080);
     }
 
     getScene(): THREE.Scene {
@@ -119,6 +314,7 @@ export class VuetrexStage extends Scene implements VxStage {
         const scene = this.scene;
         this.createGroundMirror(scene);
         this.createFloor(scene);
+        this.createBackgroundWall(scene);
         this.createLights(scene);
 
         //particle system
@@ -139,6 +335,7 @@ export class VuetrexStage extends Scene implements VxStage {
     }
 
     createGroundMirror(scene: THREE.Scene) {
+        this.groundMirror = undefined
         if (this.settings.mirrorOpacity === undefined) {
             this.settings.mirrorOpacity = 0.95;
         }
@@ -150,10 +347,12 @@ export class VuetrexStage extends Scene implements VxStage {
                 textureHeight: this.height * window.devicePixelRatio * 2,
                 color: new THREE.Color(this.settings.floorColor || 0x777777)
             });
+            groundMirror.name = 'vx-ground-reflector';
             groundMirror.rotateX(-Math.PI / 2);
-            groundMirror.position.y = -0.251;
+            groundMirror.position.y = FLOOR_REFLECTOR_Y;
             groundMirror.receiveShadow = false;
             scene.add(groundMirror);
+            this.groundMirror = groundMirror;
         }
     }
 
@@ -172,7 +371,7 @@ export class VuetrexStage extends Scene implements VxStage {
         this.repaintTitles(caps.planeSize)
         caps.updateFn = () => this.repaintTitles(caps.planeSize)
 
-        let material = new THREE.MeshStandardMaterial({
+        const material = new THREE.MeshStandardMaterial({
             color: '#f0f0f0',
             roughness: 0.7,
             metalness: 0.5,
@@ -181,12 +380,67 @@ export class VuetrexStage extends Scene implements VxStage {
             map: texture.texture
         });
         material.toneMapped = false;
-        let plane = new THREE.Mesh(new THREE.PlaneGeometry(caps.planeSize, caps.planeSize), material);
-        plane.rotation.x = -Math.PI / 2.0;
-        plane.position.y = -0.2495;
-        plane.castShadow = false;
-        plane.receiveShadow = true;
-        scene.add(plane);
+        const plane = new THREE.Mesh(new THREE.PlaneGeometry(caps.planeSize, caps.planeSize), material);
+        attachFloorOverlay(scene, plane, this.groundMirror)
+    }
+
+    createBackgroundWall(scene: THREE.Scene) {
+        const settings = this.settings.wall
+        if (!settings) return
+        const opacity = THREE.MathUtils.clamp(settings.opacity ?? 1, 0, 1)
+
+        const texture = new THREEx.DynamicTexture(1024, 512)
+        this.paintBackgroundWallTexture(texture, settings)
+        texture.texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy()
+        texture.texture.minFilter = THREE.LinearMipmapLinearFilter
+        texture.texture.generateMipmaps = true
+        if (settings.shape === 'curved') {
+            // The stage is viewed from the cylinder's inner face.
+            texture.texture.wrapS = THREE.RepeatWrapping
+            texture.texture.repeat.x = -1
+            texture.texture.offset.x = 1
+        }
+
+        const material = new THREE.MeshBasicMaterial({
+            map: texture.texture,
+            transparent: opacity < 1,
+            side: THREE.DoubleSide,
+            depthWrite: opacity === 1,
+        })
+        const height = settings.height ?? 5
+        const wall = new THREE.Mesh(createBackgroundWallGeometry(settings), material)
+        wall.name = 'vx-background-wall'
+        wall.position.set(
+            0,
+            settings.y ?? height / 2 - 0.2,
+            settings.z ?? (settings.shape === 'curved' ? 1.5 : -4.5),
+        )
+        wall.renderOrder = -10
+        scene.add(wall)
+    }
+
+    paintBackgroundWallTexture(texture: THREEx.DynamicTexture, settings: VxWallSettings) {
+        const width = 1024
+        const height = 512
+        const color = settings.color ?? this.settings.floorColor ?? 0x20282d
+        const gridColor = settings.gridColor ?? this.settings.captionColor ?? 0xffffff
+
+        texture.clear(cssColorWithAlpha(color, settings.opacity ?? 1))
+        texture.fillStyle = cssColor(gridColor)
+        texture.setGlobalAlpha(0.055)
+        for (let x = 0; x <= width; x += 32) texture.fillRect(x, 0, 1, height)
+        for (let y = 0; y <= height; y += 32) texture.fillRect(0, y, width, 1)
+        texture.setGlobalAlpha(0.16)
+        for (let x = 0; x <= width; x += 128) texture.fillRect(x, 0, 2, height)
+        for (let y = 0; y <= height; y += 128) texture.fillRect(0, y, width, 2)
+
+        texture.setGlobalAlpha(1)
+        if (settings.title) {
+            texture.drawText(settings.title, 48, 176, cssColor(gridColor), 'bold 34px Helvetica')
+        }
+        if (settings.subtitle) {
+            texture.drawText(settings.subtitle, 48, 210, cssColor(gridColor), '18px Helvetica')
+        }
     }
 
     repaintTitles(mirrorSize: number) {
@@ -295,6 +549,7 @@ export class VuetrexStage extends Scene implements VxStage {
                 this.caps.updateFn();
             }
             el.mesh = null;
+            this.invalidateContentBounds()
         }
     }
 
@@ -326,6 +581,7 @@ export class VuetrexStage extends Scene implements VxStage {
             el.mesh.userData.caption.y = worldPos.z + size / 2.0
             el.mesh.userData.caption.text = el.getCaption()
             this.caps.updateFn();
+            this.invalidateContentBounds()
             return;
         }
 
@@ -339,6 +595,7 @@ export class VuetrexStage extends Scene implements VxStage {
         model.userData.caption = this.addCaption(el, size * scale, el.getCaption())
         model.userData.el = el;
         this.connectors.update(el);
+        this.invalidateContentBounds()
     }
 
     connect(el1: string, el2: string, layout?: string, type?: string, registrationId?: string): string {
@@ -387,6 +644,11 @@ export class VuetrexStage extends Scene implements VxStage {
     }
 
     destroy() {
+        this.destroyed = true
+        if (this.refitFrame !== undefined && typeof cancelAnimationFrame === 'function') {
+            cancelAnimationFrame(this.refitFrame)
+            this.refitFrame = undefined
+        }
         super.destroy();
         this.connectors.clear();
     }
@@ -446,20 +708,126 @@ export class VuetrexStage extends Scene implements VxStage {
         this.subscribers.forEach(fn => fn(mesh.name, vector));
     }
 
-    sendCameraTo(camera: string) {
-        switch (camera) {
-            case "scene": {
-                //this.cameraMotion.set(0.25, 0.0, 0.25);
-                this.retargetCamera(new THREE.Vector3(0.0, 0.0, 1.5), new THREE.Vector3(0.0, 13.0, 8.0))
-            } break;
-            default: {
-                const el: THREE.Object3D | undefined = this.scene.getObjectByName('el-'+camera);
-                if (el) {
-                    this.cameraMotion.set(0.0, 0.0, 0.0);
-                    this.retargetCamera(el.position,
-                        new THREE.Vector3(el.position.x, el.position.y + 4.0, el.position.z + 4.2))
-                }
+    fitToContent(options: VxFitOptions = {}): boolean {
+        this.activeCameraTarget = 'scene'
+        this.fitOptions = {
+            padding: options.padding ?? this.fitOptions.padding,
+            duration: options.duration ?? this.fitOptions.duration,
+        }
+
+        const bounds = this.contentBounds()
+        if (bounds.isEmpty()) return false
+
+        return this.frameBounds(bounds, this.fitOptions, this.overviewDirection(), true)
+    }
+
+    /** Coalesce geometry/layout invalidations into one camera update per frame. */
+    invalidateContentBounds(): void {
+        if (this.destroyed || this.refitQueued) return
+        this.refitQueued = true
+
+        const run = () => {
+            this.refitQueued = false
+            this.refitFrame = undefined
+            if (this.destroyed) return
+            if (this.activeCameraTarget === 'scene') {
+                this.refitContent()
+            } else {
+                this.focusObject(this.activeCameraTarget, this.focusOptions, false)
             }
         }
+
+        if (typeof requestAnimationFrame === 'function') {
+            this.refitFrame = requestAnimationFrame(run)
+        } else {
+            queueMicrotask(run)
+        }
+    }
+
+    override onWindowResize() {
+        super.onWindowResize()
+        this.invalidateContentBounds()
+    }
+
+    sendCameraTo(camera: string) {
+        this.activeCameraTarget = camera
+        if (camera === 'scene') {
+            this.fitToContent()
+            return
+        }
+
+        this.cameraMotion.set(0.0, 0.0, 0.0)
+        this.focusObject(camera, this.focusOptions, true)
+    }
+
+    private refitContent(): boolean {
+        const bounds = this.contentBounds()
+        if (bounds.isEmpty()) return false
+        return this.frameBounds(bounds, this.fitOptions, this.overviewDirection(), false)
+    }
+
+    private focusObject(name: string, options: Required<VxFitOptions>, force: boolean): boolean {
+        const object = this.scene.getObjectByName(`el-${name}`)
+        if (!object) return false
+
+        return this.frameBounds(worldBoundsOf(object), options, this.focusDirection(), force)
+    }
+
+    private frameBounds(
+        bounds: THREE.Box3,
+        options: Required<VxFitOptions>,
+        direction: THREE.Vector3,
+        force: boolean,
+    ): boolean {
+        if (!force && this.framingIsCurrent(bounds)) return true
+        const frame = cameraFrameForBounds(this.camera, bounds, direction, options.padding)
+        if (!frame) return false
+
+        const size = bounds.getSize(new THREE.Vector3())
+        const distance = frame.position.distanceTo(frame.target)
+        this.camera.near = Math.max(0.01, distance / 1000)
+        this.camera.far = Math.max(64, distance + size.length() * 3)
+        this.camera.updateProjectionMatrix()
+        this.retargetCamera(frame.target, frame.position, options.duration)
+        this.lastFraming = {
+            target: this.activeCameraTarget,
+            bounds: bounds.clone(),
+            aspect: this.camera.aspect,
+        }
+        return true
+    }
+
+    private framingIsCurrent(bounds: THREE.Box3): boolean {
+        const previous = this.lastFraming
+        if (!previous || previous.target !== this.activeCameraTarget || previous.aspect !== this.camera.aspect) return false
+        const epsilon = 0.01
+        return previous.bounds.min.distanceToSquared(bounds.min) <= epsilon * epsilon
+            && previous.bounds.max.distanceToSquared(bounds.max) <= epsilon * epsilon
+    }
+
+    private contentBounds(): THREE.Box3 {
+        const bounds = new THREE.Box3()
+        const includeAuthoredRoots = (object: THREE.Object3D, insideAuthoredRoot: boolean) => {
+            if (!object.visible) return
+            const authored = Boolean(object.userData.el)
+            if (authored && !insideAuthoredRoot) {
+                bounds.union(worldBoundsOf(object))
+                return
+            }
+            object.children.forEach(child => includeAuthoredRoots(child, insideAuthoredRoot || authored))
+        }
+        this.scene.children.forEach(child => includeAuthoredRoots(child, false))
+        return bounds
+    }
+
+    private overviewDirection(): THREE.Vector3 {
+        // cameraBase is the settled destination even while a previous camera
+        // transition is still in flight, so reactive refits keep one heading.
+        const direction = this.cameraBase.clone().sub(this.cameraTarget)
+        return direction.lengthSq() > 1e-8 ? direction : new THREE.Vector3(0, 0.65, 1)
+    }
+
+    private focusDirection(): THREE.Vector3 {
+        return new THREE.Vector3(0, 0.8, 1)
     }
 }

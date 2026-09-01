@@ -4,6 +4,7 @@ import { applyMaterialProps, type VxMaterialProps } from '@/lib-components/nodes
 import { Node } from '@/lib-components/nodes/Node.js'
 import type { VuetrexStage } from '@/lib-components/three/stage.js'
 import type { VxEventMap } from '@/lib-components/three/element3d.js'
+import * as THREEx from '@/lib-components/three/three.imports.js'
 
 /** A canonical keyed item for callers that do not already have domain objects with IDs. */
 export interface InstanceItem<T> {
@@ -145,6 +146,7 @@ export class InstanceNode<T = unknown> extends Node {
             this.mesh!.userData.el = this.element
             this.mesh!.position.copy(this.element.getPosition())
             this.stage.connectors.update(this.element)
+            this.stage.invalidateContentBounds?.()
         }, { flush: 'post' })
     }
 
@@ -157,6 +159,7 @@ export class InstanceNode<T = unknown> extends Node {
         if (this.ownsGeometry) this.geometry?.dispose()
         this.geometry = undefined
         this.material.dispose()
+        this.stage.invalidateContentBounds?.()
     }
 
     private semanticId(item: T, index: number): string {
@@ -227,7 +230,7 @@ export class InstanceNode<T = unknown> extends Node {
             this.geometry = source
             this.ownsGeometry = false
         } else {
-            this.geometry = markRaw(new THREE.BoxGeometry(1, 1, 1))
+            this.geometry = markRaw(new THREEx.RoundedBoxGeometry(1, 1, 1, 4, 0.08))
             this.ownsGeometry = true
         }
         this.geometry.computeBoundingBox()
@@ -257,6 +260,8 @@ export class InstanceNode<T = unknown> extends Node {
         }
         this.mesh!.count = count
         this.mesh!.instanceMatrix.needsUpdate = true
+        this.mesh!.computeBoundingBox()
+        this.mesh!.computeBoundingSphere()
         if (this.mesh!.instanceColor) this.mesh!.instanceColor.needsUpdate = true
         this.mesh!.computeBoundingSphere()
     }

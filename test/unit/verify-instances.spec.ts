@@ -61,6 +61,7 @@ describe('InstanceNode', () => {
         expect(parent.group.children).toHaveLength(1)
         const mesh = node.element.mesh as THREE.InstancedMesh
         expect(mesh).toBeInstanceOf(THREE.InstancedMesh)
+        expect(mesh.geometry.type).toBe('RoundedBoxGeometry')
         expect(mesh.count).toBe(2)
 
         const matrix = new THREE.Matrix4()

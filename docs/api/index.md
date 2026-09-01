@@ -1,104 +1,89 @@
-# Core concepts
+---
+title: Components and props
+description: Reference for the Vuetrex component, built-in scene elements, materials, and events.
+outline: deep
+---
 
-## Layout containers
+# Components and props
 
-Vuetrex containers measure their children and place them in local 3D coordinate spaces:
+This page is a lookup reference. Start with [Build your first scene](/guide/) for a guided introduction.
 
-| Element | Layout |
+## `<Vuetrex>`
+
+```vue
+<Vuetrex
+  height="520px"
+  width="100%"
+  position="relative"
+  :settings="settings"
+  :camera="camera"
+  :stopped="paused"
+  :elements="customElements"
+  @ready="onReady"
+>
+  <!-- vx-* scene tree -->
+</Vuetrex>
+```
+
+| Prop | Type | Default | Purpose |
+|---|---|---|---|
+| `height` | `string` | `50vh` | Canvas wrapper CSS height |
+| `width` | `string` | `100%` | Canvas wrapper CSS width |
+| `position` | `string` | `static` | Canvas wrapper CSS position |
+| `settings` | `VxSettings` | `{}` | Stage colors, spacing, lights, and particles |
+| `camera` | `string` | `scene` | Named node to frame, or the overview |
+| `stopped` | `boolean` | `false` | Pause the stage animation loop |
+| `elements` | `ElementRegistry` | `{}` | Per-stage custom element registrations |
+
+The `ready` event receives the [`VxStage`](/api/stage) interface.
+
+## Built-in scene elements
+
+### Containers
+
+| Element | Purpose | Important props |
+|---|---|---|
+| `<vx-group>` | Automatic or dynamic layout group | `layout`, `size`, `height`, `gap`, `placement` |
+| `<vx-row>` | X-axis layout | `size`, `height`, `gap`, alignment |
+| `<vx-layer>` | Z-axis layout and scaling boundary | `size`, `height`, `gap`, `scale`, `elevation` |
+| `<vx-stack>` | Y-axis layout | `size`, `height`, `gap` |
+| `<vx-ring>` | XZ circular layout | `radius`, `start-angle`, `direction`, `gap-ratio` |
+| `<vx-panel>` | Rounded visual container with label/content regions | panel props below |
+
+Every group supports `align`, `align-x`, `align-y`, and `align-z` with `start`, `center`, or `end`.
+
+`<vx-group layout>` accepts `grid`, `row`, `depth`, `stack`, and `ring`. `placement` accepts a composition
+[`Placement`](/api/composition#placements) and removes that group from its parent's automatic layout.
+
+### Shapes
+
+| Element | Geometry | Defaults and special props |
+|---|---|---|
+| `<vx-box>` | Rounded box | `size=1`, `height=0.5`, optional `depth` |
+| `<vx-cylinder>` | Beveled cylinder | `size=1`, `height=0.33` |
+| `<vx-wedge>` | Beveled ring segment | `size=1`, `height=0.33`, optional `thickness` |
+
+Shared mesh props:
+
+| Prop | Purpose |
 |---|---|
-| `<vx-group>` | Automatic XZ grid |
-| `<vx-row>` | Left-to-right on X |
-| `<vx-layer>` | Front-to-back on Z |
-| `<vx-stack>` | Bottom-to-top on Y |
-| `<vx-ring>` | Circular placement in XZ |
+| `name` | Stable address for focus, animation, and connectors |
+| `text` | Shared scene caption |
+| `size` | Width and default depth |
+| `height` | Vertical extent |
+| `depth` | Box Z extent; `0` falls back to `size` |
+| `connection` | Connect this node to a named target |
+| `material` | Reactive `VxMaterialProps` object |
+| `hover` | Temporary material and scale overrides |
+| `lines` | SDF text lines rendered on the mesh |
+| `label-face` | `front` or `top` |
+| `label-color` | RGB hex number |
+| `label-padding` | Fractional face inset, clamped to `0..0.45` |
+| `label-font-size` | World units; `0` enables automatic fitting |
+| `label-line-height` | Text line-height multiplier |
+| `label-align` | `left`, `center`, or `right` |
 
-Named containers are convenient aliases. The canonical form is also available when choosing a layout dynamically:
-
-```vue
-<vx-group layout="row">
-  <vx-box />
-  <vx-box />
-</vx-group>
-
-<vx-group layout="ring" start-angle="45" direction="reverse">
-  <vx-wedge v-for="item in items" :key="item.id" />
-</vx-group>
-```
-
-Supported `layout` values are `grid`, `row`, `depth`, `stack`, and `ring`.
-
-Containers can be nested freely:
-
-```vue
-<vx-layer>
-  <vx-row>
-    <vx-stack>
-      <vx-box text="service" />
-      <vx-cylinder text="pod" />
-    </vx-stack>
-  </vx-row>
-</vx-layer>
-```
-
-### Size, height, and gap
-
-Without an explicit size, a container derives its footprint from its children. `gap` controls the space between
-children. Its fallback is the stage `gap`, then the stage's legacy `distance` setting.
-
-```vue
-<vx-row :gap="0.4">
-  <vx-box />
-  <vx-box />
-</vx-row>
-```
-
-`size` reserves an XZ footprint and `height` reserves Y. A reservation may shrink overflowing container content but
-never enlarges it:
-
-```vue
-<vx-row :size="4" :height="1" />
-<vx-group :size="{ x: 6, y: 2, z: 4 }" />
-```
-
-### Ring options
-
-`start-angle` rotates the first child in degrees. Zero starts at the front (`+Z`); `90` starts at `+X`.
-`direction` is `normal` or `reverse`. Both props are reactive.
-
-For segmented wedge rings, `gap-ratio` reserves a fraction of each no-gap segment's outer chord as empty space
-without changing the ring radius. Its range is `0` (solid) through values below `1`. For example, `0.25` makes the
-separator width 25% of that full chord. With explicit `radius` and `thickness`, separators are constant-width radial
-slots: their sides follow the ring normals instead of converging toward the inner circle. The ratio describes the
-narrowest finished opening after beveling; the underlying cut and bevel adapt together so every separator retains
-that width. Setting `gap-ratio` selects this spacing mode and ignores the world-unit `gap`.
-
-Set `radius` on the ring to control the exact outer arc radius, and `thickness` on each wedge to control the radial
-distance between its outer and inner arcs. Both use world units and remain constant when the number of wedges changes.
-When these props are omitted, wedges retain their content-driven legacy sizing.
-
-```vue
-<vx-ring :radius="1" :start-angle="45" direction="reverse" :gap-ratio="0.25">
-  <vx-wedge v-for="item in items" :key="item.id" :thickness="0.15" />
-</vx-ring>
-```
-
-### Alignment
-
-Alignment shifts a child inside its content-sized slot. Values are `start`, `center`, and `end`; the default is
-`center`, preserving existing scenes.
-
-```vue
-<vx-row align="center" />
-<vx-row align-x="start" align-y="center" align-z="end" />
-<vx-stack align-z="end" />
-```
-
-`align` sets all three axes. `align-x`, `align-y`, and `align-z` override individual axes.
-
-## Panels
-
-`panel` is a visual rounded-box container that divides its top face between a label and child content. By default the
-label uses the south 40% and children are fitted into the north 60%.
+### Panel
 
 ```vue
 <vx-panel
@@ -106,84 +91,103 @@ label uses the south 40% and children are fitted into the north 60%.
   :size="1.6"
   :depth="0.9"
   :height="0.22"
-  :lines="['API service']"
+  :lines="['API service', 'healthy']"
   label-region="south"
   :label-share="0.4"
-  :material="{ color: 0x174f88 }"
+  :content-padding="0.08"
+  layout="grid"
 >
-  <vx-stack :gap="0.025">
-    <vx-box :size="0.4" :height="0.12" />
-    <vx-box :size="0.4" :height="0.12" />
-    <vx-box :size="0.4" :height="0.12" />
-  </vx-stack>
+  <vx-stack><!-- content --></vx-stack>
 </vx-panel>
 ```
 
-Use `label-region="north"` to reverse the split. `label-share` is clamped to `0.1–0.9`; `content-padding` controls the
-inset inside the child region. `layout` accepts `grid`, `row`, `depth`, `stack`, or `ring`. `lines`, label font/color/
-alignment props, material, hover, events, names, nesting, and connector endpoints are reactive.
+`label-region` is `north` or `south`. `label-share` is clamped to `0.1..0.9`. The child `layout` accepts `grid`, `row`,
+`depth`, `stack`, or `ring`. Panels also support material, hover, events, and the shared label styling props.
 
-## Custom elements
-
-Use `registerElement()` before mounting to register a node globally:
-
-```ts
-import { registerElement } from '@exceeder/vuetrex'
-import { ServerNode } from './ServerNode'
-
-registerElement('vx-server', ServerNode)
-```
-
-Then use the tag in Vuetrex templates:
+### Connector
 
 ```vue
-<vuetrex>
-  <vx-server text="API" />
-</vuetrex>
-```
-
-For one Vuetrex instance, pass an element registry through its `elements` prop instead.
-
-## Connectors and captions
-
-```vue
-<vuetrex>
-  <vx-box name="a" />
-  <vx-cylinder name="b" text="Round" connection="a" />
-  <vx-connector from="a" to="b" type="line" layout="direct" />
-</vuetrex>
-```
-
-Named nodes can be connected through the `connection` shorthand or a `<vx-connector>`. Caption text is reactive.
-
-## Events
-
-Vuetrex supports `click`, `dblclick`, `pointerenter`, and `pointerleave`. Click and double-click bubble through the
-logical node tree; pointer enter and leave do not.
-
-```vue
-<vx-box
-  :text="String(counter)"
-  @click="counter++"
-  @pointerenter="hovered = true"
-  @pointerleave="hovered = false"
+<vx-connector
+  from="gateway"
+  to="orders"
+  type="particles"
+  layout="orthogonal"
 />
 ```
 
-## Camera
+`type` is `particles` or `line`. `layout` is `orthogonal` or `direct`; `straight` is a compatibility alias. Connector
+nodes do not participate in layout.
 
-Set `camera` to a node name to focus it, or to `scene` for the overview:
+### Instance repeater
 
 ```vue
-<vuetrex :camera="camera">
-  <vx-row>
-    <vx-box
-      v-for="item in items"
-      :key="item"
-      :name="item"
-      :text="item"
-      @click="camera = camera === item ? 'scene' : item"
-    />
-  </vx-row>
-</vuetrex>
+<vx-instances
+  :items="pods"
+  key-by="id"
+  :encoding="encoding"
+  :geometry="geometry"
+  :material="material"
+  anchor="base"
+/>
 ```
+
+`anchor` is `base`, `center`, or `origin`. See [Large scenes](/guide/large-scenes) for encoding and current limitations.
+
+### Display wall
+
+```vue
+<vx-display-wall
+  shape="curved"
+  mode="continuous"
+  :surface="surface"
+/>
+```
+
+See [Display walls](/guide/display-walls) for continuous and independent screen modes.
+
+## Materials and hover
+
+```ts
+interface VxMaterialProps {
+  color?: number
+  opacity?: number
+  transparent?: boolean
+  roughness?: number
+  metalness?: number
+  emissive?: number
+  emissiveIntensity?: number
+  wireframe?: boolean
+}
+
+interface VxHoverProps extends VxMaterialProps {
+  scale?: number
+  transition?: number
+}
+```
+
+Use RGB hex numbers such as `0x3e91c7`. Set `transparent: true` when using opacity below `1`.
+
+## Events
+
+Built-in interactive nodes support `click`, `dblclick`, `pointerenter`, and `pointerleave`.
+
+```ts
+interface VxMouseEvent extends MouseEvent {
+  vxNode: Node
+  vxPosition: unknown
+  vxInstance?: InstanceHit<unknown>
+}
+```
+
+Click and double-click bubble through the logical node tree. Pointer enter and leave do not.
+
+## Public exports
+
+The package exports:
+
+- `Vuetrex`, `VxStage`, `VxSettings`, `VxMouseEvent`, and camera/animation option types
+- Material and hover types
+- `DisplayWall`, `InstanceNode`, `Panel`, `Node`, and `Base`
+- `registerElement()` and custom element registry types
+- Instance geometry, encoding, key, anchor, item, and hit types
+- The complete [composition API](/api/composition)

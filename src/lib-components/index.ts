@@ -1,6 +1,45 @@
 export type { VxStage, VxSettings, VxMouseEvent } from '@/lib-components/vuetrex.js';
-export type { VxAnimProps, VxAnimOptions } from '@/lib-components/three/stage.js';
+export type { VxAnimProps, VxAnimOptions, VxFitOptions, VxWallSettings } from '@/lib-components/three/stage.js';
+export { DisplayWall } from '@/lib-components/nodes/DisplayWall.js';
+export type {
+    VxDisplayPaintContext,
+    VxDisplaySurface,
+    VxDisplayWallMode,
+    VxDisplayWallShape,
+} from '@/lib-components/nodes/DisplayWall.js';
 export type { VxMaterialProps, VxHoverProps } from '@/lib-components/nodes/material.js';
+export {
+    aggregate,
+    bundleBy,
+    compose,
+    connect,
+    encode,
+    filter,
+    groupBy,
+    label,
+    operatorCatalog,
+    radialFocus,
+    ring,
+    row,
+    sphere,
+    stack,
+    timeline,
+} from '@/lib-components/composition/index.js';
+export type {
+    Capability,
+    CapabilityType,
+    ComposedScene,
+    CompositionContext,
+    Placement,
+    RadialFocusOptions,
+    RadialRelation,
+    RepresentationRecipe,
+    SceneConnection,
+    SceneFragment,
+    SceneLabel,
+    SceneNode,
+    SpatialContext,
+} from '@/lib-components/composition/index.js';
 export { InstanceNode } from '@/lib-components/nodes/InstanceNode.js';
 export type {
     InstanceAnchor,

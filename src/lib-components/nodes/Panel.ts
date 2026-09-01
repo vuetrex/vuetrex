@@ -221,6 +221,7 @@ export class Panel extends Node {
             this.backingMesh.name = `el-${this.name}-surface`
             this.backingMesh.userData.el = this.element
             this.stage.connectors.update(this.element)
+            this.stage.invalidateContentBounds?.()
         }))
 
         this.stopHandles.push(watchEffect(() => {
@@ -230,6 +231,7 @@ export class Panel extends Node {
             const oldGeometry = this.backingMesh.geometry
             this.backingMesh.geometry = new THREEx.RoundedBoxGeometry(width, height, depth, 5, Math.min(0.05, height / 3))
             oldGeometry.dispose()
+            this.stage.invalidateContentBounds?.()
         }))
 
         this.stopHandles.push(watchEffect(() => {
@@ -237,6 +239,7 @@ export class Panel extends Node {
             this.group.position.set(0, this.height() / 2, this.contentCenterZ())
             this.group.scale.setScalar(scale)
             this.stage.connectors.update(this.element)
+            this.stage.invalidateContentBounds?.()
         }))
 
         this.stopHandles.push(watchEffect(() => {
@@ -391,5 +394,6 @@ export class Panel extends Node {
         this.material.dispose()
         this.rootGroup.removeFromParent()
         this.rootGroup.clear()
+        this.stage.invalidateContentBounds?.()
     }
 }

@@ -10,6 +10,7 @@ import {
 import {VuetrexStage} from '@/lib-components/three/stage.js';
 import {Group, Vector3} from 'three';
 import {markRaw, reactive, watchEffect, WatchStopHandle} from 'vue';
+import type {Placement} from '@/lib-components/composition/index.js';
 
 export type Alignment = 'start' | 'center' | 'end'
 export type LayoutName = 'grid' | 'row' | 'depth' | 'stack' | 'ring'
@@ -25,6 +26,7 @@ export interface GroupState {
     layout?: LayoutName
     startAngle: number
     direction: 'normal' | 'reverse'
+    placement?: Placement
 }
 
 export class GroupNode extends Node {
@@ -48,6 +50,7 @@ export class GroupNode extends Node {
             alignZ: 'center',
             startAngle: 0,
             direction: 'normal',
+            placement: undefined,
             ...stateDefaults,
             size: markRaw(new Vector3()),
             height: 0,
@@ -97,6 +100,11 @@ export class GroupNode extends Node {
         return 1.0
     }
 
+    override participatesInLayout(): boolean {
+        // A recipe placement owns this subtree's parent-space position.
+        return this.state.placement ? false : super.participatesInLayout()
+    }
+
     private fitScale(): number {
         if (!this.sizeOverridden && !this.heightOverridden) return 1.0
         const content = this.contentSize()
@@ -119,6 +127,12 @@ export class GroupNode extends Node {
     }
 
     override setStateValue(key: string, value: any): void {
+        if (key === 'placement') {
+            this.state.placement = value && typeof value === 'object'
+                ? markRaw(value as Placement)
+                : undefined
+            return
+        }
         if (key === 'size') {
             this.state.size = markRaw(this.parseSize(value))
             this.sizeOverridden = true
@@ -195,9 +209,21 @@ export class GroupNode extends Node {
 
             this.group.name = `el-${this.name}`
             this.group.userData.el = this.element
-            this.group.position.copy(pos)
-            this.group.scale.setScalar(this.getIntrinsicScale() * this.fitScale())
+            const placement = this.state.placement
+            const intrinsicScale = this.getIntrinsicScale() * this.fitScale()
+            if (placement) {
+                this.group.position.copy(pos).add(placement.position)
+                this.group.quaternion.copy(placement.orientation)
+                this.group.scale.copy(placement.scale).multiplyScalar(intrinsicScale)
+                this.group.visible = placement.visibility !== false
+            } else {
+                this.group.position.copy(pos)
+                this.group.quaternion.identity()
+                this.group.scale.setScalar(intrinsicScale)
+                this.group.visible = true
+            }
             this.stage.connectors.update(this.element)
+            this.stage.invalidateContentBounds?.()
         })
     }
 
@@ -223,5 +249,6 @@ export class GroupNode extends Node {
             this.stopHandle = undefined
         }
         this.group.removeFromParent()
+        this.stage.invalidateContentBounds?.()
     }
 }

@@ -1,7 +1,22 @@
-# Vuetrex Architecture
+---
+title: Architecture
+description: How Vue's custom renderer, the logical node tree, and Three.js stay synchronized.
+outline: deep
+---
 
-Vuetrex replaces Vue's DOM renderer with a Three.js scene. Vue templates author 3D diagrams; the custom renderer drives
-Three.js instead of the browser DOM.
+# Architecture
+
+This page is for contributors and authors of low-level extensions. Application developers should begin with the
+[guide](/guide/).
+
+## The problem: Vue and Three.js own different kinds of state
+
+Vue is good at reconciling declarative trees. Three.js is an imperative scene graph with mutable objects and GPU
+resources. Mirroring every Three.js object inside application code would create two lifecycles and two sources of
+truth.
+
+Vuetrex inserts a logical node tree between them. Vue owns component identity and reactivity; logical nodes own scene
+semantics and layout; Three.js owns rendering resources.
 
 ---
 
@@ -19,6 +34,15 @@ Three.js scene            ← visual, imperative
     ▼
 WebGL canvas
 ```
+
+For data-driven scenes, an optional planning pass sits before the template:
+
+```
+event data → RepresentationRecipe → SceneFragment + Placement[] → Vue template → Vuetrex renderer
+```
+
+The recipe describes selection, aggregation, spatial arrangement, and emitted semantic records. Vue components still
+own representation details, and the custom renderer still exclusively owns Three.js objects.
 
 ---
 
@@ -61,6 +85,19 @@ item IDs, applies one transform and color encoding per item, reports the encoded
 maps raycast `instanceId` values back to `VxMouseEvent.vxInstance`. It is intentionally one logical node: the first
 draft has one shared geometry/material and one whole-batch connector endpoint.
 
+### Composition recipes (`composition/index.ts`)
+
+`RepresentationRecipe` is a pure data-to-plan contract with four phases: `select`, `aggregate`, `arrange`, and `emit`.
+`arrange` returns `Placement` values (position, orientation, scale, visibility), while `emit` produces a `SceneFragment`
+of semantic nodes, connections, and labels. Operators cover collection transforms (`filter`, `groupBy`, `aggregate`),
+spatial patterns (`row`, `stack`, `ring`, `sphere`, `timeline`, `radialFocus`), and emission (`encode`, `connect`,
+`bundleBy`, `label`).
+Focus and animation are capabilities because they change interaction policy rather than data shape.
+
+Passing a `Placement` to a `GroupNode` opts that subtree out of its parent's automatic layout and applies the placement
+to the group's local transform. This lets a recipe position an arbitrarily detailed Vue subtree without knowing how
+that subtree is rendered.
+
 ### `ConnectorNode` (`nodes/ConnectorNode.ts`)
 
 Extends `Node`. Declarative connector record independent of any shape node. Reactive `from`, `to`, `layout`, and `type`
@@ -89,6 +126,7 @@ which is still the shorthand for "connect this node to target id".
 | `Stack`         | Vertical stacking container           | `stackLayout`                        |
 | `Ring`          | Circular layout container             | `ringLayout`                         |
 | `Panel`         | Visual top-surface container          | Split label/content regions          |
+| `DisplayWall`   | Canvas/SVG-backed display surface      | Continuous or independent screens    |
 | `ConnectorNode` | Declarative link between nodes        | `syncWithThree()`                    |
 | `InstanceNode`  | Keyed GPU-instanced semantic repeater | `InstanceEncoding`, `instanceHitAt()`|
 | `Root`          | Tree root, owns destroy               | —                                    |
@@ -100,8 +138,15 @@ Thin bridge: holds `mesh: THREE.Object3D` and `pos: Vector3`. `getPosition()` de
 
 ### `VuetrexStage` (`three/stage.ts`)
 
-Scene infrastructure. Manages floor, mirror, lights, caption texture, connectors, `renderMesh()`, `removeObject()`,
-camera, raycasting. Exposes `boxRadius` / `boxDistance` (configurable via `VxSettings`).
+Scene infrastructure. Manages floor, optional flat/curved textured background wall, mirror, lights, caption texture,
+connectors, `renderMesh()`, `removeObject()`, camera, and raycasting. Exposes `boxRadius` / `boxDistance` (configurable
+via `VxSettings`).
+
+Camera framing is bounds-driven. `fitToContent({ padding, duration })` measures authored Three.js roots in world space,
+fits all eight corners against the perspective camera's horizontal and vertical field of view, and keeps the selected
+options for later refits. Geometry, group placement, instance, panel, structural removal, and viewport changes coalesce
+into one refit per animation frame. Named focus uses the same calculation on the target object's world bounds, so nested
+placement groups and scaled descendants are handled correctly.
 
 `renderMesh()` can parent meshes either under the scene root or under a container's `THREE.Group`. Connection
 declarations are registered first, then `reconcileConnections()` resolves them against live `Element3d` instances after
@@ -133,8 +178,8 @@ port-aware end routing.
 
 ## Layout system
 
-Each container node (extending `GroupNode`) owns the position calculation for its children via a `LayoutFactory`
-from [layouts.ts](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/src/lib-components/nodes/layouts.ts?type=file&root=%252F).
+Each container node (extending `GroupNode`) owns the position calculation for its children through the pure layouts in
+`src/lib-components/nodes/layouts.ts`.
 The factory is created from the container's declared `size` / `height`, then `layoutPositionOf(child: Node): Vector3`
 returns coordinates in the container's **local space**.
 
@@ -151,6 +196,10 @@ enables recursive nesting of containers.
 `Panel` owns a rounded backing mesh and a separate child `THREE.Group`. `label-share` divides its top face along Z:
 the label occupies the named `label-region`, while children are uniformly shrink-fitted into the complementary region.
 The panel remains one measured, named connector endpoint; its label does not participate in child layout.
+
+`DisplayWall` owns its frame geometry and canvas textures. Structural props rebuild the curved wall or screen set;
+surface changes repaint existing textures. Inline SVG is rasterized into the same canvas path, so Canvas 2D, SVG, and
+existing canvas/image sources share one scene-node contract.
 
 Adding a new layout: add a factory in `nodes/layouts.ts`, then subclass `GroupNode` with that factory.
 
@@ -179,6 +228,9 @@ flush, `applySync()` calls `syncWithThree()` on each child. Every Three-aware no
 that installs its own watchEffects exactly once; `onRemoved()` stops those handles and detaches scene objects.
 Connection reconciliation now runs from the node watchEffects themselves, so there is no `Root.afterFlush()` /
 `nextTick()` stage pass.
+
+Layout-affecting Three.js sync paths also call `stage.invalidateContentBounds()`. The stage coalesces those notifications
+and only then measures world bounds, after the current Vue/Three synchronization work has settled.
 
 ---
 
@@ -215,5 +267,5 @@ events carry `{ id, item, instanceIndex }` in `event.vxInstance`.
 3. Override `protected readonly flushMode` if sync timing matters
 4. Register in `nodes/types.ts`: `'vx-myshape': MyShape`
 
-For a new container layout: `extends GroupNode`, override `layoutPositionOf(child)`. For a new container layout:
-`extends GroupNode` with a new `LayoutFactory`.
+For a new container layout, extend `GroupNode` with a new `Layout` implementation and add focused measurement and
+nesting tests.

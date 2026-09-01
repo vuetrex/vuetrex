@@ -1,0 +1,224 @@
+<template>
+  <section class="scene-shell">
+    <Vuetrex
+      height="100%"
+      width="100%"
+      :camera="camera"
+      :settings="settings"
+    >
+      <BackgroundWall :deployments="deployments" :current-time="currentTime" :mode="wallMode" />
+      <MainStage
+        :deployments="deployments"
+        :relations="relations"
+        :composition="composition"
+        :current-time="currentTime"
+        :selected-id="selected?.id ?? ''"
+        @select-deployment="emit('selectDeployment', $event)"
+        @select-pod="(deploymentId, podId) => emit('selectPod', deploymentId, podId)"
+      />
+    </Vuetrex>
+
+    <div v-if="error" class="error-banner">
+      <span>{{ error }}</span>
+      <button type="button" @click="emit('reconnect')">Reconnect</button>
+    </div>
+
+    <aside class="scene-summary">
+      <span><strong>{{ deployments.length }}</strong> visible deployments</span>
+      <span><strong>{{ visiblePodCount }}</strong> visible pods</span>
+      <span><strong>{{ readyPodCount }}</strong> ready</span>
+    </aside>
+
+    <aside v-if="selected" class="inspector">
+      <button class="close" type="button" aria-label="Close inspector" @click="emit('clearSelection')">×</button>
+      <p>{{ selected.namespace }} / {{ selected.team }}</p>
+      <h2>{{ selected.id }}</h2>
+      <dl>
+        <div><dt>Status</dt><dd :class="selected.status">{{ selected.status }}</dd></div>
+        <div><dt>Replicas</dt><dd>{{ selected.readyReplicas }}/{{ selected.desiredReplicas }}</dd></div>
+        <div><dt>Requests</dt><dd>{{ Math.round(selected.metrics.requestsPerSecond) }}/s</dd></div>
+        <div><dt>p95 latency</dt><dd>{{ Math.round(selected.metrics.latencyP95Ms) }} ms</dd></div>
+        <div><dt>Error rate</dt><dd>{{ (selected.metrics.errorRate * 100).toFixed(2) }}%</dd></div>
+        <template v-if="selectedPod">
+          <div><dt>Pod</dt><dd>{{ selectedPod.id }}</dd></div>
+          <div><dt>Phase</dt><dd>{{ selectedPod.phase }}</dd></div>
+          <div><dt>Restarts</dt><dd>{{ selectedPod.restarts }}</dd></div>
+          <div><dt>Memory</dt><dd>{{ Math.round(selectedPod.metrics.memoryMb) }} MB</dd></div>
+        </template>
+      </dl>
+    </aside>
+
+    <ol v-if="recentEvents.length" class="events" aria-label="Recent lifecycle events">
+      <li v-for="event in recentEvents.slice(0, 4)" :key="event.id" :class="event.severity">
+        <time>t={{ event.t }}</time>
+        <strong>{{ event.reason }}</strong>
+        <span>{{ event.resource.id }}</span>
+      </li>
+    </ol>
+  </section>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { Vuetrex, type VxSettings } from '@/lib-components/index.js'
+import BackgroundWall from './scene/BackgroundWall.vue'
+import MainStage from './scene/MainStage.vue'
+import type {
+  CompositionPattern,
+  DeploymentViewModel,
+  HealthEvent,
+  MetricPodSample,
+  RelationViewModel,
+  WallDisplayMode,
+} from '../types.js'
+
+const props = defineProps<{
+  camera: string
+  composition: CompositionPattern
+  wallMode: WallDisplayMode
+  currentTime: number
+  deployments: DeploymentViewModel[]
+  relations: RelationViewModel[]
+  selected: DeploymentViewModel | null
+  selectedPod: (MetricPodSample & { ordinal: number }) | null
+  recentEvents: HealthEvent[]
+  error: string
+}>()
+
+const emit = defineEmits<{
+  selectDeployment: [id: string]
+  selectPod: [deploymentId: string, podId: string]
+  clearSelection: []
+  reconnect: []
+}>()
+
+const settings: VxSettings = {
+  unit: 1,
+  distance: 0.34,
+  gap: 0.34,
+  color: 0x38434a,
+  backgroundColor: 0x111719,
+  highlightColor: 0x4e9cbe,
+  floorColor: 0x171b1d,
+  captionColor: 0xe8ecee,
+  particleColor: 0x72d6e8,
+  lightColor1: 0x9ac7d6,
+  lightColor2: 0xffffff,
+  mirrorOpacity: 0.76,
+  particleSpread: 0.016,
+  particleVolume: 36,
+}
+
+const visiblePodCount = computed(() =>
+  props.deployments.reduce((count, item) => count + item.pods.length, 0),
+)
+const readyPodCount = computed(() =>
+  props.deployments.reduce((count, item) => count + item.readyReplicas, 0),
+)
+</script>
+
+<style scoped>
+.scene-shell { position: relative; min-width: 0; min-height: 0; }
+.scene-shell :deep(canvas) { display: block; }
+.scene-summary, .inspector, .events, .error-banner {
+  position: absolute;
+  border: 1px solid #3b464c;
+  background: rgba(25, 31, 34, 0.92);
+}
+.scene-summary {
+  top: 24px;
+  left: 20px;
+  display: flex;
+  gap: 18px;
+  padding: 10px 13px;
+  color: #aab5ba;
+  font-size: 11px;
+}
+.scene-summary strong { color: #edf2f4; }
+.inspector { top: 24px; right: 20px; width: 260px; padding: 16px; }
+.inspector p {
+  margin: 0 0 4px;
+  color: #77bdd0;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.inspector h2 { margin: 4px 0 15px; font-size: 18px; }
+.close {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  min-height: 27px;
+  padding: 1px 8px;
+  color: #e8ecee;
+  border: 1px solid #47535a;
+  border-radius: 5px;
+  background: #263036;
+  cursor: pointer;
+  font-size: 17px;
+}
+.inspector dl, .inspector dl div { margin: 0; }
+.inspector dl div {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-top: 1px solid #374045;
+  font-size: 12px;
+}
+.inspector dt { color: #9aa6ab; }
+.inspector dd { margin: 0; font-weight: 700; }
+.inspector dd.healthy { color: #6ed393; }
+.inspector dd.degraded { color: #e5ad4c; }
+.inspector dd.unavailable { color: #ee6670; }
+.events {
+  right: 20px;
+  bottom: 20px;
+  width: 350px;
+  margin: 0;
+  padding: 8px 12px;
+  list-style: none;
+}
+.events li {
+  display: grid;
+  grid-template-columns: 48px 1fr 1.2fr;
+  gap: 8px;
+  padding: 6px 0;
+  color: #a9b5ba;
+  border-top: 1px solid #343d41;
+  font-size: 11px;
+}
+.events li:first-child { border-top: 0; }
+.events time { color: #6faec0; }
+.events .warning strong { color: #e4ae53; }
+.events .critical strong { color: #ed6871; }
+.error-banner {
+  top: 24px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  color: #ffd8d8;
+  transform: translateX(-50%);
+}
+.error-banner button {
+  min-height: 29px;
+  padding: 4px 8px;
+  color: #e8ecee;
+  border: 1px solid #47535a;
+  border-radius: 5px;
+  background: #263036;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .scene-summary { top: 10px; left: 10px; }
+  .inspector { top: 58px; right: 10px; width: min(260px, calc(100% - 20px)); }
+  .events { right: 10px; bottom: 10px; width: min(350px, calc(100% - 20px)); }
+}
+
+@media (max-width: 560px) {
+  .scene-summary { gap: 10px; font-size: 10px; }
+  .events { display: none; }
+}
+</style>
