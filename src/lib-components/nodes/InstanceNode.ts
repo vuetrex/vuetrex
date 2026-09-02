@@ -142,9 +142,10 @@ export class InstanceNode<T = unknown> extends Node {
 
             const parent = this.nearestAncestorObject()
             if (this.mesh!.parent !== parent) parent.add(this.mesh!)
-            this.mesh!.name = `el-${this.name}`
+            this.mesh!.name = `el-${this.id}`
             this.mesh!.userData.el = this.element
             this.mesh!.position.copy(this.element.getPosition())
+            this.applyObjectState(this.mesh!)
             this.stage.connectors.update(this.element)
             this.stage.invalidateContentBounds?.()
         }, { flush: 'post' })
@@ -243,8 +244,8 @@ export class InstanceNode<T = unknown> extends Node {
         this.clearMesh()
         this.capacity = capacity
         this.mesh = new THREE.InstancedMesh(geometry, this.material, capacity)
-        this.mesh.castShadow = true
-        this.mesh.receiveShadow = true
+        this.mesh.castShadow = this.stage.shadowsEnabled?.() ?? true
+        this.mesh.receiveShadow = this.stage.shadowsEnabled?.() ?? true
         this.element.mesh = this.mesh
         this.subscribeEvents()
     }

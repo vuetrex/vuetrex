@@ -164,9 +164,10 @@ export class DisplayWall extends Node {
         this.stopHandles.push(watchEffect(() => {
             const parent = this.nearestAncestorObject()
             if (this.root.parent !== parent) parent.add(this.root)
-            this.root.name = `el-${this.name}`
+            this.root.name = `el-${this.id}`
             this.root.userData.el = this.element
             this.root.position.copy(this.element.getPosition())
+            this.applyObjectState(this.root)
             this.stage.invalidateContentBounds?.()
         }))
 
@@ -353,7 +354,7 @@ export class DisplayWall extends Node {
         }
         const material = new MeshBasicMaterial({ map: texture, side: DoubleSide, toneMapped: false })
         const mesh = new Mesh(geometry, material)
-        mesh.name = `el-${this.name}-display-${this.screens.length}`
+        mesh.name = `el-${this.id}-display-${this.screens.length}`
         mesh.userData.el = this.element
         mesh.renderOrder = 2
         const record = { canvas, context, texture, mesh, loadToken: 0 }

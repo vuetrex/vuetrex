@@ -129,3 +129,26 @@ such as spheres, geographic projection, or temporal depth:
 
 The placement positions the whole local subtree. The component inside can continue using rows, stacks, rings, and
 panels without knowing its world position.
+
+## Reserve a deliberate gap
+
+Do not add invisible geometry when the layout needs an empty slot. Use `<vx-spacer>` so the reservation remains
+measurable without adding draw calls, shadows, captions, or camera bounds:
+
+```vue
+<vx-row :gap="0.25">
+  <ServiceNode :service="gateway" />
+  <vx-spacer :width="1.2" :height="0.6" :depth="0.8" />
+  <ServiceNode :service="orders" />
+</vx-row>
+```
+
+For conditional data, choose whether the missing item should collapse:
+
+```vue
+<ServiceNode v-if="service" :service="service" />
+<vx-spacer v-else :size="1" :height="0.5" />
+```
+
+`visible="false"` is another way to hide a node while retaining its measured slot. Set
+`participates-in-layout="false"` when the slot should collapse independently of visibility.

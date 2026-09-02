@@ -46,9 +46,9 @@ interface VxFitOptions {
 
 Returns `false` when no measurable authored content exists. The options remain active for later automatic refits.
 
-### `sendCameraTo(name)`
+### `sendCameraTo(id)`
 
-Frames a named node's measured world bounds. Use `scene` to return to the complete fitted overview.
+Frames a node's measured world bounds by semantic ID. Use `scene` to return to the complete fitted overview.
 
 ```ts
 stage.sendCameraTo('orders')
@@ -57,9 +57,9 @@ stage.sendCameraTo('scene')
 
 In most Vue components, bind the `<Vuetrex camera>` prop instead of calling this directly.
 
-### `animateTo(name, props, options?)`
+### `animateTo(id, props, options?)`
 
-Animates the transform of a named node without exposing its Three.js object.
+Animates the transform of a node addressed by semantic ID without exposing its Three.js object.
 
 ```ts
 stage.animateTo('orders', { positionY: 0.4, scale: 1.08 }, {
@@ -90,6 +90,27 @@ Returns the underlying `THREE.Scene`. This is an escape hatch for integrations t
 Objects added directly are outside the logical Vuetrex tree. Vuetrex will not automatically measure, remove, connect,
 or dispatch logical events through them.
 
+### `setDiagnostics(mode)`
+
+Enable a non-authored overlay for inspecting scene composition:
+
+```ts
+stage.setDiagnostics(true)
+
+stage.setDiagnostics({
+  groupBounds: true,
+  footprints: true,
+  connectionPorts: true,
+  nodeIds: true,
+})
+
+stage.setDiagnostics(false)
+```
+
+Group bounds are green, measured layout footprints are cyan, current default connection ports are orange, and semantic
+node IDs are labeled above content. Diagnostic objects are excluded from camera fitting, pointer events, and the
+logical node tree. The same value can be supplied initially as `settings.diagnostics`.
+
 ## Settings
 
 Pass settings through the `<Vuetrex :settings>` prop.
@@ -104,6 +125,10 @@ const settings: VxSettings = {
   highlightColor: 0x58b7c0,
   captionColor: 0xe7eef0,
   particleColor: 0x73cad1,
+  floorGrid: false,
+  floorMirror: false,
+  floorCaptions: false,
+  shadows: false,
   gap: 0.35,
 }
 ```
@@ -114,6 +139,10 @@ const settings: VxSettings = {
 | `backgroundColor` | Renderer background |
 | `floorColor` | Floor and floor texture color |
 | `mirrorOpacity` | Floor reflection strength |
+| `floorGrid` | Draw the floor grid; defaults to `true` |
+| `floorMirror` | Create the reflection pass; defaults to `true` |
+| `floorCaptions` | Draw mesh `text` on the floor texture; defaults to `true` |
+| `shadows` | Enable renderer shadow maps, shadow lights, and mesh shadow flags; defaults to `true` |
 | `highlightColor` | Default interactive highlight |
 | `captionColor` | Shared caption color |
 | `particleColor` | Connector particle color |
@@ -125,6 +154,7 @@ const settings: VxSettings = {
 | `distance` | Legacy stage spacing |
 | `gap` | Default container gap |
 | `wall` | Legacy generated background wall settings |
+| `diagnostics` | `true` or per-overlay `VxDiagnosticsSettings` |
 
 For live charts and text, prefer [`<vx-display-wall>`](/guide/display-walls) over `settings.wall`.
 

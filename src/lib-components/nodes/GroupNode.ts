@@ -105,6 +105,10 @@ export class GroupNode extends Node {
         return this.state.placement ? false : super.participatesInLayout()
     }
 
+    protected override effectiveVisibility(): boolean {
+        return this.visible && this.state.placement?.visibility !== false
+    }
+
     private fitScale(): number {
         if (!this.sizeOverridden && !this.heightOverridden) return 1.0
         const content = this.contentSize()
@@ -207,7 +211,7 @@ export class GroupNode extends Node {
                 parentObj.add(this.group)
             }
 
-            this.group.name = `el-${this.name}`
+            this.group.name = `el-${this.id}`
             this.group.userData.el = this.element
             const placement = this.state.placement
             const intrinsicScale = this.getIntrinsicScale() * this.fitScale()
@@ -215,19 +219,21 @@ export class GroupNode extends Node {
                 this.group.position.copy(pos).add(placement.position)
                 this.group.quaternion.copy(placement.orientation)
                 this.group.scale.copy(placement.scale).multiplyScalar(intrinsicScale)
-                this.group.visible = placement.visibility !== false
+                this.group.visible = this.effectiveVisibility()
             } else {
                 this.group.position.copy(pos)
                 this.group.quaternion.identity()
                 this.group.scale.setScalar(intrinsicScale)
-                this.group.visible = true
+                this.group.visible = this.effectiveVisibility()
             }
+            this.applyObjectState(this.group)
             this.stage.connectors.update(this.element)
             this.stage.invalidateContentBounds?.()
         })
     }
 
     layoutPositionOf(child: Node): Vector3 {
+        if (!child.participatesInLayout()) return super.layoutPositionOf(child)
         const siblings = this.elements.value as Node[]
         const idx = siblings.indexOf(child)
         const footprints = this.childFootprints()

@@ -22,6 +22,7 @@ export class Root extends Node {
     }
 
     override layoutPositionOf(child: Node): Vector3 {
+        if (!child.participatesInLayout()) return super.layoutPositionOf(child).add(ROOT_SPACE_CENTER)
         const siblings = this.elements.value as Node[]
         const idx = siblings.indexOf(child)
         const footprints = siblings.map(s => s.measuredSize.value)

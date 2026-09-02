@@ -21,7 +21,19 @@ export abstract class Node extends Base {
     public element: Element3d;
 
     public readonly stage: VuetrexStage;
-    public name: string = Math.floor(Math.random() * 100000).toString(32);
+    private static keySequence = 0;
+    private readonly generatedKey = `vx-node-${++Node.keySequence}`;
+    private readonly identity = reactive({
+        key: this.generatedKey,
+        hasVNodeKey: false,
+        explicitId: undefined as string | undefined,
+        name: '',
+    });
+    private readonly behavior = reactive({
+        visible: true,
+        disabled: false,
+        participatesInLayout: true,
+    });
     protected subscribed: boolean = false;
     public readonly type: string = 'Node';
 
@@ -59,6 +71,28 @@ export abstract class Node extends Base {
     }
 
     isRenderableNode(): boolean { return true; }
+
+    /** Immutable renderer identity unless Vue supplied an explicit vnode key. */
+    get key(): string { return this.identity.key; }
+
+    /** Semantic identity used by focus, animation, diagnostics, and connections. */
+    get id(): string {
+        return this.identity.explicitId ?? (this.identity.name || this.generatedKey);
+    }
+
+    set id(value: string) { this.setId(value); }
+
+    /** Human-readable name. Use `id` for machine references and `text` for captions. */
+    get name(): string { return this.identity.name; }
+
+    set name(value: string) { this.setName(value); }
+
+    get visible(): boolean { return this.behavior.visible; }
+    get disabled(): boolean { return this.behavior.disabled; }
+
+    override participatesInLayout(): boolean {
+        return this.behavior.participatesInLayout;
+    }
 
     isLayer(): boolean { return false; }
 
@@ -135,8 +169,82 @@ export abstract class Node extends Base {
         return new THREE.Vector3(0, child.getElevation(), 0);
     }
 
-    setName(name: string) {
-        this.name = name;
+    setRendererKey(key: string): void {
+        const nextKey = String(key);
+        if (!nextKey || (this.identity.hasVNodeKey && nextKey === this.identity.key)) return;
+        this.identity.key = nextKey;
+        this.identity.hasVNodeKey = true;
+    }
+
+    setId(id: unknown): void {
+        const explicitId = id === undefined || id === null || id === '' ? undefined : String(id);
+        const nextId = explicitId ?? (this.identity.name || this.generatedKey);
+        this.stage.updateNodeRegistration?.(this, nextId, this.identity.name);
+        this.identity.explicitId = explicitId;
+        this.refreshObjectIdentity();
+    }
+
+    setName(name: unknown): void {
+        const nextName = name === undefined || name === null ? '' : String(name);
+        const nextId = this.identity.explicitId ?? (nextName || this.generatedKey);
+        this.stage.updateNodeRegistration?.(this, nextId, nextName);
+        this.identity.name = nextName;
+        this.refreshObjectIdentity();
+    }
+
+    private refreshObjectIdentity(): void {
+        if (this.element.mesh) this.element.mesh.name = `el-${this.id}`;
+        this.stage.reconcileConnections?.();
+        this.stage.invalidateContentBounds?.();
+    }
+
+    protected effectiveVisibility(): boolean {
+        return this.visible;
+    }
+
+    /** Apply common visibility and interaction state to a newly-created object. */
+    applyObjectState(object: THREE.Object3D = this.element.mesh as THREE.Object3D): void {
+        if (!object) return;
+        object.visible = this.effectiveVisibility();
+        object.userData.vxDisabled = this.disabled;
+        object.traverse(child => {
+            child.userData.vxDisabled = this.disabled;
+        });
+    }
+
+    private setVisible(value: unknown): void {
+        this.behavior.visible = value === undefined || value === null
+            ? true
+            : value === true || value === '' || value === 'true';
+        if (this.element.mesh) this.applyObjectState(this.element.mesh);
+        this.stage.updateNodeState?.(this);
+        this.stage.reconcileConnections?.();
+        this.stage.invalidateContentBounds?.();
+    }
+
+    private setDisabled(value: unknown): void {
+        this.behavior.disabled = value === true || value === '' || value === 'true';
+        if (this.element.mesh) this.applyObjectState(this.element.mesh);
+    }
+
+    private setLayoutParticipation(value: unknown): void {
+        this.behavior.participatesInLayout = value === undefined || value === null
+            ? true
+            : value === true || value === '' || value === 'true';
+        this.parent.value?.registerSync();
+        this.stage.invalidateContentBounds?.();
+    }
+
+    override setStateValue(key: string, value: any): void {
+        const normalized = key.indexOf('-') >= 0
+            ? key.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+            : key;
+        if (normalized === 'id') { this.setId(value); return; }
+        if (normalized === 'name') { this.setName(value); return; }
+        if (normalized === 'visible') { this.setVisible(value); return; }
+        if (normalized === 'disabled') { this.setDisabled(value); return; }
+        if (normalized === 'participatesInLayout') { this.setLayoutParticipation(value); return; }
+        super.setStateValue(key, value);
     }
 
     set onClick(e: VxEventListener<Event> | undefined) {
@@ -156,14 +264,14 @@ export abstract class Node extends Base {
     }
 
     dispatchClick(e: MouseEvent) {
-        if (this.nodeEvents.onClick)
+        if (!this.disabled && this.nodeEvents.onClick)
             this.nodeEvents.onClick(e);
         const pn = this.parent.value as Node;
         if (pn) pn.dispatchClick(e);
     }
 
     dispatchDblclick(e: MouseEvent) {
-        if (this.nodeEvents.onDblclick)
+        if (!this.disabled && this.nodeEvents.onDblclick)
             this.nodeEvents.onDblclick(e);
         const pn = this.parent.value as Node;
         if (pn) pn.dispatchDblclick(e);
@@ -171,12 +279,12 @@ export abstract class Node extends Base {
 
     // pointerenter/pointerleave do not bubble by design
     dispatchPointerenter(e: MouseEvent) {
-        if (this.nodeEvents.onPointerenter)
+        if (!this.disabled && this.nodeEvents.onPointerenter)
             this.nodeEvents.onPointerenter(e);
     }
 
     dispatchPointerleave(e: MouseEvent) {
-        if (this.nodeEvents.onPointerleave)
+        if (!this.disabled && this.nodeEvents.onPointerleave)
             this.nodeEvents.onPointerleave(e);
     }
 

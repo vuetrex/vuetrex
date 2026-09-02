@@ -92,6 +92,10 @@ export abstract class Base {
 
     appendChild(child: Base) {
         child.setParent(this);
+        if (child.isRenderableNode()) {
+            const node = child as any;
+            node.stage?.registerNode?.(node);
+        }
         this.childList.push(child);
         triggerRef(this.children);
         this.registerSync();
@@ -106,6 +110,7 @@ export abstract class Base {
             child.onRemoved();
             if (child.isRenderableNode()) {
                 const node = child as any;
+                node.stage?.unregisterNode?.(node);
                 if (node.stage && node.element) {
                     node.stage.connectors.remove(node.element);
                 }
@@ -119,6 +124,10 @@ export abstract class Base {
 
     insertBefore(child: Base, anchor: Base) {
         child.setParent(this);
+        if (child.isRenderableNode()) {
+            const node = child as any;
+            node.stage?.registerNode?.(node);
+        }
         const anchorIdx = this.childList.indexOf(anchor);
         if (anchorIdx >= 0) {
             this.childList.splice(anchorIdx, 0, child);

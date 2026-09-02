@@ -49,6 +49,7 @@ export class Ring extends GroupNode {
 
     override layoutPositionOf(child: Node): Vector3 {
         const defaultPosition = super.layoutPositionOf(child)
+        if (!child.participatesInLayout()) return defaultPosition
         if (typeof this.state.radius !== 'number') return defaultPosition
 
         const siblings = this.elements.value

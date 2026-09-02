@@ -64,6 +64,10 @@ Extends `Base`. Everything that can exist in the 3D scene. Holds:
 - **`allocatedSizeOf(child): Vector3`** — reports the slot reserved for a child container
 - **`nearestAncestorObject()`** — finds the closest `THREE.Group` in the parent chain
 
+Each node also has an immutable renderer `key`, a semantic `id`, and a human-facing `name`. The stage registry resolves
+IDs without searching Three.js object names and rejects duplicate IDs or non-empty names in development. Common node
+behavior keeps visibility, interaction disabling, and layout participation independent.
+
 ### `GroupNode` (`nodes/GroupNode.ts`)
 
 Extends `Node`. Establishes local coordinate spaces in the Three.js scene graph. Owns a `THREE.Group` where its children
@@ -208,6 +212,7 @@ Adding a new layout: add a factory in `nodes/layouts.ts`, then subclass `GroupNo
 Layout is content-driven and runs bottom-up:
 
 - `Node.measuredSize` is a reactive `Vector3` derived from `intrinsicSize()`.
+- `<vx-spacer>` contributes an explicit measured footprint but no renderable geometry.
 - Mesh nodes report their declared `size × height × size` footprint.
 - `GroupNode.contentSize()` asks its pure `Layout` object to measure all child footprints.
 - `layoutPositionOf()` asks the same layout to place a child in the container's local space.

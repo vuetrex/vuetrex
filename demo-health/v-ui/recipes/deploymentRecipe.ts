@@ -1,7 +1,6 @@
 import { Vector3 } from 'three'
 import {
   encode,
-  filter,
   radialFocus,
   ring,
   row,
@@ -29,7 +28,9 @@ export const deploymentRecipe: RepresentationRecipe<
   DeploymentViewModel
 > = {
   select(data) {
-    const deployments = filter(data.deployments, deployment => deployment.currentReplicas > 0)
+    // Keep known deployments in the composition while they start. Vue controls
+    // visibility separately, so their spatial slots remain stable over time.
+    const deployments = [...data.deployments]
     const activeIds = new Set(deployments.map(deployment => deployment.id))
     const relations = data.relations.filter(relation =>
       activeIds.has(relation.from) && activeIds.has(relation.to),

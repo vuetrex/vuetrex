@@ -104,8 +104,8 @@ export class Panel extends Node {
         this.material = stage.createElementMaterial()
         this.baseProps = captureProps(this.material)
         this.backingMesh = new Mesh(new THREEx.RoundedBoxGeometry(1, 1, 1, 5, 0.05), this.material)
-        this.backingMesh.castShadow = true
-        this.backingMesh.receiveShadow = true
+        this.backingMesh.castShadow = stage.shadowsEnabled?.() ?? true
+        this.backingMesh.receiveShadow = stage.shadowsEnabled?.() ?? true
         this.rootGroup.add(this.backingMesh)
         this.rootGroup.add(this.group)
         this.element.mesh = this.rootGroup as any
@@ -185,6 +185,7 @@ export class Panel extends Node {
     }
 
     layoutPositionOf(child: Node): Vector3 {
+        if (!child.participatesInLayout()) return super.layoutPositionOf(child)
         const children = this.elements.value as Node[]
         const index = Math.max(0, children.indexOf(child))
         const position = this.currentLayout().place(index, this.childFootprints(), this.gap())
@@ -215,11 +216,12 @@ export class Panel extends Node {
             const position = this.element.getPosition()
             const parentObject = this.nearestAncestorObject()
             if (this.rootGroup.parent !== parentObject) parentObject.add(this.rootGroup)
-            this.rootGroup.name = `el-${this.name}`
+            this.rootGroup.name = `el-${this.id}`
             this.rootGroup.userData.el = this.element
             this.rootGroup.position.copy(position)
-            this.backingMesh.name = `el-${this.name}-surface`
+            this.backingMesh.name = `el-${this.id}-surface`
             this.backingMesh.userData.el = this.element
+            this.applyObjectState(this.rootGroup)
             this.stage.connectors.update(this.element)
             this.stage.invalidateContentBounds?.()
         }))

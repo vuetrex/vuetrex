@@ -49,29 +49,68 @@ The `ready` event receives the [`VxStage`](/api/stage) interface.
 | `<vx-stack>` | Y-axis layout | `size`, `height`, `gap` |
 | `<vx-ring>` | XZ circular layout | `radius`, `start-angle`, `direction`, `gap-ratio` |
 | `<vx-panel>` | Rounded visual container with label/content regions | panel props below |
+| `<vx-spacer>` | Empty measured layout reservation | `width`, `height`, `depth`, or `size` |
 
 Every group supports `align`, `align-x`, `align-y`, and `align-z` with `start`, `center`, or `end`.
 
 `<vx-group layout>` accepts `grid`, `row`, `depth`, `stack`, and `ring`. `placement` accepts a composition
 [`Placement`](/api/composition#placements) and removes that group from its parent's automatic layout.
 
+### Identity and behavior
+
+Every scene node supports the following props:
+
+| Prop | Default | Purpose |
+|---|---|---|
+| `id` | Legacy `name` or generated ID | Stable semantic address for focus, animation, connections, and diagnostics |
+| `name` | empty | Human-readable node name; duplicate non-empty names throw in development |
+| `text` | empty | Visible floor caption where the node type supports captions |
+| `visible` | `true` | Show the node; hidden nodes still reserve layout space |
+| `disabled` | `false` | Keep the node visible but suppress its pointer and click events |
+| `participates-in-layout` | `true` | Include the node in parent measurement and automatic placement |
+
+Use Vue's `:key` for virtual-tree identity and Vuetrex's `id` for scene identity. Use `name`, `text`, or shape labels for what people read.
+For backwards compatibility, `name` remains the semantic ID when no explicit `id` is supplied. Vue keys never become
+scene IDs implicitly.
+
+`visible` and `participates-in-layout` are deliberately independent. A hidden node reserves its slot unless layout
+participation is also disabled. A visible node with `participates-in-layout="false"` renders at its parent's local
+origin or at its explicit recipe placement.
+
+### Reserve empty space
+
+`<vx-spacer>` is the official non-visual layout item:
+
+```vue
+<vx-row :gap="0.3">
+  <vx-box id="gateway" />
+  <vx-spacer :width="1.5" :height="0.5" :depth="1" />
+  <vx-box id="orders" />
+</vx-row>
+```
+
+`size="1.5"` is shorthand for equal width and depth. An object `{ x, y, z }` or `Vector3` sets all dimensions.
+
 ### Shapes
 
-| Element | Geometry | Defaults and special props |
-|---|---|---|
-| `<vx-box>` | Rounded box | `size=1`, `height=0.5`, optional `depth` |
-| `<vx-cylinder>` | Beveled cylinder | `size=1`, `height=0.33` |
-| `<vx-wedge>` | Beveled ring segment | `size=1`, `height=0.33`, optional `thickness` |
+Geometry props are intentionally shape-specific:
+
+| Element | `size` | `height` | `depth` | Additional geometry props |
+|---|---|---|---|---|
+| `<vx-box>` | Width and default Z depth | Exact vertical extent | Overrides Z depth when positive | Rounded bevel is built in |
+| `<vx-cylinder>` | Radial footprint | Exact vertical extent | Ignored | Bevel is built in |
+| `<vx-wedge>` | Automatic-ring slot size | Extrusion height | Ignored | `thickness`; parent ring `radius` and `gap-ratio` |
+
+`depth` is not a generic second radius. Radial shapes remain symmetric in X/Z and ignore it in both geometry and
+layout measurement.
 
 Shared mesh props:
 
 | Prop | Purpose |
 |---|---|
-| `name` | Stable address for focus, animation, and connectors |
-| `text` | Shared scene caption |
 | `size` | Width and default depth |
 | `height` | Vertical extent |
-| `depth` | Box Z extent; `0` falls back to `size` |
+| `depth` | Box Z extent; ignored by cylinder and wedge |
 | `connection` | Connect this node to a named target |
 | `material` | Reactive `VxMaterialProps` object |
 | `hover` | Temporary material and scale overrides |
@@ -185,9 +224,9 @@ Click and double-click bubble through the logical node tree. Pointer enter and l
 
 The package exports:
 
-- `Vuetrex`, `VxStage`, `VxSettings`, `VxMouseEvent`, and camera/animation option types
+- `Vuetrex`, `VxStage`, `VxSettings`, `VxDiagnosticsSettings`, `VxMouseEvent`, and camera/animation option types
 - Material and hover types
-- `DisplayWall`, `InstanceNode`, `Panel`, `Node`, and `Base`
+- `DisplayWall`, `InstanceNode`, `Panel`, `Spacer`, `Node`, and `Base`
 - `registerElement()` and custom element registry types
 - Instance geometry, encoding, key, anchor, item, and hit types
 - The complete [composition API](/api/composition)

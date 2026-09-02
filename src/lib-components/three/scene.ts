@@ -256,7 +256,9 @@ export default class Scene extends LifeCycle {
             let found: (undefined | THREE.Intersection);
             if (intersects.length > 0) {
                 found = intersects.find(
-                    x => x.object && x.object.name.startsWith("el-")
+                    x => x.object
+                        && x.object.name.startsWith("el-")
+                        && !x.object.userData.el?.node?.disabled
                 );
                 const labelObject = <THREE.Mesh> (found && found.object);
                 const instanceId = found?.instanceId

@@ -3,6 +3,13 @@ export type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'di
 export type CompositionPattern = 'row' | 'radial' | 'temporal'
 export type WallDisplayMode = 'continuous' | 'displays'
 
+export interface RenderFeatures {
+  floorGrid: boolean
+  floorMirror: boolean
+  floorCaptions: boolean
+  shadows: boolean
+}
+
 export interface ScenarioDefinition {
   id: string
   label: string

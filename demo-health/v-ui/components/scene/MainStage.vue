@@ -1,14 +1,17 @@
 <template>
-  <vx-group name="main-stage" :placement="originPlacement">
-    <vx-layer :gap="0.25">
+  <vx-group id="main-stage" name="Main stage" :placement="originPlacement">
+    <vx-layer id="deployment-layer" name="Deployment layer" :gap="0.25">
       <vx-group
         v-for="node in compositionNodes"
         :key="node.id"
-        :name="`placement-${node.id}`"
+        :id="`placement:${node.id}`"
+        :name="`Placement: ${displayName(node.id)}`"
         :placement="node.placement"
+        :visible="node.data.currentReplicas > 0"
       >
         <DeploymentNode
           :deployment="node.data"
+          :selected="node.id === selectedId"
           @select="emit('selectDeployment', $event)"
           @select-pod="(deploymentId, podId) => emit('selectPod', deploymentId, podId)"
         />
@@ -17,7 +20,7 @@
 
     <!-- Relation metrics can later become direct connector encodings. -->
     <vx-connector
-      v-for="relation in relations"
+      v-for="relation in activeRelations"
       :key="relation.id"
       :from="relation.from"
       :to="relation.to"
@@ -66,4 +69,15 @@ const compositionNodes = computed(() => compose(deploymentRecipe, {
   selectedId: props.selectedId || undefined,
   parameters: { pattern: props.composition },
 }).fragment.nodes)
+
+const activeRelations = computed(() => {
+  const activeIds = new Set(props.deployments
+    .filter(deployment => deployment.currentReplicas > 0)
+    .map(deployment => deployment.id))
+  return props.relations.filter(relation => activeIds.has(relation.from) && activeIds.has(relation.to))
+})
+
+function displayName(id: string) {
+  return id.replaceAll('-', ' ')
+}
 </script>

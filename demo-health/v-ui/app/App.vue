@@ -6,9 +6,13 @@
       :connection="connection"
       :composition="composition"
       :wall-mode="wallMode"
+      :diagnostics="diagnostics"
+      :render-features="renderFeatures"
       @patch="updateState"
       @composition="composition = $event"
       @wall-mode="wallMode = $event"
+      @diagnostics="diagnostics = $event"
+      @render-features="renderFeatures = $event"
       @overview="showOverview"
     />
 
@@ -16,6 +20,8 @@
       :camera="camera"
       :composition="composition"
       :wall-mode="wallMode"
+      :diagnostics="diagnostics"
+      :render-features="renderFeatures"
       :current-time="currentTime"
       :deployments="deployments"
       :relations="relations"
@@ -37,13 +43,20 @@ import Header from '../components/Header.vue'
 import Stage from '../components/Stage.vue'
 import { useHealthFixture } from '../composables/useHealthFixture.js'
 import { useResearchScene } from '../model/sceneModel.js'
-import type { CompositionPattern, WallDisplayMode } from '../types.js'
+import type { CompositionPattern, RenderFeatures, WallDisplayMode } from '../types.js'
 
 const selectedId = ref('')
 const selectedPodId = ref('')
 const camera = ref('scene')
 const composition = ref<CompositionPattern>('radial')
 const wallMode = ref<WallDisplayMode>('continuous')
+const diagnostics = ref(false)
+const renderFeatures = ref<RenderFeatures>({
+  floorGrid: true,
+  floorMirror: false,
+  floorCaptions: false,
+  shadows: true,
+})
 
 const {
   catalog,

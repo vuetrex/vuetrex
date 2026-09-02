@@ -57,6 +57,23 @@ function fromMetric(definition: CatalogDeployment, sample: MetricDeploymentSampl
   }
 }
 
+function fromDefinition(definition: CatalogDeployment): DeploymentViewModel {
+  return {
+    id: definition.id,
+    name: definition.id,
+    namespace: definition.namespace,
+    domain: definition.domain,
+    team: definition.team,
+    createdAt: 0,
+    desiredReplicas: definition.replicas,
+    currentReplicas: 0,
+    readyReplicas: 0,
+    status: 'unavailable',
+    metrics: emptyMetrics,
+    pods: [],
+  }
+}
+
 export function useResearchScene(
   catalog: ShallowRef<HealthCatalog | null>,
   snapshot: ShallowRef<HealthSnapshot | null>,
@@ -74,7 +91,8 @@ export function useResearchScene(
       if (sample && definition) return [fromMetric(definition, sample)]
 
       const item = snapshots.get(id)
-      return item ? [fromSnapshot(item)] : []
+      if (item) return [fromSnapshot(item)]
+      return definition ? [fromDefinition(definition)] : []
     })
   })
 

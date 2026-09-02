@@ -27,7 +27,7 @@ function makeStage(): VuetrexStage {
 
 describe('Panel', () => {
     it('is registered as a built-in visual container', () => {
-        expect(types.panel).toBe(Panel)
+        expect(types['vx-panel']).toBe(Panel)
     })
 
     it('reserves a south label region and places content on the north part of the top face', async () => {

@@ -96,8 +96,8 @@ export class Connectors {
     }
 
     unregisterPair(el1: Element3d, el2: Element3d): void {
-        const fromName = el1.node.name
-        const toName = el2.node.name
+        const fromName = el1.node.id
+        const toName = el2.node.id
         for (const [id, record] of [...this.connections]) {
             const sameDirection = record.from === fromName && record.to === toName
             const reverseDirection = record.from === toName && record.to === fromName

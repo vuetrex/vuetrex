@@ -1,7 +1,8 @@
 <template>
-  <vx-group name="background-wall" :placement="wallPlacement">
+  <vx-group id="background-wall" name="Background wall" :placement="wallPlacement">
     <vx-display-wall
-      name="health-displays"
+      id="health-displays"
+      name="Health displays"
       shape="curved"
       :mode="mode"
       :radius="7.2"

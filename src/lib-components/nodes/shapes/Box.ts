@@ -6,6 +6,7 @@ import * as THREEx from '@/lib-components/three/three.imports.js';
 export class Box extends MeshNode {
 
     readonly material: THREE.MeshStandardMaterial;
+    protected override readonly supportsDepth = true;
 
     constructor(stage: VuetrexStage) {
         super(stage);

@@ -1,10 +1,12 @@
 <template>
   <section class="scene-shell">
     <Vuetrex
+      :key="stageKey"
       height="100%"
       width="100%"
       :camera="camera"
       :settings="settings"
+      @ready="onReady"
     >
       <BackgroundWall :deployments="deployments" :current-time="currentTime" :mode="wallMode" />
       <MainStage
@@ -24,7 +26,7 @@
     </div>
 
     <aside class="scene-summary">
-      <span><strong>{{ deployments.length }}</strong> visible deployments</span>
+      <span><strong>{{ visibleDeploymentCount }}</strong> visible deployments</span>
       <span><strong>{{ visiblePodCount }}</strong> visible pods</span>
       <span><strong>{{ readyPodCount }}</strong> ready</span>
     </aside>
@@ -59,8 +61,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Vuetrex, type VxSettings } from '@/lib-components/index.js'
+import { computed, watch } from 'vue'
+import { Vuetrex, type VxSettings, type VxStage } from '@/lib-components/index.js'
 import BackgroundWall from './scene/BackgroundWall.vue'
 import MainStage from './scene/MainStage.vue'
 import type {
@@ -68,6 +70,7 @@ import type {
   DeploymentViewModel,
   HealthEvent,
   MetricPodSample,
+  RenderFeatures,
   RelationViewModel,
   WallDisplayMode,
 } from '../types.js'
@@ -76,6 +79,8 @@ const props = defineProps<{
   camera: string
   composition: CompositionPattern
   wallMode: WallDisplayMode
+  diagnostics: boolean
+  renderFeatures: RenderFeatures
   currentTime: number
   deployments: DeploymentViewModel[]
   relations: RelationViewModel[]
@@ -92,7 +97,7 @@ const emit = defineEmits<{
   reconnect: []
 }>()
 
-const settings: VxSettings = {
+const settings = computed<VxSettings>(() => ({
   unit: 1,
   distance: 0.34,
   gap: 0.34,
@@ -107,10 +112,35 @@ const settings: VxSettings = {
   mirrorOpacity: 0.76,
   particleSpread: 0.016,
   particleVolume: 36,
+  floorGrid: props.renderFeatures.floorGrid,
+  floorMirror: props.renderFeatures.floorMirror,
+  floorCaptions: props.renderFeatures.floorCaptions,
+  shadows: props.renderFeatures.shadows,
+}))
+
+// Stage-level render features are construction settings. A keyed remount keeps
+// the demo control simple while preserving application-owned camera state.
+const stageKey = computed(() => [
+  props.renderFeatures.floorGrid,
+  props.renderFeatures.floorMirror,
+  props.renderFeatures.floorCaptions,
+  props.renderFeatures.shadows,
+].map(value => value ? '1' : '0').join(''))
+
+let stage: VxStage | undefined
+
+function onReady(value: VxStage) {
+  stage = value
+  stage.setDiagnostics(props.diagnostics)
 }
+
+watch(() => props.diagnostics, enabled => stage?.setDiagnostics(enabled))
 
 const visiblePodCount = computed(() =>
   props.deployments.reduce((count, item) => count + item.pods.length, 0),
+)
+const visibleDeploymentCount = computed(() =>
+  props.deployments.filter(item => item.currentReplicas > 0).length,
 )
 const readyPodCount = computed(() =>
   props.deployments.reduce((count, item) => count + item.readyReplicas, 0),

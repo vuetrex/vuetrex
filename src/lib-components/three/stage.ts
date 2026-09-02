@@ -6,6 +6,7 @@ import {Node} from '@/lib-components/nodes/Node.js';
 import type {InstanceHit} from '@/lib-components/nodes/InstanceNode.js';
 import {Connectors} from '@/lib-components/three/connectors/connectors.js';
 import gsap from 'gsap';
+import {Text} from 'troika-three-text';
 
 /**
  * Target transform values for animateTo(). Each field is optional — only
@@ -52,6 +53,15 @@ export interface VxStage {
     fitToContent(options?: VxFitOptions): boolean
     /** Focus a named node's world bounds, or use `scene` for the fitted overview. */
     sendCameraTo(camera: string): void
+    /** Enable, configure, or disable the scene diagnostics overlay. */
+    setDiagnostics(diagnostics: boolean | VxDiagnosticsSettings): void
+}
+
+export interface VxDiagnosticsSettings {
+    groupBounds?: boolean
+    footprints?: boolean
+    connectionPorts?: boolean
+    nodeIds?: boolean
 }
 
 export interface VxSettings {
@@ -75,6 +85,11 @@ export interface VxSettings {
     distance?: number
     gap?: number
     wall?: VxWallSettings
+    diagnostics?: boolean | VxDiagnosticsSettings
+    floorGrid?: boolean
+    floorMirror?: boolean
+    floorCaptions?: boolean
+    shadows?: boolean
 }
 
 export interface VxWallSettings {
@@ -102,6 +117,7 @@ let BOX_RADIUS = 1.0;
 let BOX_DISTANCE = 1.0;
 const FLOOR_Y = -0.2495;
 const FLOOR_REFLECTOR_Y = -0.251;
+const DEVELOPMENT_CHECKS = (import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV ?? true;
 
 /**
  * Keep the floor decal inside the reflector subtree. Reflector hides itself
@@ -276,8 +292,12 @@ export class VuetrexStage extends Scene implements VxStage {
         texture: null,
         updateFn: () => {}
     }
-    private captions: Array<{x:number, y:number, text:string}> = []
+    private captions: Array<{x:number, y:number, text:string, visible: boolean}> = []
     private groundMirror?: THREE.Object3D
+    private readonly nodesById = new Map<string, Node>()
+    private readonly nodesByName = new Map<string, Node>()
+    private diagnostics: boolean | VxDiagnosticsSettings = false
+    private readonly diagnosticsGroup = new THREE.Group()
     boxRadius: number;
     boxDistance: number;
     gap: number;
@@ -293,6 +313,7 @@ export class VuetrexStage extends Scene implements VxStage {
         super(domParent)
         this.connectors = new Connectors(this);
         this.settings = settings
+        this.diagnostics = settings.diagnostics ?? false
 
         this.boxRadius = settings.unit || BOX_RADIUS
         this.boxDistance = settings.distance || BOX_DISTANCE
@@ -300,6 +321,9 @@ export class VuetrexStage extends Scene implements VxStage {
         this.colorMain = new THREE.Color(settings.color || 0x555555);
         this.colorHighlight = new THREE.Color(settings.highlightColor || 0x4c7fb2);
         this.scene.background = new THREE.Color(settings.backgroundColor ?? 0x808080);
+        this.renderer.shadowMap.enabled = this.shadowsEnabled()
+        this.diagnosticsGroup.name = 'vx-diagnostics'
+        this.diagnosticsGroup.renderOrder = 1000
     }
 
     getScene(): THREE.Scene {
@@ -312,6 +336,7 @@ export class VuetrexStage extends Scene implements VxStage {
 
     mount() {
         const scene = this.scene;
+        scene.add(this.diagnosticsGroup)
         this.createGroundMirror(scene);
         this.createFloor(scene);
         this.createBackgroundWall(scene);
@@ -324,10 +349,56 @@ export class VuetrexStage extends Scene implements VxStage {
         //gsap.to(this.camera.position, {duration:2.1, x:0.2, y:1.75, z:2.5,  delay: 0.5});
         this.registerAnimation(this.cameraAnimationFn()); //push tween function to be called on each frame
         this.registerAnimation(this.mouseAnimationFn());
+        this.refreshDiagnostics()
     }
 
     getById(id: string): Element3d {
+        const registered = this.nodesById?.get(id)?.element
+        if (registered) return registered
         return (this.scene.getObjectByName('el-'+id) as THREE.Mesh)?.userData.el;
+    }
+
+    registerNode(node: Node): void {
+        this.registerNodeIdentity(node, node.id, node.name)
+    }
+
+    updateNodeRegistration(node: Node, id: string, name: string): void {
+        const registered = [...this.nodesById.values()].some(candidate => candidate === node)
+        if (!registered) return
+        this.registerNodeIdentity(node, id, name)
+    }
+
+    private registerNodeIdentity(node: Node, id: string, name: string): void {
+        const duplicateId = this.nodesById.get(id)
+        if (DEVELOPMENT_CHECKS && duplicateId && duplicateId !== node) {
+            throw new Error(`Vuetrex node id must be unique; duplicate id: ${id}`)
+        }
+        const duplicateName = name ? this.nodesByName.get(name) : undefined
+        if (DEVELOPMENT_CHECKS && duplicateName && duplicateName !== node) {
+            throw new Error(`Vuetrex node name must be unique in development; duplicate name: ${name}`)
+        }
+
+        for (const [registeredId, registeredNode] of this.nodesById) {
+            if (registeredNode === node && registeredId !== id) this.nodesById.delete(registeredId)
+        }
+        for (const [registeredName, registeredNode] of this.nodesByName) {
+            if (registeredNode === node && registeredName !== name) this.nodesByName.delete(registeredName)
+        }
+        this.nodesById.set(id, node)
+        if (name) this.nodesByName.set(name, node)
+    }
+
+    unregisterNode(node: Node): void {
+        for (const [id, registeredNode] of this.nodesById) {
+            if (registeredNode === node) this.nodesById.delete(id)
+        }
+        for (const [name, registeredNode] of this.nodesByName) {
+            if (registeredNode === node) this.nodesByName.delete(name)
+        }
+    }
+
+    shadowsEnabled(): boolean {
+        return this.settings.shadows !== false
     }
 
     onHighlight(fn: Function) {
@@ -336,6 +407,7 @@ export class VuetrexStage extends Scene implements VxStage {
 
     createGroundMirror(scene: THREE.Scene) {
         this.groundMirror = undefined
+        if (this.settings.floorMirror === false) return
         if (this.settings.mirrorOpacity === undefined) {
             this.settings.mirrorOpacity = 0.95;
         }
@@ -382,6 +454,7 @@ export class VuetrexStage extends Scene implements VxStage {
         material.toneMapped = false;
         const plane = new THREE.Mesh(new THREE.PlaneGeometry(caps.planeSize, caps.planeSize), material);
         attachFloorOverlay(scene, plane, this.groundMirror)
+        plane.receiveShadow = this.shadowsEnabled()
     }
 
     createBackgroundWall(scene: THREE.Scene) {
@@ -455,7 +528,7 @@ export class VuetrexStage extends Scene implements VxStage {
 
         texture.context.font = "bold "+Math.floor(textureSize/72)+"px Helvetica"
         const scale = textureSize / mirrorSize * textureRepeats;
-        this.captions.forEach(c => {
+        if (this.settings.floorCaptions !== false) this.captions.filter(c => c.visible).forEach(c => {
             const w = texture.context.measureText(c.text).width
 
             const x = c.x * scale
@@ -464,22 +537,24 @@ export class VuetrexStage extends Scene implements VxStage {
                 '#'+(this.settings.captionColor || 0xffffff).toString(16))
         })
 
-        // Grid color must not depend on whether drawText() happened to run.
-        // Instance batches do not create floor captions, unlike ordinary meshes.
-        texture.fillStyle = '#' + (this.settings.captionColor || 0xffffff).toString(16)
-        texture.setGlobalAlpha(0.02)
-        for (let i=0; i<100; i++) {
-            texture.fillRect(100, 100 + 20*i, 1897, 2)
-        }
-        for (let i=0; i<100; i++) {
-            texture.fillRect(100 + 20*i, 100, 2, 1987)
-        }
-        texture.setGlobalAlpha(0.1)
-        for (let i=0; i<20; i++) {
-            texture.fillRect(100, 100 + 100*i, 1897, 2)
-        }
-        for (let i=0; i<20; i++) {
-            texture.fillRect(100 + 100*i, 100, 2, 1897)
+        if (this.settings.floorGrid !== false) {
+            // Grid color must not depend on whether drawText() happened to run.
+            // Instance batches do not create floor captions, unlike ordinary meshes.
+            texture.fillStyle = '#' + (this.settings.captionColor || 0xffffff).toString(16)
+            texture.setGlobalAlpha(0.02)
+            for (let i=0; i<100; i++) {
+                texture.fillRect(100, 100 + 20*i, 1897, 2)
+            }
+            for (let i=0; i<100; i++) {
+                texture.fillRect(100 + 20*i, 100, 2, 1987)
+            }
+            texture.setGlobalAlpha(0.1)
+            for (let i=0; i<20; i++) {
+                texture.fillRect(100, 100 + 100*i, 1897, 2)
+            }
+            for (let i=0; i<20; i++) {
+                texture.fillRect(100 + 100*i, 100, 2, 1897)
+            }
         }
         //texture.drawText("Bonjour", 110, 1980, '#eeffff')
         texture.setGlobalAlpha(1.0)
@@ -507,7 +582,7 @@ export class VuetrexStage extends Scene implements VxStage {
         const light2 = new THREE.DirectionalLight(this.settings.lightColor2 || 0xffffff, 5.5);
         light2.position.set(-7, 25, 13);
         light2.target.position.set( 0, 0, 0 );
-        light2.castShadow = true;
+        light2.castShadow = this.shadowsEnabled();
         const d = 8;
         light2.shadow.camera = new THREE.OrthographicCamera( -d, d, d, -d,  0.5, 55);
         light2.shadow.radius = 7;
@@ -554,6 +629,7 @@ export class VuetrexStage extends Scene implements VxStage {
     }
 
     addCaption(el: Element3d, size: number, caption: string) {
+        if (this.settings.floorCaptions === false) return undefined
         const pos = el.getWorldPosition();
         if (el.mesh && pos.length() === 0) {
             // fallback if mesh exists but matrix not updated
@@ -563,7 +639,8 @@ export class VuetrexStage extends Scene implements VxStage {
         const c = {
             x: pos.x,
             y: pos.z + size / 2.0,
-            text: caption
+            text: caption,
+            visible: el.node.visible,
         }
         this.captions.push(c);
         if (el.mesh)
@@ -575,11 +652,16 @@ export class VuetrexStage extends Scene implements VxStage {
     renderMesh(el: Element3d, height: number, size: number = this.boxRadius, gen: (height:number, size:number) => THREE.Mesh, parentObject: THREE.Object3D = this.scene) {
         if (el.mesh !== null) {
             el.mesh.position.copy(el.getPosition())
+            el.node.applyObjectState(el.mesh)
             this.connectors.update(el);
             const worldPos = el.getWorldPosition();
-            el.mesh.userData.caption.x = worldPos.x
-            el.mesh.userData.caption.y = worldPos.z + size / 2.0
-            el.mesh.userData.caption.text = el.getCaption()
+            const caption = el.mesh.userData.caption
+            if (caption) {
+                caption.x = worldPos.x
+                caption.y = worldPos.z + size / 2.0
+                caption.text = el.getCaption()
+                caption.visible = el.node.visible
+            }
             this.caps.updateFn();
             this.invalidateContentBounds()
             return;
@@ -587,13 +669,16 @@ export class VuetrexStage extends Scene implements VxStage {
 
         const model = gen(height, size);
         const scale = el.node.getScale();
-        model.name = "el-" + el.node.name;
-        model.castShadow = true;
+        model.name = "el-" + el.node.id;
+        model.castShadow = this.shadowsEnabled();
+        model.receiveShadow = this.shadowsEnabled();
         model.position.copy(el.getPosition());
         parentObject.add(model);
         el.mesh = model as THREE.Object3D<VxEventMap>;
-        model.userData.caption = this.addCaption(el, size * scale, el.getCaption())
+        const caption = this.addCaption(el, size * scale, el.getCaption())
+        if (caption) model.userData.caption = caption
         model.userData.el = el;
+        el.node.applyObjectState(model)
         this.connectors.update(el);
         this.invalidateContentBounds()
     }
@@ -608,6 +693,143 @@ export class VuetrexStage extends Scene implements VxStage {
 
     public reconcileConnections() {
         this.connectors.reconcileConnections();
+    }
+
+    updateNodeState(node: Node): void {
+        const caption = node.element.mesh?.userData.caption
+        if (caption) caption.visible = node.visible
+        this.caps.updateFn()
+    }
+
+    setDiagnostics(diagnostics: boolean | VxDiagnosticsSettings): void {
+        this.diagnostics = diagnostics
+        this.diagnosticsGroup.name = 'vx-diagnostics'
+        if (!this.diagnosticsGroup.parent) this.scene.add(this.diagnosticsGroup)
+        this.refreshDiagnostics()
+    }
+
+    private diagnosticOptions(): Required<VxDiagnosticsSettings> | null {
+        if (!this.diagnostics) return null
+        if (this.diagnostics === true) {
+            return { groupBounds: true, footprints: true, connectionPorts: true, nodeIds: true }
+        }
+        return {
+            groupBounds: this.diagnostics.groupBounds ?? true,
+            footprints: this.diagnostics.footprints ?? true,
+            connectionPorts: this.diagnostics.connectionPorts ?? true,
+            nodeIds: this.diagnostics.nodeIds ?? true,
+        }
+    }
+
+    private clearDiagnostics(): void {
+        if (!this.diagnosticsGroup) return
+        const disposedGeometry = new Set<THREE.BufferGeometry>()
+        const disposedMaterial = new Set<THREE.Material>()
+        this.diagnosticsGroup.traverse(object => {
+            const diagnostic = object as THREE.Mesh & { dispose?: () => void }
+            if (diagnostic.geometry && !disposedGeometry.has(diagnostic.geometry)) {
+                disposedGeometry.add(diagnostic.geometry)
+                diagnostic.geometry.dispose()
+            }
+            const materials = diagnostic.material
+                ? (Array.isArray(diagnostic.material) ? diagnostic.material : [diagnostic.material])
+                : []
+            materials.forEach(material => {
+                if (!disposedMaterial.has(material)) {
+                    disposedMaterial.add(material)
+                    material.dispose()
+                }
+            })
+            if (object !== this.diagnosticsGroup && typeof diagnostic.dispose === 'function') diagnostic.dispose()
+        })
+        this.diagnosticsGroup.clear()
+    }
+
+    private diagnosticLineMaterial(color: number): THREE.LineBasicMaterial {
+        return new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.9, depthTest: false })
+    }
+
+    private refreshDiagnostics(): void {
+        if (!this.diagnosticsGroup || !this.nodesById) return
+        this.clearDiagnostics()
+        const options = this.diagnosticOptions()
+        if (!options) return
+
+        for (const [id, node] of this.nodesById) {
+            const object = node.element.mesh
+            if (!object || !node.visible || id !== node.id) continue
+            object.updateWorldMatrix(true, true)
+            const bounds = worldBoundsOf(object)
+
+            if (options.groupBounds && (node as Node & { isGroupNode?: boolean }).isGroupNode && !bounds.isEmpty()) {
+                const helper = new THREE.Box3Helper(bounds, 0x78d98b)
+                helper.name = `vx-diagnostic-group-${id}`
+                helper.userData.vxDiagnostic = 'group-bounds'
+                const materials = Array.isArray(helper.material) ? helper.material : [helper.material]
+                materials.forEach(material => { material.depthTest = false })
+                helper.renderOrder = 1001
+                this.diagnosticsGroup.add(helper)
+            }
+
+            if (options.footprints) {
+                const size = node.measuredSize.value
+                if (size.x > 0 || size.y > 0 || size.z > 0) {
+                    const box = new THREE.BoxGeometry(
+                        Math.max(size.x, 0.002),
+                        Math.max(size.y, 0.002),
+                        Math.max(size.z, 0.002),
+                    )
+                    const edges = new THREE.EdgesGeometry(box)
+                    box.dispose()
+                    const footprint = new THREE.LineSegments(edges, this.diagnosticLineMaterial(0x55d7ed))
+                    const offset = node.renderOffset()
+                    footprint.matrix.copy(object.matrixWorld).multiply(
+                        new THREE.Matrix4().makeTranslation(
+                            -offset.x,
+                            size.y / 2 - offset.y,
+                            -offset.z,
+                        ),
+                    )
+                    footprint.matrixAutoUpdate = false
+                    footprint.name = `vx-diagnostic-footprint-${id}`
+                    footprint.userData.vxDiagnostic = 'footprint'
+                    footprint.renderOrder = 1002
+                    this.diagnosticsGroup.add(footprint)
+                }
+            }
+
+            if (options.connectionPorts) {
+                const port = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.045, 10, 6),
+                    new THREE.MeshBasicMaterial({ color: 0xffb454, depthTest: false }),
+                )
+                port.position.copy(node.element.getWorldPosition())
+                port.name = `vx-diagnostic-port-${id}`
+                port.userData.vxDiagnostic = 'connection-port'
+                port.renderOrder = 1003
+                this.diagnosticsGroup.add(port)
+            }
+
+            if (options.nodeIds) {
+                const center = bounds.isEmpty()
+                    ? node.element.getWorldPosition()
+                    : bounds.getCenter(new THREE.Vector3())
+                const top = bounds.isEmpty() ? center.y : bounds.max.y
+                const label: any = new Text()
+                label.text = id
+                label.fontSize = 0.11
+                label.color = 0xffffff
+                label.anchorX = 'center'
+                label.anchorY = 'bottom'
+                label.position.set(center.x, top + 0.06, center.z)
+                label.name = `vx-diagnostic-id-${id}`
+                label.userData.vxDiagnostic = 'node-id'
+                label.renderOrder = 1004
+                label.material.depthTest = false
+                label.sync()
+                this.diagnosticsGroup.add(label)
+            }
+        }
     }
 
     disconnect(el1: Element3d, el2: Element3d) {
@@ -650,6 +872,9 @@ export class VuetrexStage extends Scene implements VxStage {
             this.refitFrame = undefined
         }
         super.destroy();
+        this.clearDiagnostics()
+        this.nodesById.clear()
+        this.nodesByName.clear()
         this.connectors.clear();
     }
 
@@ -657,7 +882,7 @@ export class VuetrexStage extends Scene implements VxStage {
 
     private mouseEventFor(mesh: THREE.Mesh, event: MouseEvent): VxMouseEvent | undefined {
         const el3d = mesh.userData.el as Element3d | undefined;
-        if (!el3d) return undefined;
+        if (!el3d || el3d.node.disabled) return undefined;
 
         const ev = event as VxMouseEvent;
         ev.vxNode = el3d.node;
@@ -730,6 +955,7 @@ export class VuetrexStage extends Scene implements VxStage {
             this.refitQueued = false
             this.refitFrame = undefined
             if (this.destroyed) return
+            this.refreshDiagnostics()
             if (this.activeCameraTarget === 'scene') {
                 this.refitContent()
             } else {
@@ -767,7 +993,7 @@ export class VuetrexStage extends Scene implements VxStage {
     }
 
     private focusObject(name: string, options: Required<VxFitOptions>, force: boolean): boolean {
-        const object = this.scene.getObjectByName(`el-${name}`)
+        const object = this.getById(name)?.mesh ?? this.scene.getObjectByName(`el-${name}`)
         if (!object) return false
 
         return this.frameBounds(worldBoundsOf(object), options, this.focusDirection(), force)

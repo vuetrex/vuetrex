@@ -49,6 +49,47 @@
         </label>
 
         <button type="button" @click="seekToIncident">t=120</button>
+        <button type="button" :aria-pressed="diagnostics" @click="emit('diagnostics', !diagnostics)">
+          Diagnostics
+        </button>
+
+        <details class="render-menu">
+          <summary>Render</summary>
+          <div class="render-options">
+            <label>
+              <input
+                type="checkbox"
+                :checked="renderFeatures.floorGrid"
+                @change="changeRenderFeature('floorGrid', $event)"
+              />
+              Floor grid
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                :checked="renderFeatures.floorMirror"
+                @change="changeRenderFeature('floorMirror', $event)"
+              />
+              Mirror
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                :checked="renderFeatures.floorCaptions"
+                @change="changeRenderFeature('floorCaptions', $event)"
+              />
+              Floor labels
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                :checked="renderFeatures.shadows"
+                @change="changeRenderFeature('shadows', $event)"
+              />
+              Shadows
+            </label>
+          </div>
+        </details>
         <button type="button" @click="emit('overview')">Overview</button>
       </div>
 
@@ -77,6 +118,7 @@ import type {
   CompositionPattern,
   ConnectionStatus,
   ControlState,
+  RenderFeatures,
   TimelinePatch,
   WallDisplayMode,
 } from '../types.js'
@@ -87,12 +129,16 @@ const props = defineProps<{
   connection: ConnectionStatus
   composition: CompositionPattern
   wallMode: WallDisplayMode
+  diagnostics: boolean
+  renderFeatures: RenderFeatures
 }>()
 
 const emit = defineEmits<{
   patch: [patch: TimelinePatch]
   composition: [pattern: CompositionPattern]
   wallMode: [mode: WallDisplayMode]
+  diagnostics: [enabled: boolean]
+  renderFeatures: [features: RenderFeatures]
   overview: []
 }>()
 
@@ -136,6 +182,13 @@ function changeTime(event: Event) {
     playing: false,
   })
 }
+
+function changeRenderFeature(feature: keyof RenderFeatures, event: Event) {
+  emit('renderFeatures', {
+    ...props.renderFeatures,
+    [feature]: (event.target as HTMLInputElement).checked,
+  })
+}
 </script>
 
 <style scoped>
@@ -173,6 +226,42 @@ button, select {
 }
 button { cursor: pointer; }
 button:hover, select:hover { border-color: #68aabe; background: #303d43; }
+.render-menu { position: relative; }
+.render-menu summary {
+  min-height: 34px;
+  padding: 7px 10px;
+  color: #e8ecee;
+  border: 1px solid #47535a;
+  border-radius: 5px;
+  background: #263036;
+  cursor: pointer;
+  list-style: none;
+}
+.render-menu summary::-webkit-details-marker { display: none; }
+.render-menu[open] summary { border-color: #68aabe; background: #303d43; }
+.render-options {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  min-width: 170px;
+  padding: 8px 10px;
+  border: 1px solid #47535a;
+  background: #20282c;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+}
+.render-options label {
+  display: flex;
+  grid-template-columns: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+  min-height: 30px;
+  color: #d4dcdf;
+  font-size: 11px;
+}
+.render-options input { width: 14px; height: 14px; margin: 0; accent-color: #54a5bd; }
 .clock { display: grid; justify-items: end; gap: 7px; font-variant-numeric: tabular-nums; }
 .connection { color: #aab3b8; font-size: 11px; }
 .connection.connected { color: #6ecb8d; }

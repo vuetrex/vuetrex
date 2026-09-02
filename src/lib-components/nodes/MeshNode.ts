@@ -109,6 +109,7 @@ export abstract class MeshNode extends Node {
     protected readonly flushMode: 'post' | 'sync' = 'post'; // see Vue's WatchEffectOptions, Callback Flush Timing
 
     readonly material: MeshStandardMaterial;
+    protected readonly supportsDepth: boolean = false;
 
     private baseProps: VxMaterialProps = {};
     private isHovered = false;
@@ -134,7 +135,7 @@ export abstract class MeshNode extends Node {
     }
 
     protected override intrinsicSize(): Vector3 {
-        const z = this.state.depth > 0 ? this.state.depth : this.state.size;
+        const z = this.supportsDepth && this.state.depth > 0 ? this.state.depth : this.state.size;
         return new Vector3(this.state.size, this.state.height, z);
     }
 
@@ -196,7 +197,7 @@ export abstract class MeshNode extends Node {
         // Geometry watchEffect — rebuilds mesh when layout or geometry params change.
         this.stopHandle = watchEffect(() => {
             const { myIdx, siblingCount } = this.layoutContext.value;
-            if (myIdx >= 0) {
+            if (this.parent.value !== null) {
                 void siblingCount;
                 const { height, size, depth } = this.state;
                 void depth; // tracked so modelGen() rebuilds when depth changes
@@ -222,9 +223,9 @@ export abstract class MeshNode extends Node {
             void text;
             void depth;
             if (connection) {
-                const key = `${this.name}->${connection}`;
+                const key = `${this.id}->${connection}`;
                 if (key !== this.registeredConnection) {
-                    this.stage.connect(this.name, connection, undefined, undefined, this.connectionRegistrationId);
+                    this.stage.connect(this.id, connection, undefined, undefined, this.connectionRegistrationId);
                     this.registeredConnection = key;
                 }
             } else {
