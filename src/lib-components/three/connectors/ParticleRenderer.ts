@@ -70,6 +70,7 @@ export class ParticleRenderer implements ConnectorRenderer {
             const metrics = scaledParticleMetrics(s.scale, this.stage.settings.particleSpread || 0.035)
 
             const dx = s.endX - s.startX;
+            const dy = s.endY - s.startY;
             const dz = s.endZ - s.startZ;
             const len = s.len || 1;
             options.particleSpread = metrics.spread;
@@ -78,10 +79,10 @@ export class ParticleRenderer implements ConnectorRenderer {
             const clampStart = Math.abs(dz) < 0.0001 ? s.startX : s.startZ;
             const clampEnd = Math.abs(dz) < 0.0001 ? s.endX : s.endZ;
             options.minMax.set(Math.min(clampStart, clampEnd), Math.max(clampStart, clampEnd));
-            options.position.set(xys.x, s.elevation, xys.y);
+            options.position.copy(xys.position);
             options.velocity.set(
                 dx / len / 50.0 * metrics.velocityScale,
-                0,
+                dy / len / 50.0 * metrics.velocityScale,
                 dz / len / 50.0 * metrics.velocityScale,
             );
             this.particleSystem.spawnParticle(options);

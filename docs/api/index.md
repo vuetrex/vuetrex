@@ -151,11 +151,33 @@ Shared mesh props:
   to="orders"
   type="particles"
   layout="orthogonal"
+  from-port="right"
+  to-port="left"
+  :elevation="0.2"
+  lane="auto"
+  :avoid="true"
 />
 ```
 
-`type` is `particles` or `line`. `layout` is `orthogonal` or `direct`; `straight` is a compatibility alias. Connector
-nodes do not participate in layout.
+`type` is `particles` or `line`. `layout` is `orthogonal`, `direct`, `bezier`, or `spline`; `straight` is a compatibility
+alias. Ports accept a named face or normalized `{ x, y, z }` bounds coordinates. `elevation` and numeric `avoid` are
+world units; `lane` is a lane index or `auto`. Connector nodes do not participate in layout.
+
+### Bus connector
+
+```vue
+<vx-bus-connector
+  from="gateway"
+  :to="['auth', 'catalog', 'orders']"
+  side="right"
+  to-port="left"
+  type="line"
+/>
+```
+
+`<vx-bus-connector>` accepts the same port, elevation, lane, and avoid options. `side` is a concise named-face alias for
+its source `from-port`. It emits one shared trunk and one branch per resolved target. The unprefixed
+`<bus-connector>` tag is retained as an alias.
 
 ### Instance repeater
 
@@ -226,7 +248,8 @@ The package exports:
 
 - `Vuetrex`, `VxStage`, `VxSettings`, `VxDiagnosticsSettings`, `VxMouseEvent`, and camera/animation option types
 - Material and hover types
-- `DisplayWall`, `InstanceNode`, `Panel`, `Spacer`, `Node`, and `Base`
+- `DisplayWall`, `InstanceNode`, `Panel`, `Spacer`, `BusConnectorNode`, `Node`, and `Base`
+- Connector port, route, lane, and bus option types
 - `registerElement()` and custom element registry types
 - Instance geometry, encoding, key, anchor, item, and hit types
 - The complete [composition API](/api/composition)

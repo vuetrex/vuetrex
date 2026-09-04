@@ -3,13 +3,22 @@ import { nextTick } from 'vue'
 import { flushPromises } from '@vue/test-utils'
 import * as THREE from 'three'
 import { ConnectorNode } from '@/lib-components/nodes/ConnectorNode.js'
+import { BusConnectorNode } from '@/lib-components/nodes/BusConnectorNode.js'
 import { Row } from '@/lib-components/nodes/Row.js'
 import { Box } from '@/lib-components/nodes/shapes/Box.js'
 import { Node } from '@/lib-components/nodes/Node.js'
 import { Connectors, enclosingConnectionScale } from '@/lib-components/three/connectors/connectors.js'
 import { LineRenderer } from '@/lib-components/three/connectors/LineRenderer.js'
 import { scaledParticleMetrics } from '@/lib-components/three/connectors/ParticleRenderer.js'
-import { ConnectorPath, DirectStrategy, OrthogonalStrategy, Segment } from '@/lib-components/three/connectors/path.js'
+import {
+    BezierStrategy,
+    ConnectorPath,
+    DirectStrategy,
+    OrthogonalStrategy,
+    Segment,
+    SplineStrategy,
+    resolvePort,
+} from '@/lib-components/three/connectors/path.js'
 import type { Element3d } from '@/lib-components/three/element3d.js'
 import type { VuetrexStage } from '@/lib-components/three/stage.js'
 
@@ -109,6 +118,35 @@ describe('ConnectorNode registration lifecycle', () => {
         expect(stage.unregisterConnection).toHaveBeenLastCalledWith(registrationId)
     })
 
+    it('registers one bus declaration for a reactive target collection', async () => {
+        const stage = {
+            connectBus: vi.fn(),
+            unregisterConnection: vi.fn(),
+            reconcileConnections: vi.fn(),
+        } as unknown as VuetrexStage
+        const bus = new BusConnectorNode(stage)
+        bus.state.from = 'gateway'
+        bus.state.to = ['auth', 'orders']
+        bus.state.side = 'right'
+        bus.syncWithThree()
+        await flushPromises()
+
+        expect(stage.connectBus).toHaveBeenCalledTimes(1)
+        const call = vi.mocked(stage.connectBus).mock.calls[0]
+        expect(call[0]).toBe('gateway')
+        expect(call[1]).toEqual(['auth', 'orders'])
+        expect(call[4]).toMatchObject({ side: 'right', avoid: true })
+
+        bus.state.to = ['auth', 'orders', 'catalog']
+        await nextTick()
+        await flushPromises()
+        expect(stage.connectBus).toHaveBeenCalledTimes(2)
+        expect(vi.mocked(stage.connectBus).mock.calls[1][3]).toBe(call[3])
+
+        bus.onRemoved()
+        expect(stage.unregisterConnection).toHaveBeenLastCalledWith(call[3])
+    })
+
     it('gives MeshNode shorthand connections the same update/removal safety', async () => {
         const scene = new THREE.Scene()
         const stage = {
@@ -158,9 +196,13 @@ describe('keyed connector registry', () => {
         path.setStrategy(new DirectStrategy())
         path.connect(a, b, 'line', 'diagonal')
         const segment = path.getSegment(0)
-        expect(segment.len).toBeCloseTo(5)
-        expect(segment.endInset).toBeCloseTo(0.645, 3)
-        expect(path.sample(segment.len / 2)).toMatchObject({ x: 0, y: 0.5 })
+        expect(segment.startX).toBeCloseTo(-1.5)
+        expect(segment.endX).toBeCloseTo(1.5)
+        expect(segment.len).toBeCloseTo(Math.sqrt(18))
+        expect(segment.endInset).toBeCloseTo(0.02, 3)
+        const midpoint = path.sample(segment.len / 2)
+        expect(midpoint.x).toBeCloseTo(0)
+        expect(midpoint.y).toBeCloseTo(0.5)
 
         const renderer = new LineRenderer({ scene } as unknown as VuetrexStage)
         renderer.update([segment], 0, 0)
@@ -173,8 +215,8 @@ describe('keyed connector registry', () => {
         const arrow = lineGroup.children[1] as THREE.Mesh
         expect(arrow.userData.connectorPart).toBe('arrowhead')
         const arrowDirection = new THREE.Vector3(0, 1, 0).applyQuaternion(arrow.quaternion)
-        expect(arrowDirection.x).toBeCloseTo(4 / 5, 6)
-        expect(arrowDirection.z).toBeCloseTo(3 / 5, 6)
+        expect(arrowDirection.x).toBeCloseTo(1 / Math.sqrt(2), 6)
+        expect(arrowDirection.z).toBeCloseTo(1 / Math.sqrt(2), 6)
         renderer.dispose()
     })
 
@@ -198,11 +240,12 @@ describe('keyed connector registry', () => {
         expect(segments[1].endX).toBe(segments[2].startX)
         expect(segments[1].endZ).toBe(segments[2].startZ)
         expect(new Set(segments.map(segment => segment.elevation)).size).toBe(1)
-        expect(segments[0].elevation).toBeGreaterThan(0)
+        expect(segments[0].startX).toBeCloseTo(-1.5)
+        expect(segments[2].endX).toBeCloseTo(1.5)
 
         const renderer = new LineRenderer({ scene } as unknown as VuetrexStage)
         renderer.update(segments, 0, 0)
-        expect(((renderer as any).group as THREE.Group).children).toHaveLength(3)
+        expect(((renderer as any).group as THREE.Group).children).toHaveLength(4)
         renderer.dispose()
         connectors.clear()
     })
@@ -255,13 +298,13 @@ describe('keyed connector registry', () => {
 
         expect(connectors.registrationCount).toBe(2)
         expect(connectors.activeConnectionCount).toBe(2)
-        expect(connectors.segmentCount).toBe(2)
+        expect(connectors.segmentCount).toBe(4)
         expect(new Set(connectors.getSegments().map(segment => segment.connectionId))).toEqual(new Set(['edge-1', 'edge-2']))
 
         connectors.unregister('edge-1')
         expect(connectors.registrationCount).toBe(1)
         expect(connectors.activeConnectionCount).toBe(1)
-        expect(connectors.getSegments().map(segment => segment.connectionId)).toEqual(['edge-2'])
+        expect(connectors.getSegments().map(segment => segment.connectionId)).toEqual(['edge-2', 'edge-2'])
         connectors.clear()
     })
 
@@ -295,6 +338,74 @@ describe('keyed connector registry', () => {
         connectors.reconcileConnections()
         expect(connectors.activeConnectionCount).toBe(1)
         expect(connectors.segmentCount).toBe(1)
+        connectors.clear()
+    })
+
+    it('resolves named and normalized ports from nested world bounds', () => {
+        const { scene, addEndpoint } = makeRegistryHarness()
+        const parent = new THREE.Group()
+        parent.position.set(4, 0, -3)
+        parent.scale.set(2, 1.5, 0.5)
+        scene.add(parent)
+        const endpoint = addEndpoint('nested', parent)
+        endpoint.mesh!.position.set(1, 1, 2)
+        scene.updateMatrixWorld(true)
+
+        const right = resolvePort(endpoint, 'right', new THREE.Vector3(20, 0, 0))
+        expect(right.point.x).toBeCloseTo(right.bounds.max.x)
+        expect(right.normal).toEqual(new THREE.Vector3(1, 0, 0))
+
+        const normalized = resolvePort(endpoint, { x: 0, y: 1, z: 0.25 }, new THREE.Vector3())
+        expect(normalized.point.x).toBeCloseTo(normalized.bounds.min.x)
+        expect(normalized.point.y).toBeCloseTo(normalized.bounds.max.y)
+        expect(normalized.point.z).toBeCloseTo(
+            THREE.MathUtils.lerp(normalized.bounds.min.z, normalized.bounds.max.z, 0.25),
+        )
+    })
+
+    it('creates elevated bezier and spline routes between edge ports', () => {
+        const { scene, addEndpoint } = makeRegistryHarness()
+        const a = addEndpoint('a')
+        const b = addEndpoint('b')
+        a.mesh!.position.set(-2, 0, -1)
+        b.mesh!.position.set(2, 0, 1)
+        scene.updateMatrixWorld(true)
+
+        const options = { fromPort: 'right' as const, toPort: 'left' as const, elevation: 1, lane: 1, avoid: 0.3 }
+        const bezier = new BezierStrategy().calculatePath(a, b, 'line', options)
+        const spline = new SplineStrategy().calculatePath(a, b, 'line', options)
+
+        expect(bezier.length).toBeGreaterThan(10)
+        expect(spline.length).toBeGreaterThan(10)
+        expect(bezier[0].startX).toBeCloseTo(-1.5)
+        expect(bezier.at(-1)!.endX).toBeCloseTo(1.5)
+        expect(Math.max(...bezier.flatMap(segment => [segment.startY, segment.endY]))).toBeGreaterThan(0.8)
+        expect(bezier.at(-1)!.terminal).toBe(true)
+        expect(spline.at(-1)!.terminal).toBe(true)
+    })
+
+    it('emits one shared bus trunk and one terminal branch per target', () => {
+        const { scene, connectors, addEndpoint } = makeRegistryHarness()
+        const gateway = addEndpoint('gateway')
+        gateway.mesh!.position.set(-3, 0, 0)
+        for (const [index, id] of ['auth', 'catalog', 'orders'].entries()) {
+            addEndpoint(id).mesh!.position.set(2, 0, index * 2 - 2)
+        }
+        scene.updateMatrixWorld(true)
+
+        connectors.registerBus('gateway', ['auth', 'catalog', 'orders'], 'line', 'gateway-bus', {
+            side: 'right',
+            toPort: 'left',
+            elevation: 0.4,
+            avoid: 0.25,
+        })
+        connectors.reconcileConnections()
+
+        const segments = [...connectors.getSegments()]
+        expect(segments.filter(segment => segment.routePart === 'trunk')).toHaveLength(1)
+        expect(segments.filter(segment => segment.routePart === 'branch' && segment.terminal)).toHaveLength(3)
+        expect(new Set(segments.map(segment => segment.connectionId))).toEqual(new Set(['gateway-bus']))
+        expect(connectors.getConnectionPorts().filter(port => port.role === 'to')).toHaveLength(3)
         connectors.clear()
     })
 })

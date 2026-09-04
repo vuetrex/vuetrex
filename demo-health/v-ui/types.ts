@@ -2,6 +2,7 @@ export type HealthStatus = 'healthy' | 'degraded' | 'unavailable'
 export type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected'
 export type CompositionPattern = 'row' | 'radial' | 'temporal'
 export type WallDisplayMode = 'continuous' | 'displays'
+export type ThemeMode = 'dark' | 'light'
 
 export interface RenderFeatures {
   floorGrid: boolean
@@ -172,5 +173,5 @@ export interface DeploymentViewModel extends Omit<DeploymentSnapshot, 'pods'> {
 
 export interface RelationViewModel extends RelationDefinition {
   renderer: 'line' | 'particles'
-  layout: 'direct' | 'orthogonal'
+  layout: 'direct' | 'orthogonal' | 'bezier' | 'spline'
 }

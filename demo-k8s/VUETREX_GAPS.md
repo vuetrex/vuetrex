@@ -17,10 +17,10 @@ Vuetrex nodes.
 
 ## Health-demo audit against the five composition-pattern reference
 
-The health demo now exercises three useful ingredients from the reference image: a curved canvas-backed display wall,
-data-driven placement recipes, and a selectable graph of deployment components. It also names its current modes
-`radial` and `temporal`. Those names currently describe simple placement variants, not the complete **Radial Focus** and
-**Temporal Depth** compositions shown in the reference.
+The health demo now exercises a curved canvas-backed display wall, data-driven placement recipes, a selectable graph of
+deployment components, relation-aware radial focus, world-bound routes, and bus fan-out. Its `radial` mode implements
+the core focus/context behavior from the reference. `temporal` remains a simple depth placement rather than the complete
+**Temporal Depth** composition shown in the reference.
 
 This section records what prevents an exact implementation of all five pictured patterns: **Layered Map**,
 **Data Wall + Floor**, **Graph + Detail Portal**, **Radial Focus**, and **Temporal Depth**. It distinguishes library gaps
@@ -55,15 +55,16 @@ but it is not a general `plane`/`surface` element:
 Transparent map sheets, floor overlays, portal glass, timeline slice panes, and composited diagrams therefore require
 direct Three.js work or misuse of the display wall.
 
-#### Connectors are planar even when the composition is not
+#### Connector geometry is 3D; routing semantics are still incomplete
 
-Connector endpoints are measured in world space, but rendered routes are flattened onto XZ at one shared Y elevation.
-Segment length, particles, line geometry, and direct arrowheads use X/Z only. This works for a floor topology, but not
-for vertical links between map layers, a raised detail portal, or corresponding nodes across time slices.
+Connector endpoints now resolve named or normalized ports against world-space bounds. Orthogonal, direct, Bezier, and
+spline routes retain full XYZ coordinates; line shafts, arrowheads, and particles follow the resulting 3D segments.
+Routes also support elevation, endpoint clearance, explicit or automatic lanes, and a one-to-many bus with a shared
+trunk.
 
-Connectors also lack per-edge style, ports, obstacle avoidance, curved routes, lane allocation, and realized bundles.
-Those gaps are visual in a small graph and structural in the pictured compositions because links must communicate
-layer, direction, flow, and temporal correspondence.
+The remaining gap is higher-level routing. `avoid` clears endpoint bounds but does not route around unrelated scene
+objects. Bus trunks are geometric fan-out, not semantic bundle realization. Per-edge color, width, dash, marker, particle
+rate, and particle speed are still global renderer concerns rather than route props.
 
 #### Placement changes have no transition contract
 
@@ -119,14 +120,15 @@ representation switching based on camera context.
    suffer from incorrect compositing or z-fighting.
 3. There is no geographic projection operator or data contract for mapping longitude/latitude or arbitrary X/Y values
    into a surface's local bounds. The health fixture also contains no geographic coordinates.
-4. Connectors cannot travel vertically from a point on one layer to the corresponding point on another.
+4. Connectors can travel vertically, but a surface cannot expose semantic local anchors for correspondence between
+   layers, and general obstacle avoidance is absent.
 5. There are no pin, icon, billboard, dashed correspondence line, clipping, or masking primitives.
 6. A recipe emits one flat node set; it cannot describe one record appearing in several coordinated layers while
    retaining one semantic identity and selection state.
 
 The minimum library addition is a general canvas/image/SVG-backed `surface` with alpha/depth controls and local point
-anchors, followed by fully 3D connector paths. Geographic projection can remain an application operator once the
-surface coordinate contract exists.
+anchors. Geographic projection can remain an application operator once the surface coordinate contract exists; the
+connector path can already preserve the resulting XYZ coordinates.
 
 ### Pattern 2: Data Wall + Floor
 
@@ -134,25 +136,37 @@ surface coordinate contract exists.
 
 - `vx-display-wall` supports flat/curved continuous canvases and independent displays.
 - Canvas 2D, inline SVG, and existing canvas/image sources can paint live charts.
-- The stage supplies a floor, lights, shadows, and reflection.
+- The stage supplies a floor, lights, optional shadows, reflection, grid, and captions.
 - Panels, stacks, cylinders, and connectors can create the floor topology.
+- World-bound ports, curved/elevated routes, automatic lanes, and bus fan-out cover the pictured floor graph's basic
+  geometry.
 
 This is the closest pattern to current capability and the health demo already produces a recognizable approximation.
 
 **What prevents the pictured result**
 
-1. The floor is stage-owned rather than a composition node. Its shape, rounded platform boundary, local size, texture,
-   material, and placement cannot be authored alongside the wall.
-2. Floor grid, mirror, overlay texture, shadows, and captions cannot be controlled independently per composition.
+1. The floor is stage-owned rather than a composition node. Grid, mirror, shadows, and captions can now be disabled
+   independently, but its shape, rounded boundary, local size, texture, material, and placement cannot be authored
+   alongside the wall.
+2. The health demo approximates the rounded floor with a flattened translucent cylinder over the global gridded floor.
+   The grid is not clipped to the platform, and the cylinder cannot own a canvas/image texture, local anchors, or an
+   automatically fitted footprint.
 3. A display is texture-only: chart regions have no semantic IDs, pointer events, tooltips, or focus targets.
 4. Wall displays cannot contain 3D Vuetrex children or reserve layout regions for them.
-5. Per-edge connector color, width, arrows, rate, and ports are still missing, so the floor graph cannot match the
-   visual hierarchy in the reference.
-6. Camera policy cannot intentionally frame the wall and selected floor node as one authored shot; it only fits their
-   union or focuses one named subtree.
+5. Per-edge connector color, width, dash, marker policy, rate, and speed are still missing, so the floor graph cannot
+   match the reference's visual hierarchy even though its endpoint and route geometry can now be reproduced.
+6. Camera policy cannot intentionally frame the wall and selected floor node as one authored shot. The overview uses a
+   fixed direction, so the demo currently changes physical platform depth and wall position to improve the composition.
+7. `displays` mode supplies independent framed screens but no shared architectural backing. The demo therefore defaults
+   to one continuous canvas and paints eight screen-like regions into that dynamic texture. This matches the intended wall
+   silhouette, but the regions are pixels rather than independent nodes; the optional display-set mode still needs a
+   second backing wall with manually coordinated radius, arc, and placement.
+8. Display texture resolution does not automatically follow the rendered surface aspect. The demo calculates a
+   2657-by-768 continuous texture from wall radius, arc, height, thickness, and bezel so canvas pixels remain square in
+   world space. This calculation belongs in `DisplayWall` behind a pixel-aspect or automatic-resolution option.
 
-The display wall itself is no longer the principal blocker. A composition-owned floor/platform, semantic display hit
-regions, connector styling, and camera-shot options are.
+The display wall itself is no longer the principal blocker. A composition-owned textured floor/platform, semantic
+display hit regions, one wall-plus-displays composition contract, connector styling, and camera-shot options are.
 
 ### Pattern 3: Graph + Detail Portal
 
@@ -172,8 +186,8 @@ regions, connector styling, and camera-shot options are.
    component tree.
 4. There is no focus-to-detail representation mapping or transition. Selection opens an external DOM inspector and
    focuses the original object; it does not create or update a scene-local portal.
-5. A connector cannot rise from a graph node to a portal plane, terminate on a chosen portal edge, or reserve an
-   elevated route.
+5. Connectors can now rise and terminate on explicit bounds ports, but there is no portal-owned anchor or routing region
+   because the portal itself is not a scene abstraction.
 6. There is no clipping/masking or independent interaction routing for portal content.
 
 A useful first version does not require a full render-to-texture portal. A `detail-surface` that is a real Vuetrex
@@ -189,21 +203,24 @@ portal can remain a later rendering feature.
 - `selectedId` and the filtered active relation graph are passed into `compose()`.
 - The selected centre, inner ring, and outer ring have independent scale policies.
 - Radial selection frames the named `main-stage` group instead of the selected node, preserving all surrounding context.
-- With no valid selection, the composition remains the original equal-ring overview.
+- With no UI selection, the health demo supplies `edge-gateway` as the recipe's default focal ID while keeping inspector
+  selection empty. Choosing a deployment replaces that visual focus with the selected service.
 
 **What still prevents the exact pictured result**
 
 1. The selected deployment has no alternate focused representation. A larger central service with detailed internals
    must currently be hand-authored as a separate component branch.
 2. Placement changes snap, so selecting another centre cannot smoothly rotate/reorder rings.
-3. Connectors terminate at object centres without radial ports, lane separation, or edge style, producing overlap near
-   the centre.
+3. Connectors now use world-bound ports and lane/elevation options, but route styling and unrelated-object collision
+   avoidance remain insufficient near a dense centre.
 4. There are no authored radial guides, ring ticks, or orbit labels independent from child layout.
 5. The operator currently distinguishes only direct neighbours and other context. Weighted edges, directed hop bands,
    pinned angular sectors, and collision-aware radial ordering remain application work.
+6. The operator has no separate `defaultFocusId`; the demo currently creates a derived context with a synthetic
+   `selectedId`, which works spatially but conflates two concepts inside the recipe call.
 
-The primary remaining end-to-end change is keyed placement transitions. Connector ports and richer focused
-representations are the next visual improvements.
+The primary remaining end-to-end change is keyed placement transitions. Richer focused representations, explicit
+default-focus policy, radial guides, and per-edge styling are the next visual improvements.
 
 ### Pattern 5: Temporal Depth
 
@@ -228,8 +245,8 @@ That is depth placement, not temporal depth.
 5. There is no transition policy for scrub, playback, window insertion/removal, or interpolation between samples.
 6. There are no slice planes, timeline axis/ticks, `NOW` marker, depth fading, per-slice opacity, or camera-distance
    visibility rules.
-7. Connectors cannot express vertical/3D correspondence between the same node across slices, and bundles are metadata
-   only.
+7. Connectors can express vertical and curved 3D correspondence, but time-qualified endpoint identity and semantic
+   bundle realization are still missing.
 8. Fitting all historical slices can make the current slice unreadably small; camera framing cannot prioritize `NOW`
    while keeping past slices as context.
 
@@ -245,7 +262,8 @@ The patterns do not require five unrelated feature sets. The following sequence 
    depth/render-order controls.
 2. **Hierarchical fragment realization** that maps `representation` to Vue components and realizes connections, labels,
    props, bundles, and capabilities instead of consuming only `fragment.nodes`.
-3. **Fully 3D connectors** with endpoint ports, vertical/curved paths, per-edge styling, and bundle/lane realization.
+3. **Finish connector semantics** with per-edge styling, marker policy, unrelated-object avoidance, and semantic bundle
+   realization. Full 3D segments, bounds ports, curves, elevation, lanes, and geometric bus fan-out are implemented.
 4. **Keyed placement transitions** covering XYZ position, quaternion, scale, visibility, and enter/exit.
 5. **Composition camera shots** that fit declared semantic subsets with preferred view direction and focus context.
 6. **Temporal and richer focus operators** built on relation-aware input and nested/time-slice fragments.
@@ -276,7 +294,10 @@ The reference uses white arrows for dependencies, blue flow for requests, red da
 for coordination. Current connectors provide only:
 
 - renderer: `particles` or `line`
-- route: `orthogonal` or `direct` (`straight` is retained as a compatibility alias)
+- route: `orthogonal`, `direct`, `bezier`, or `spline` (`straight` is retained as a compatibility alias)
+- bounds-aware named/normalized endpoint ports
+- elevation, endpoint clearance, and explicit/automatic lane offsets
+- one-to-many bus fan-out with a shared trunk
 
 Color, opacity, thickness, dash pattern, arrow direction, particle speed, and particle density cannot be set per edge.
 The demo uses particle versus line rendering as the only semantic distinction.
@@ -322,16 +343,19 @@ metric-driven database/tower visuals; infrastructure-specific silhouettes remain
 
 ### Connector routing still needs hardening
 
-- Orthogonal routes have no obstacle avoidance, port selection, lane allocation, or edge-specific elevation.
-- Direction is explicit for direct line connectors; orthogonal and particle routes still have no end markers.
-- Dense fan-out creates overlapping segments with no shared-bus representation.
+- `avoid` reserves clearance outside endpoint bounds; it does not discover or route around unrelated objects.
+- Automatic lanes separate parallel records with the same directed endpoint pair, but do not allocate lanes globally
+  across crossing routes or buses.
+- Line routes receive terminal arrowheads, but marker shape, direction, color, and visibility are not configurable.
+- Bus fan-out shares a trunk, but trunk position is heuristic and does not participate in obstacle or global lane solving.
+- Bezier and spline lines are sampled into short box segments rather than rendered as a continuous tube or stroke.
 
-## Proposed connector additions
+## Connector status and remaining additions
 
 ### 1. Directional connector styling
 
-The first low-cost step is implemented: direct `line` connectors receive a scale-aware arrowhead immediately before
-the source-facing edge of the `to` endpoint.
+The first low-cost step is implemented: terminal `line` segments receive a scale-aware arrowhead immediately before
+the resolved `to` port for direct, orthogonal, curved, and bus routes.
 The remaining work is per-edge styling and explicit marker control:
 
 ```vue
@@ -348,7 +372,7 @@ The remaining work is per-edge styling and explicit marker control:
 ```
 
 It should support `start`, `end`, `both`, and `none` direction markers, dashed status lines, and reactive
-color/opacity/width. Orthogonal markers should wait for port-aware routing so arrowheads do not terminate inside nodes.
+color/opacity/width. Marker selection and style are still renderer-global rather than declarative per edge.
 
 ### 2. `flow` renderer
 
@@ -363,27 +387,29 @@ A semantic particle connector designed for metrics rather than a global particle
 
 This maps directly to the planned cluster event emulator.
 
-### 3. Port-aware routes
+### 3. Port-aware routes (implemented)
 
-Add endpoint props such as `from-port="right"`, `to-port="left"`, or explicit normalized face coordinates. Route
-strategies should operate on world-space bounding boxes, not only object centers. This would stop links from cutting
-through nodes and make nested composition predictable.
+`from-port="right"`, `to-port="left"`, and explicit normalized bounds coordinates are available. Ports resolve against
+world-space bounds, including nested transforms. The remaining work is oriented/local face semantics for rotated
+objects and reusable named custom ports owned by a component.
 
-### 4. Bus/fan-out connector
+### 4. Bus/fan-out connector (implemented first draft)
 
-Support one source to many targets with a shared trunk and short branches:
+One source can now address many targets through a shared trunk and short branches:
 
 ```vue
 
 <bus-connector from="gateway" :to="apiIds" side="right"/>
 ```
 
-This is especially useful for gateways, queues, service discovery, and database client pools.
+`vx-bus-connector` is useful for gateways, queues, service discovery, and database client pools. Remaining work includes
+styled/labelled bundles, target grouping, trunk constraints, and obstacle-aware trunk placement.
 
-### 5. Curved and elevated routes
+### 5. Curved and elevated routes (implemented first draft)
 
-Add `bezier`/`spline` strategies plus `elevation`, `lane`, and `avoid` props. Even basic automatic lane offsets would
-make crossed links legible in a topology of this size.
+`bezier`/`spline` strategies plus `elevation`, `lane`, and `avoid` props are available. Basic automatic lanes separate
+parallel endpoint pairs. `avoid` currently means endpoint clearance, not general scene collision solving; smooth line
+geometry and global lane allocation remain gaps.
 
 ## Proposed elements
 
@@ -462,11 +488,16 @@ Fog and background should encode slow aggregate signals rather than decoration:
 All mappings should be clamped, smoothed, included in the legend, and kept below a visibility ceiling so degraded health
 never makes the resources required for diagnosis unreadable.
 
-## Small API quality improvements
+## Resolved small API quality improvements
 
-- Add stable node keys/IDs separate from display names and reject duplicate names in development.
-- Add `visible`, `disabled`, and `participatesInLayout` props to nodes.
-- Add an official way to reserve empty layout space.
-- Document which geometry props each shape honors; for example, box supports `depth`, while radial shapes do not.
-- Provide a scene diagnostics mode that draws group bounds, measured footprints, connection ports, and node IDs.
-- Allow the floor grid, mirror, shadows, and floor captions to be disabled independently for large dashboards.
+- Stable renderer keys and semantic node IDs are separate from display names; duplicate non-empty names/IDs are
+  rejected during development.
+- Nodes support `visible`, `disabled`, and `participatesInLayout` independently.
+- `vx-spacer` reserves explicit empty layout space.
+- Geometry-prop support is documented, including `depth` support for boxes/panels and radial-shape limitations.
+- Scene diagnostics can draw group bounds, measured footprints, resolved connection ports, and node IDs.
+- Floor grid, mirror, shadows, and floor captions can be disabled independently.
+
+The Data Wall pass exposed the next layer of API quality work: composition-owned camera direction and screen region,
+a textured platform surface with a clipped local grid, a wall-plus-displays component contract, and explicit separation
+between default visual focus and interactive selection.

@@ -102,13 +102,13 @@ Passing a `Placement` to a `GroupNode` opts that subtree out of its parent's aut
 to the group's local transform. This lets a recipe position an arbitrarily detailed Vue subtree without knowing how
 that subtree is rendered.
 
-### `ConnectorNode` (`nodes/ConnectorNode.ts`)
+### Connector records (`nodes/ConnectorNode.ts`, `nodes/BusConnectorNode.ts`)
 
-Extends `Node`. Declarative connector record independent of any shape node. Reactive `from`, `to`, `layout`, and `type`
-props update one stable keyed registration through `stage.connect()`. Connector nodes synchronize with the renderer but
-return `participatesInLayout() === false`, so declarations do not change measurement or placement. Unmounting
-unregisters only that declaration, and parallel edges remain independent. This complements `MeshNode.state.connection`,
-which is still the shorthand for "connect this node to target id".
+`ConnectorNode` is a declarative point-to-point record. Reactive endpoints, ports, strategy, elevation, lane, and
+clearance update one stable keyed registration through `stage.connect()`. `BusConnectorNode` owns one source and a
+reactive target collection through `stage.connectBus()`, producing one trunk and terminal branches. Both synchronize
+with the renderer but return `participatesInLayout() === false`. Unmounting unregisters only that declaration, and
+parallel edges remain independent. `MeshNode.state.connection` remains the shorthand for a default route to one ID.
 
 ### Material & Interaction (`nodes/material.ts`)
 
@@ -132,6 +132,7 @@ which is still the shorthand for "connect this node to target id".
 | `Panel`         | Visual top-surface container          | Split label/content regions          |
 | `DisplayWall`   | Canvas/SVG-backed display surface      | Continuous or independent screens    |
 | `ConnectorNode` | Declarative link between nodes        | `syncWithThree()`                    |
+| `BusConnectorNode` | Shared one-to-many route          | `syncWithThree()`                    |
 | `InstanceNode`  | Keyed GPU-instanced semantic repeater | `InstanceEncoding`, `instanceHitAt()`|
 | `Root`          | Tree root, owns destroy               | —                                    |
 
@@ -157,21 +158,20 @@ declarations are registered first, then `reconcileConnections()` resolves them a
 sync.
 
 - **Connector renderers:** `particles` and `line`
-- **Connector strategies:** `orthogonal` and `direct` (`straight` remains a compatibility alias for `direct`)
+- **Connector strategies:** `orthogonal`, `direct`, `bezier`, and `spline` (`straight` aliases `direct`)
 
-Connector segments carry the world scale of the closest Three.js parent shared by both endpoints. Particle spread, size,
-and velocity and the line renderer's world-space thickness follow that enclosing scale. Routes are rebuilt when either
+Ports resolve against `Box3.setFromObject()` world bounds, either from named faces or normalized `{x,y,z}` coordinates.
+Connector segments carry full XYZ endpoints and the world scale of the closest Three.js parent shared by both endpoints.
+Particle spread, size, velocity, and the line renderer's world-space thickness follow that enclosing scale. Routes rebuild when either
 endpoint or an enclosing `GroupNode` changes, allowing diagrams to be scaled down while a closer camera preserves their
-apparent connector proportions. A route also carries a shared world-space elevation derived from its endpoints, keeping
-every orthogonal segment above platform/base meshes instead of hiding bends at a fixed floor height. Segments retain
-explicit X/Z start and end coordinates: the orthogonal strategy emits a contiguous, axis-aligned zigzag, while the
-direct strategy emits one true endpoint-to-endpoint span. Sampling is coordinate-independent, so line geometry and
-particle velocity use the same complete route.
+apparent connector proportions. Orthogonal routes use endpoint leads and axis-aligned bends; direct routes use edge-to-edge
+spans; Bezier and spline strategies sample smooth curves into the same segment representation. Elevation raises route
+crests, lanes offset parallel paths, and `avoid` currently supplies endpoint clearance. Sampling is coordinate-independent,
+so line geometry and particle velocity use the same complete 3D route. Bus records add one shared trunk plus branches
+without duplicating the trunk for every target.
 
-Direct `line` connectors include a scale-aware cone marker pointing toward the `to` endpoint. The marker is inset to
-the source-facing edge of the target's world-space XZ bounds so it remains visible instead of being buried at the node
-centre. Particle and orthogonal connectors intentionally remain unmarked until they have edge-local flow controls and
-port-aware end routing.
+Terminal `line` segments include a scale-aware cone marker pointing into their resolved target port. Bus branches each
+receive a terminal marker; the shared source lead and trunk do not.
 
 - **`VxAnimProps`:** target transform values for `animateTo()` (positionY, scale, etc.)
 - **`VxAnimOptions`:** animation timing and easing (duration, ease, delay, onComplete)

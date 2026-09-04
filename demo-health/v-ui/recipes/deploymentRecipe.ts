@@ -2,7 +2,6 @@ import { Vector3 } from 'three'
 import {
   encode,
   radialFocus,
-  ring,
   row,
   timeline,
   type RepresentationRecipe,
@@ -56,22 +55,21 @@ export const deploymentRecipe: RepresentationRecipe<
         return placement
       })
     }
-    if (!context.selectedId) {
-      return ring(data.deployments, context, {
-        radius: 2.25,
-        startAngle: -Math.PI / 2,
-        scale: new Vector3(0.92, 0.92, 0.92),
-      })
-    }
-    return radialFocus(data.deployments, context, {
+    // The overview is a focused operational dashboard: keep the gateway as the
+    // visual hub until the user chooses another deployment.
+    const focusContext = context.selectedId
+      ? context
+      : { ...context, selectedId: 'edge-gateway' }
+    return radialFocus(data.deployments, focusContext, {
       id: deployment => deployment.id,
       relations: data.relations,
-      innerRadius: 2.05,
-      outerRadius: 3.6,
+      innerRadius: 2.15,
+      outerRadius: 3.35,
       startAngle: -Math.PI / 2,
-      centerScale: new Vector3(1.24, 1.24, 1.24),
-      innerScale: new Vector3(0.9, 0.9, 0.9),
-      outerScale: new Vector3(0.78, 0.78, 0.78),
+      faceCenter: false,
+      centerScale: new Vector3(1.3, 1.3, 1.3),
+      innerScale: new Vector3(0.88, 0.88, 0.88),
+      outerScale: new Vector3(0.76, 0.76, 0.76),
     })
   },
 

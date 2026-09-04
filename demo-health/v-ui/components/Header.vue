@@ -90,6 +90,18 @@
             </label>
           </div>
         </details>
+        <label class="theme-control">
+          <input
+            class="theme-toggle"
+            type="checkbox"
+            role="switch"
+            :checked="theme === 'light'"
+            aria-label="Light mode"
+            @change="changeTheme"
+          />
+          <span class="theme-track" aria-hidden="true"><span /></span>
+          <span>{{ theme === 'light' ? 'Light' : 'Dark' }}</span>
+        </label>
         <button type="button" @click="emit('overview')">Overview</button>
       </div>
 
@@ -120,6 +132,7 @@ import type {
   ControlState,
   RenderFeatures,
   TimelinePatch,
+  ThemeMode,
   WallDisplayMode,
 } from '../types.js'
 
@@ -131,6 +144,7 @@ const props = defineProps<{
   wallMode: WallDisplayMode
   diagnostics: boolean
   renderFeatures: RenderFeatures
+  theme: ThemeMode
 }>()
 
 const emit = defineEmits<{
@@ -139,6 +153,7 @@ const emit = defineEmits<{
   wallMode: [mode: WallDisplayMode]
   diagnostics: [enabled: boolean]
   renderFeatures: [features: RenderFeatures]
+  theme: [mode: ThemeMode]
   overview: []
 }>()
 
@@ -183,6 +198,10 @@ function changeTime(event: Event) {
   })
 }
 
+function changeTheme(event: Event) {
+  emit('theme', (event.target as HTMLInputElement).checked ? 'light' : 'dark')
+}
+
 function changeRenderFeature(feature: keyof RenderFeatures, event: Event) {
   emit('renderFeatures', {
     ...props.renderFeatures,
@@ -201,44 +220,44 @@ function changeRenderFeature(feature: keyof RenderFeatures, event: Event) {
   width: 100%;
   min-width: 0;
   padding: 14px 24px;
-  border-bottom: 1px solid #343b3f;
-  background: #1b2023;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--toolbar-bg);
 }
 .toolbar > *, .timeline, .timeline label { min-width: 0; }
 .title-block p {
   margin: 0 0 4px;
-  color: #77bdd0;
+  color: var(--accent);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.12em;
 }
 .title-block h1 { margin: 0; font-size: 21px; letter-spacing: 0; }
 .timeline { display: flex; width: 100%; align-items: end; gap: 8px; }
-.timeline label { display: grid; gap: 4px; color: #9ba7ad; font-size: 10px; }
+.timeline label { display: grid; gap: 4px; color: var(--text-subtle); font-size: 10px; }
 select { max-width: 100%; }
 button, select {
   min-height: 34px;
   padding: 7px 10px;
-  color: #e8ecee;
-  border: 1px solid #47535a;
+  color: var(--text);
+  border: 1px solid var(--border);
   border-radius: 5px;
-  background: #263036;
+  background: var(--surface);
 }
 button { cursor: pointer; }
-button:hover, select:hover { border-color: #68aabe; background: #303d43; }
+button:hover, select:hover { border-color: var(--accent); background: var(--surface-hover); }
 .render-menu { position: relative; }
 .render-menu summary {
   min-height: 34px;
   padding: 7px 10px;
-  color: #e8ecee;
-  border: 1px solid #47535a;
+  color: var(--text);
+  border: 1px solid var(--border);
   border-radius: 5px;
-  background: #263036;
+  background: var(--surface);
   cursor: pointer;
   list-style: none;
 }
 .render-menu summary::-webkit-details-marker { display: none; }
-.render-menu[open] summary { border-color: #68aabe; background: #303d43; }
+.render-menu[open] summary { border-color: var(--accent); background: var(--surface-hover); }
 .render-options {
   position: absolute;
   z-index: 20;
@@ -247,9 +266,9 @@ button:hover, select:hover { border-color: #68aabe; background: #303d43; }
   display: grid;
   min-width: 170px;
   padding: 8px 10px;
-  border: 1px solid #47535a;
-  background: #20282c;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--border);
+  background: var(--menu-bg);
+  box-shadow: 0 12px 28px var(--shadow);
 }
 .render-options label {
   display: flex;
@@ -258,12 +277,51 @@ button:hover, select:hover { border-color: #68aabe; background: #303d43; }
   align-items: center;
   gap: 9px;
   min-height: 30px;
-  color: #d4dcdf;
+  color: var(--text);
   font-size: 11px;
 }
 .render-options input { width: 14px; height: 14px; margin: 0; accent-color: #54a5bd; }
+.theme-control {
+  position: relative;
+  display: flex !important;
+  grid-template-columns: none !important;
+  flex-direction: row;
+  align-items: center;
+  flex: 0 0 78px !important;
+  gap: 7px !important;
+  min-height: 34px;
+  padding: 5px 8px;
+  color: var(--text) !important;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 11px !important;
+}
+.theme-toggle { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.theme-track {
+  position: relative;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 16px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-hover);
+}
+.theme-track span {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform 140ms ease, background 140ms ease;
+}
+.theme-toggle:checked + .theme-track span { background: var(--accent-strong); transform: translateX(12px); }
+.theme-toggle:focus-visible + .theme-track { outline: 2px solid var(--accent); outline-offset: 2px; }
 .clock { display: grid; justify-items: end; gap: 7px; font-variant-numeric: tabular-nums; }
-.connection { color: #aab3b8; font-size: 11px; }
+.connection { color: var(--text-muted); font-size: 11px; }
 .connection.connected { color: #6ecb8d; }
 .connection.reconnecting { color: #e1ae55; }
 .scrubber { z-index: 4; width: 100%; min-width: 0; height: 12px; }

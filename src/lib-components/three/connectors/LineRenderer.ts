@@ -7,6 +7,7 @@ const BASE_LINE_THICKNESS = 0.012;
 const BASE_ARROW_LENGTH = 0.16;
 const BASE_ARROW_RADIUS = 0.065;
 const UP = new THREE.Vector3(0, 1, 0);
+const RIGHT = new THREE.Vector3(1, 0, 0);
 
 /**
  * World-space line renderer. Box segments keep thickness proportional to the
@@ -35,14 +36,17 @@ export class LineRenderer implements ConnectorRenderer {
         const signature = segments.map(segment => [
             segment.connectionId,
             segment.startX,
+            segment.startY,
             segment.startZ,
             segment.endX,
+            segment.endY,
             segment.endZ,
             segment.scale,
             segment.elevation,
             segment.layout,
             segment.type,
             segment.endInset,
+            segment.terminal,
         ].join(':')).join('|')
         if (signature === this.signature) return
         this.signature = signature
@@ -50,8 +54,9 @@ export class LineRenderer implements ConnectorRenderer {
 
         for (const segment of segments) {
             const dx = segment.endX - segment.startX
+            const dy = segment.endY - segment.startY
             const dz = segment.endZ - segment.startZ
-            const length = Math.hypot(dx, dz)
+            const length = Math.hypot(dx, dy, dz)
             if (length === 0) continue
             const scale = segment.scale > 0 && Number.isFinite(segment.scale) ? segment.scale : 1
             const thickness = BASE_LINE_THICKNESS * scale
@@ -59,20 +64,17 @@ export class LineRenderer implements ConnectorRenderer {
             const mesh = new THREE.Mesh(geometry, this.material)
             mesh.position.set(
                 (segment.startX + segment.endX) / 2,
-                segment.elevation,
+                (segment.startY + segment.endY) / 2,
                 (segment.startZ + segment.endZ) / 2,
             )
-            mesh.rotation.y = -Math.atan2(dz, dx)
+            const direction = new THREE.Vector3(dx / length, dy / length, dz / length)
+            mesh.quaternion.setFromUnitVectors(RIGHT, direction)
             mesh.userData.connectorPart = 'shaft'
             this.group.add(mesh)
 
-            // Direction markers intentionally start with the least ambiguous
-            // route: a single direct, non-particle connector. Orthogonal paths
-            // need bend/port rules before an end marker can be positioned well.
-            if (segment.type === 'line' && segment.layout === 'direct') {
+            if (segment.type === 'line' && segment.terminal) {
                 const arrowLength = Math.min(BASE_ARROW_LENGTH * scale, length * 0.35)
                 const arrowRadius = Math.min(BASE_ARROW_RADIUS * scale, arrowLength * 0.45)
-                const direction = new THREE.Vector3(dx / length, 0, dz / length)
                 const arrowGeometry = new THREE.ConeGeometry(arrowRadius, arrowLength, 12)
                 const arrow = new THREE.Mesh(arrowGeometry, this.material)
                 // ConeGeometry points along local +Y. Stop just outside the
@@ -84,7 +86,7 @@ export class LineRenderer implements ConnectorRenderer {
                 arrow.quaternion.setFromUnitVectors(UP, direction)
                 arrow.position.set(
                     segment.endX - direction.x * (endInset + arrowLength / 2),
-                    segment.elevation,
+                    segment.endY - direction.y * (endInset + arrowLength / 2),
                     segment.endZ - direction.z * (endInset + arrowLength / 2),
                 )
                 arrow.userData.connectorPart = 'arrowhead'

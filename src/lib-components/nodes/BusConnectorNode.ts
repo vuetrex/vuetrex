@@ -1,23 +1,24 @@
+import { reactive, watchEffect, type WatchStopHandle } from 'vue'
 import { Node } from '@/lib-components/nodes/Node.js'
-import { VuetrexStage } from '@/lib-components/three/stage.js'
-import {watchEffect, WatchStopHandle, reactive} from 'vue'
+import type { VuetrexStage } from '@/lib-components/three/stage.js'
 import type {
+    BusRouteOptions,
     ConnectorLane,
     ConnectorPort,
-    ConnectorRouteOptions,
+    ConnectorPortName,
 } from '@/lib-components/three/connectors/types.js'
 
-let connectorRegistrationSequence = 0
+let busRegistrationSequence = 0
 
-export class ConnectorNode extends Node {
-    public readonly type: string = 'Connector'
-
+/** Declarative one-to-many connector with one shared trunk. */
+export class BusConnectorNode extends Node {
+    public readonly type = 'BusConnector'
     public state: {
         from: string
-        to: string
+        to: string[]
         text: string
         type: string
-        layout: string
+        side: ConnectorPortName | undefined
         fromPort: ConnectorPort
         toPort: ConnectorPort
         elevation: number
@@ -25,10 +26,10 @@ export class ConnectorNode extends Node {
         avoid: boolean | number
     } = reactive({
         from: '',
-        to: '',
+        to: [],
         text: '',
-        type: 'particles',
-        layout: 'orthogonal',
+        type: 'line',
+        side: undefined,
         fromPort: 'auto',
         toPort: 'auto',
         elevation: 0,
@@ -37,27 +38,22 @@ export class ConnectorNode extends Node {
     })
 
     private stopHandle?: WatchStopHandle
-    private readonly registrationId = `connector:${++connectorRegistrationSequence}`
+    private readonly registrationId = `bus:${++busRegistrationSequence}`
 
     constructor(stage: VuetrexStage) {
         super(stage)
     }
 
-    isRenderableNode(): boolean {
-        return true
-    }
+    isRenderableNode(): boolean { return true }
+    participatesInLayout(): boolean { return false }
 
-    participatesInLayout(): boolean {
-        return false
-    }
-
-    syncWithThree() {
+    syncWithThree(): void {
         if (this.stopHandle) return
         this.stopHandle = watchEffect(() => {
-            const { from, to, layout, type, fromPort, toPort, elevation, lane, avoid } = this.state
-            const options: ConnectorRouteOptions = { fromPort, toPort, elevation, lane, avoid }
-            if (from && to) {
-                this.stage.connect(from, to, layout, type, this.registrationId, options)
+            const { from, to, type, side, fromPort, toPort, elevation, lane, avoid } = this.state
+            const options: BusRouteOptions = { side, fromPort, toPort, elevation, lane, avoid }
+            if (from && to.length) {
+                this.stage.connectBus(from, to, type, this.registrationId, options)
                 this.stage.reconcileConnections()
             } else {
                 this.stage.unregisterConnection(this.registrationId)
@@ -67,6 +63,12 @@ export class ConnectorNode extends Node {
 
     override setStateValue(key: string, value: unknown): void {
         const normalized = key.replace(/-([a-z])/g, (_, character) => character.toUpperCase())
+        if (normalized === 'to') {
+            this.state.to = Array.isArray(value)
+                ? value.map(String)
+                : String(value ?? '').split(',').map(item => item.trim()).filter(Boolean)
+            return
+        }
         if (normalized === 'lane') {
             const lane = Number(value)
             this.state.lane = value === 'auto' || value == null || !Number.isFinite(lane) ? 'auto' : lane
@@ -80,11 +82,9 @@ export class ConnectorNode extends Node {
         super.setStateValue(key, value)
     }
 
-    onRemoved() {
-        if (this.stopHandle) {
-            this.stopHandle()
-            this.stopHandle = undefined
-        }
+    onRemoved(): void {
+        this.stopHandle?.()
+        this.stopHandle = undefined
         this.stage.unregisterConnection(this.registrationId)
     }
 }

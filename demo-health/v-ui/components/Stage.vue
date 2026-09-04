@@ -8,13 +8,20 @@
       :settings="settings"
       @ready="onReady"
     >
-      <BackgroundWall :deployments="deployments" :current-time="currentTime" :mode="wallMode" />
+      <BackgroundWall
+        :deployments="deployments"
+        :relations="relations"
+        :current-time="currentTime"
+        :mode="wallMode"
+        :theme="theme"
+      />
       <MainStage
         :deployments="deployments"
         :relations="relations"
         :composition="composition"
         :current-time="currentTime"
         :selected-id="selected?.id ?? ''"
+        :theme="theme"
         @select-deployment="emit('selectDeployment', $event)"
         @select-pod="(deploymentId, podId) => emit('selectPod', deploymentId, podId)"
       />
@@ -72,6 +79,7 @@ import type {
   MetricPodSample,
   RenderFeatures,
   RelationViewModel,
+  ThemeMode,
   WallDisplayMode,
 } from '../types.js'
 
@@ -81,6 +89,7 @@ const props = defineProps<{
   wallMode: WallDisplayMode
   diagnostics: boolean
   renderFeatures: RenderFeatures
+  theme: ThemeMode
   currentTime: number
   deployments: DeploymentViewModel[]
   relations: RelationViewModel[]
@@ -101,13 +110,13 @@ const settings = computed<VxSettings>(() => ({
   unit: 1,
   distance: 0.34,
   gap: 0.34,
-  color: 0x38434a,
-  backgroundColor: 0x111719,
-  highlightColor: 0x4e9cbe,
-  floorColor: 0x171b1d,
-  captionColor: 0xe8ecee,
-  particleColor: 0x72d6e8,
-  lightColor1: 0x9ac7d6,
+  color: props.theme === 'light' ? 0x687d86 : 0x38434a,
+  backgroundColor: props.theme === 'light' ? 0xdde4e6 : 0x111719,
+  highlightColor: props.theme === 'light' ? 0x247f9d : 0x4e9cbe,
+  floorColor: props.theme === 'light' ? 0xcbd3d6 : 0x171b1d,
+  captionColor: props.theme === 'light' ? 0x1c292f : 0xe8ecee,
+  particleColor: props.theme === 'light' ? 0x1687a8 : 0x72d6e8,
+  lightColor1: props.theme === 'light' ? 0xffffff : 0x9ac7d6,
   lightColor2: 0xffffff,
   mirrorOpacity: 0.76,
   particleSpread: 0.016,
@@ -121,6 +130,7 @@ const settings = computed<VxSettings>(() => ({
 // Stage-level render features are construction settings. A keyed remount keeps
 // the demo control simple while preserving application-owned camera state.
 const stageKey = computed(() => [
+  props.theme,
   props.renderFeatures.floorGrid,
   props.renderFeatures.floorMirror,
   props.renderFeatures.floorCaptions,
@@ -152,8 +162,8 @@ const readyPodCount = computed(() =>
 .scene-shell :deep(canvas) { display: block; }
 .scene-summary, .inspector, .events, .error-banner {
   position: absolute;
-  border: 1px solid #3b464c;
-  background: rgba(25, 31, 34, 0.92);
+  border: 1px solid var(--border);
+  background: var(--overlay);
 }
 .scene-summary {
   top: 24px;
@@ -161,14 +171,14 @@ const readyPodCount = computed(() =>
   display: flex;
   gap: 18px;
   padding: 10px 13px;
-  color: #aab5ba;
+  color: var(--text-muted);
   font-size: 11px;
 }
-.scene-summary strong { color: #edf2f4; }
+.scene-summary strong { color: var(--text-strong); }
 .inspector { top: 24px; right: 20px; width: 260px; padding: 16px; }
 .inspector p {
   margin: 0 0 4px;
-  color: #77bdd0;
+  color: var(--accent);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -180,10 +190,10 @@ const readyPodCount = computed(() =>
   right: 7px;
   min-height: 27px;
   padding: 1px 8px;
-  color: #e8ecee;
-  border: 1px solid #47535a;
+  color: var(--text);
+  border: 1px solid var(--border);
   border-radius: 5px;
-  background: #263036;
+  background: var(--surface);
   cursor: pointer;
   font-size: 17px;
 }
@@ -192,10 +202,10 @@ const readyPodCount = computed(() =>
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-top: 1px solid #374045;
+  border-top: 1px solid var(--border-soft);
   font-size: 12px;
 }
-.inspector dt { color: #9aa6ab; }
+.inspector dt { color: var(--text-subtle); }
 .inspector dd { margin: 0; font-weight: 700; }
 .inspector dd.healthy { color: #6ed393; }
 .inspector dd.degraded { color: #e5ad4c; }
@@ -213,8 +223,8 @@ const readyPodCount = computed(() =>
   grid-template-columns: 48px 1fr 1.2fr;
   gap: 8px;
   padding: 6px 0;
-  color: #a9b5ba;
-  border-top: 1px solid #343d41;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-soft);
   font-size: 11px;
 }
 .events li:first-child { border-top: 0; }
@@ -234,10 +244,10 @@ const readyPodCount = computed(() =>
 .error-banner button {
   min-height: 29px;
   padding: 4px 8px;
-  color: #e8ecee;
-  border: 1px solid #47535a;
+  color: var(--text);
+  border: 1px solid var(--border);
   border-radius: 5px;
-  background: #263036;
+  background: var(--surface);
   cursor: pointer;
 }
 

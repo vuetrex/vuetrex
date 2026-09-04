@@ -64,4 +64,13 @@ export { Node } from '@/lib-components/nodes/Node.js';
 export { Base } from '@/lib-components/nodes/Base.js';
 export { Panel } from '@/lib-components/nodes/Panel.js';
 export { Spacer } from '@/lib-components/nodes/Spacer.js';
+export { BusConnectorNode } from '@/lib-components/nodes/BusConnectorNode.js';
+export type {
+    BusRouteOptions,
+    ConnectorLane,
+    ConnectorPort,
+    ConnectorPortCoordinates,
+    ConnectorPortName,
+    ConnectorRouteOptions,
+} from '@/lib-components/three/connectors/types.js';
 export type { VuetrexStage } from '@/lib-components/three/stage.js';

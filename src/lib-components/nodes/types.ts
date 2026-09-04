@@ -6,6 +6,7 @@ import {Row} from '@/lib-components/nodes/Row.js';
 import {Stack} from '@/lib-components/nodes/Stack.js';
 import {Ring} from '@/lib-components/nodes/Ring.js';
 import {ConnectorNode} from '@/lib-components/nodes/ConnectorNode.js';
+import {BusConnectorNode} from '@/lib-components/nodes/BusConnectorNode.js';
 import {Panel} from '@/lib-components/nodes/Panel.js';
 import {InstanceNode} from '@/lib-components/nodes/InstanceNode.js';
 import {DisplayWall} from '@/lib-components/nodes/DisplayWall.js';
@@ -37,6 +38,8 @@ const builtins: ElementRegistry = {
     'vx-stack': Stack,
     'vx-ring': Ring,
     'vx-connector': ConnectorNode,
+    'vx-bus-connector': BusConnectorNode,
+    'bus-connector': BusConnectorNode,
     'vx-panel': Panel,
     'vx-instances': InstanceNode,
     'vx-display-wall': DisplayWall,

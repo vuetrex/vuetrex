@@ -11,7 +11,7 @@
     :label-share="0.38"
     :label-font-size="0.10"
     :label-line-height="1.22"
-    :label-color="0xf4f7f9"
+    :label-color="labelColor"
     :material="panelMaterial"
     :hover="hoverMaterial"
     :disabled="deployment.currentReplicas === 0"
@@ -79,6 +79,7 @@ import { computed } from 'vue'
 import type { InstanceEncoding, InstanceHit, VxMouseEvent } from '@/lib-components/index.js'
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
 import type { DeploymentViewModel } from '../../types.js'
+import type { ThemeMode } from '../../types.js'
 
 const podGeometry = () => new RoundedBoxGeometry(1, 1, 1, 3, 0.08)
 type Pod = DeploymentViewModel['pods'][number]
@@ -86,6 +87,7 @@ type Pod = DeploymentViewModel['pods'][number]
 const props = defineProps<{
   deployment: DeploymentViewModel
   selected: boolean
+  theme: ThemeMode
 }>()
 
 const emit = defineEmits<{
@@ -94,6 +96,7 @@ const emit = defineEmits<{
 }>()
 
 const displayName = computed(() => props.deployment.id.replaceAll('-', ' '))
+const labelColor = computed(() => props.theme === 'light' ? 0x17242b : 0xf4f7f9)
 const summaryLine = computed(() =>
   `${props.deployment.readyReplicas}/${props.deployment.desiredReplicas} ready | ${Math.round(props.deployment.metrics.requestsPerSecond)}/s`,
 )
@@ -103,24 +106,26 @@ const statusColor = computed(() => {
   return 0x2d7a55
 })
 const panelMaterial = computed(() => ({
-  color: props.selected ? 0x315064 : 0x26313a,
+  color: props.theme === 'light'
+    ? props.selected ? 0x9dcada : 0xd8e0e3
+    : props.selected ? 0x315064 : 0x26313a,
   roughness: 0.55,
   metalness: 0.12,
   emissive: statusColor.value,
   emissiveIntensity: props.selected ? 0.24 : props.deployment.status === 'healthy' ? 0.05 : 0.18,
 }))
 const hoverMaterial = computed(() => ({
-  color: 0x3e5968,
+  color: props.theme === 'light' ? 0xb6ced6 : 0x3e5968,
   emissive: statusColor.value,
   emissiveIntensity: 0.28,
   scale: 1.035,
   transition: 0.16,
 }))
-const podBatchMaterial = {
-  color: 0xffffff,
+const podBatchMaterial = computed(() => ({
+  color: props.theme === 'light' ? 0xeef3f4 : 0xffffff,
   roughness: 0.34,
   metalness: 0.18,
-}
+}))
 const trafficMaterial = {
   color: 0x3e91c7,
   roughness: 0.42,

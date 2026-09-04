@@ -5,6 +5,7 @@ import {Element3d, VxEventMap} from '@/lib-components/three/element3d.js';
 import {Node} from '@/lib-components/nodes/Node.js';
 import type {InstanceHit} from '@/lib-components/nodes/InstanceNode.js';
 import {Connectors} from '@/lib-components/three/connectors/connectors.js';
+import type {BusRouteOptions, ConnectorRouteOptions} from '@/lib-components/three/connectors/types.js';
 import gsap from 'gsap';
 import {Text} from 'troika-three-text';
 
@@ -683,8 +684,12 @@ export class VuetrexStage extends Scene implements VxStage {
         this.invalidateContentBounds()
     }
 
-    connect(el1: string, el2: string, layout?: string, type?: string, registrationId?: string): string {
-        return this.connectors.register(el1, el2, layout, type, registrationId);
+    connect(el1: string, el2: string, layout?: string, type?: string, registrationId?: string, options?: ConnectorRouteOptions): string {
+        return this.connectors.register(el1, el2, layout, type, registrationId, options);
+    }
+
+    connectBus(from: string, to: readonly string[], type?: string, registrationId?: string, options?: BusRouteOptions): string {
+        return this.connectors.registerBus(from, to, type, registrationId, options);
     }
 
     unregisterConnection(registrationId: string) {
@@ -798,18 +803,6 @@ export class VuetrexStage extends Scene implements VxStage {
                 }
             }
 
-            if (options.connectionPorts) {
-                const port = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.045, 10, 6),
-                    new THREE.MeshBasicMaterial({ color: 0xffb454, depthTest: false }),
-                )
-                port.position.copy(node.element.getWorldPosition())
-                port.name = `vx-diagnostic-port-${id}`
-                port.userData.vxDiagnostic = 'connection-port'
-                port.renderOrder = 1003
-                this.diagnosticsGroup.add(port)
-            }
-
             if (options.nodeIds) {
                 const center = bounds.isEmpty()
                     ? node.element.getWorldPosition()
@@ -828,6 +821,23 @@ export class VuetrexStage extends Scene implements VxStage {
                 label.material.depthTest = false
                 label.sync()
                 this.diagnosticsGroup.add(label)
+            }
+        }
+
+        if (options.connectionPorts) {
+            for (const portRecord of this.connectors.getConnectionPorts?.() ?? []) {
+                const port = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.045, 10, 6),
+                    new THREE.MeshBasicMaterial({
+                        color: portRecord.role === 'from' ? 0xffb454 : 0xff7c66,
+                        depthTest: false,
+                    }),
+                )
+                port.position.copy(portRecord.point)
+                port.name = `vx-diagnostic-port-${portRecord.id}-${portRecord.role}`
+                port.userData.vxDiagnostic = 'connection-port'
+                port.renderOrder = 1003
+                this.diagnosticsGroup.add(port)
             }
         }
     }
