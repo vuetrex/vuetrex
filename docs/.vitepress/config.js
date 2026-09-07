@@ -59,6 +59,7 @@ export default {
                     {text: 'Composition recipes', link: '/guide/composability'},
                     {text: 'Large scenes', link: '/guide/large-scenes'},
                     {text: 'Display walls', link: '/guide/display-walls'},
+                    {text: 'Procedural geometry', link: '/guide/procedural-geometry'}
                 ]
             },
             {

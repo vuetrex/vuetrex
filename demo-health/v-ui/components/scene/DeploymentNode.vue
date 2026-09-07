@@ -29,12 +29,13 @@
         @click="selectPod"
       />
 
-      <vx-spacer
-        :id="`${deployment.id}:metric-gap`"
-        :name="`${displayName} metric gap`"
-        :width="0.08"
-        :height="0.34"
-        :depth="0.34"
+      <vx-geometry
+        :id="`${deployment.id}:procedural-visual`"
+        :name="`${displayName} procedural signature`"
+        :graph="proceduralVisual"
+        :material="proceduralMaterial"
+        anchor="base"
+        disabled
       />
 
       <vx-row :id="`${deployment.id}:signals`" :name="`${displayName} signals`" :gap="0.035">
@@ -78,6 +79,7 @@ import * as THREE from 'three'
 import { computed } from 'vue'
 import type { InstanceEncoding, InstanceHit, VxMouseEvent } from '@/lib-components/index.js'
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
+import { deploymentVisualFor } from '../../geometry/deploymentVisual.js'
 import type { DeploymentViewModel } from '../../types.js'
 import type { ThemeMode } from '../../types.js'
 
@@ -153,6 +155,14 @@ const trafficHeight = computed(() =>
 const latencyHeight = computed(() =>
   0.10 + Math.min(0.24, props.deployment.metrics.latencyP95Ms / 800),
 )
+const proceduralVisual = computed(() => deploymentVisualFor(props.deployment))
+const proceduralMaterial = computed(() => ({
+  color: props.theme === 'light' ? 0xffffff : 0xe8f3f6,
+  roughness: 0.38,
+  metalness: 0.18,
+  emissive: statusColor.value,
+  emissiveIntensity: props.selected ? 0.18 : props.deployment.status === 'healthy' ? 0.035 : 0.12,
+}))
 
 const podEncoding = computed<InstanceEncoding<Pod>>(() => {
   const heights = props.deployment.pods.map(podHeight)

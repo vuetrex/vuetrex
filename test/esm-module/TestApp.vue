@@ -22,13 +22,14 @@
             <vx-box size="0.4" height="0.15"/>
           </vx-stack>
         </vx-panel>
+        <vx-geometry name="procedural-boxes" :graph="proceduralGeometry" />
       </vx-layer>
     </Vuetrex>
   </div>
 </template>
 
 <script>
-import { Vuetrex } from '@exceeder/vuetrex';
+import { Vuetrex, geo } from '@exceeder/vuetrex';
 import { getCurrentInstance } from 'vue';
 export default {
   components: {
@@ -41,6 +42,11 @@ export default {
   setup() {
     console.log("Current Instance:",getCurrentInstance())
     console.log("Vuetrex loaded:",Vuetrex)
+    return {
+      proceduralGeometry: geo.distribute(geo.box(), {
+        points: [[0, 0, 0], [1.5, 0, 0]],
+      }),
+    }
   }
 }
 </script>

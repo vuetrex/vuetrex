@@ -6,7 +6,8 @@ outline: deep
 
 # Procedural Geometry Graph Implementation Plan
 
-**Status:** Proposed. This document adds no runtime behavior.
+**Status:** Implemented on 2026-09-06. Automated verification is complete; interactive browser visual QA remains
+pending because the available browser blocks localhost previews.
 
 **Goal:** Add a procedural geometry package under `src/lib-components/geometry/` that can express Blender Geometry
 Nodes-like pipelines while retaining Vue reactivity. Geometry primitives and operators must compose uniformly, support
@@ -676,12 +677,12 @@ The visual example is also the acceptance test for self-similarity and module-le
 - Test `test/unit/verify-geometry-graph.spec.ts`
 - Test `test/unit/verify-geometry-modules.spec.ts`
 
-- [ ] Define immutable graph node and named-input contracts.
-- [ ] Define `GeometrySource`, `GeometryFactory<P>`, `GeometryContext`, and `Field<T>`.
-- [ ] Implement compact vector/color/rotation normalization with useful validation errors.
-- [ ] Implement `defineGeometry()` without Vue or Three.js resource ownership.
-- [ ] Support shared source references and detect cyclic object graphs.
-- [ ] Test factory composition, shared subgraphs, finite recursion, immutability, and cycle diagnostics.
+- [x] Define immutable graph node and named-input contracts.
+- [x] Define `GeometrySource`, `GeometryFactory<P>`, `GeometryContext`, and `Field<T>`.
+- [x] Implement compact vector/color/rotation normalization with useful validation errors.
+- [x] Implement `defineGeometry()` without Vue or Three.js resource ownership.
+- [x] Support shared source references and detect cyclic object graphs.
+- [x] Test factory composition, shared subgraphs, finite recursion, immutability, and cycle diagnostics.
 
 ### Task 2: Primitive descriptions and prototype realization
 
@@ -694,12 +695,12 @@ The visual example is also the acceptance test for self-similarity and module-le
 - Add `src/lib-components/geometry/compiler/prototypes.ts`
 - Test `test/unit/verify-geometry-graph.spec.ts`
 
-- [ ] Implement pure primitive graph builders.
-- [ ] Implement deterministic topology signatures.
-- [ ] Realize thin lines, thick line pipes, planes, boxes, and icospheres.
-- [ ] Calculate local bounds and normals where applicable.
-- [ ] Define ownership/disposal behavior for generated buffer geometry.
-- [ ] Test topology, dimensions, bounds, line-to-pipe behavior, and signature stability.
+- [x] Implement pure primitive graph builders.
+- [x] Implement deterministic topology signatures.
+- [x] Realize thin lines, thick line pipes, planes, boxes, and icospheres.
+- [x] Calculate local bounds and normals where applicable.
+- [x] Define ownership/disposal behavior for generated buffer geometry.
+- [x] Test topology, dimensions, bounds, line-to-pipe behavior, and signature stability.
 
 ### Task 3: Transform, Combine, fields, and graph evaluator
 
@@ -711,12 +712,12 @@ The visual example is also the acceptance test for self-similarity and module-le
 - Add `src/lib-components/geometry/compiler/evaluator.ts`
 - Test `test/unit/verify-geometry-operators.spec.ts`
 
-- [ ] Implement DAG traversal with per-compile memoization.
-- [ ] Implement transform composition and pivot behavior.
-- [ ] Implement `combine` as record composition without topology baking.
-- [ ] Implement field evaluation for transform, color, and visibility.
-- [ ] Preserve record context and prototype identity through each operator.
-- [ ] Test nested transforms, shared inputs, map composition, and non-mutating reuse.
+- [x] Implement DAG traversal with per-compile memoization.
+- [x] Implement transform composition and pivot behavior.
+- [x] Implement `combine` as record composition without topology baking.
+- [x] Implement field evaluation for transform, color, and visibility.
+- [x] Preserve record context and prototype identity through each operator.
+- [x] Test nested transforms, shared inputs, map composition, and non-mutating reuse.
 
 ### Task 4: Distribution and deterministic Randomize
 
@@ -729,12 +730,12 @@ The visual example is also the acceptance test for self-similarity and module-le
 - Modify `src/lib-components/three/three.imports.ts` only if a Three.js surface-sampling addon needs central export
 - Test `test/unit/verify-geometry-operators.spec.ts`
 
-- [ ] Implement keyed item and explicit-point distributions.
-- [ ] Implement line, grid, custom, and seeded surface patterns.
-- [ ] Compose complete multi-record input subgraphs at every placement.
-- [ ] Carry position, tangent, normal, item, index, and stable key in context.
-- [ ] Implement independent key-derived random channels.
-- [ ] Test stable reordering, membership changes, orientation, surface bounds, determinism, and channel independence.
+- [x] Implement keyed item and explicit-point distributions.
+- [x] Implement line, grid, custom, and seeded surface patterns.
+- [x] Compose complete multi-record input subgraphs at every placement.
+- [x] Carry position, tangent, normal, item, index, and stable key in context.
+- [x] Implement independent key-derived random channels.
+- [x] Test stable reordering, membership changes, orientation, surface bounds, determinism, and channel independence.
 
 ### Task 5: Realizer and reactive `GeometryNode`
 
@@ -747,15 +748,15 @@ The visual example is also the acceptance test for self-similarity and module-le
 - Modify `src/lib-components/three/stage.ts` only for multi-batch instance hit context
 - Test `test/unit/verify-procedural-geometry.spec.ts`
 
-- [ ] Create one stable output group per `GeometryNode`.
-- [ ] Batch records by compatible prototype/material signature.
-- [ ] Retain keyed instance slots and geometrically grow capacity.
-- [ ] Update transforms/colors/visibility without rebuilding topology.
-- [ ] Implement thin-line realization.
-- [ ] Implement bounds, anchoring, parent layout participation, and camera invalidation.
-- [ ] Wire standard node identity, events, connector lookup, shadows, and cleanup.
-- [ ] Resolve instance hits across multiple generated batches while preserving current `InstanceNode` behavior.
-- [ ] Test reactive updates, object reuse, bounds, nesting, events, and complete resource disposal.
+- [x] Create one stable output group per `GeometryNode`.
+- [x] Batch records by compatible prototype/material signature.
+- [x] Retain keyed instance slots and geometrically grow capacity.
+- [x] Update transforms/colors/visibility without rebuilding topology.
+- [x] Implement thin-line realization.
+- [x] Implement bounds, anchoring, parent layout participation, and camera invalidation.
+- [x] Wire standard node identity, events, connector lookup, shadows, and cleanup.
+- [x] Resolve instance hits across multiple generated batches while preserving current `InstanceNode` behavior.
+- [x] Test reactive updates, object reuse, bounds, nesting, events, and complete resource disposal.
 
 ### Task 6: Public API
 
@@ -766,10 +767,10 @@ The visual example is also the acceptance test for self-similarity and module-le
 - Modify `src/lib-components/nodes/types.ts`
 - Update ESM integration coverage under `test/esm-module/`
 
-- [ ] Export the `geo` namespace, `defineGeometry()`, and supported public types.
-- [ ] Register only the `vx-geometry` renderer tag.
-- [ ] Keep operator implementation details and compiler records internal unless applications need them for mapping.
-- [ ] Validate package declarations and ESM imports.
+- [x] Export the `geo` namespace, `defineGeometry()`, and supported public types.
+- [x] Register only the `vx-geometry` renderer tag.
+- [x] Keep operator implementation details and compiler records internal unless applications need them for mapping.
+- [x] Validate package declarations and ESM imports.
 
 ### Task 7: Plant module example and documentation
 
@@ -780,24 +781,25 @@ The visual example is also the acceptance test for self-similarity and module-le
 - Update `docs/architecture.md`
 - Add a demo component and reusable plant modules under `demo/`
 
-- [ ] Document primitives, all five initial operators, fields, keys, anchoring, and ownership.
-- [ ] Clearly distinguish Combine from true CSG Boolean operations.
-- [ ] Build the stem/twig/branch/tree module hierarchy.
-- [ ] Add reactive seed, branching, and leaf controls.
-- [ ] Demonstrate that every module output remains usable in a larger pipeline.
-- [ ] Document finite recursion and performance guidance.
+- [x] Document primitives, all five initial operators, fields, keys, anchoring, and ownership.
+- [x] Clearly distinguish Combine from true CSG Boolean operations.
+- [x] Build the stem/twig/branch/tree module hierarchy.
+- [x] Add reactive seed, branching, and leaf controls.
+- [x] Demonstrate that every module output remains usable in a larger pipeline.
+- [x] Document finite recursion and performance guidance.
 
 ### Task 8: Verification and release readiness
 
-- [ ] Run the narrow geometry graph/operator/module tests.
-- [ ] Run `pnpm test:run`.
-- [ ] Run `pnpm typecheck`.
-- [ ] Run `pnpm build`.
-- [ ] Run `pnpm test:esm-project`.
-- [ ] Run the relevant docs build after examples and navigation are updated.
+- [x] Run the narrow geometry graph/operator/module tests.
+- [x] Run `pnpm test:run`.
+- [x] Run `pnpm typecheck`.
+- [x] Run `pnpm build`.
+- [x] Run `pnpm test:esm-project`.
+- [x] Run the relevant docs build after examples and navigation are updated.
 - [ ] Inspect the plant demo interactively for bounds, camera fitting, reactive stability, seed determinism, and GPU
-      batching.
-- [ ] Confirm repeated parameter changes do not steadily increase scene children, geometries, materials, or watchers.
+      batching. The production demo bundle and plant composition tests pass, but the available browser blocks
+      localhost previews.
+- [x] Confirm repeated parameter changes do not steadily increase scene children, geometries, materials, or watchers.
 
 ---
 
@@ -821,4 +823,3 @@ The first version is complete when:
     transformed, randomized, distributed, or combined at the top level.
 12. Documentation explicitly states first-version limitations and leaves an additive route to named outputs, typed
     point/curve domains, true CSG operations, and an optional Vue template facade.
-

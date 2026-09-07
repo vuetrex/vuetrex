@@ -44,6 +44,14 @@ event data → RepresentationRecipe → SceneFragment + Placement[] → Vue temp
 The recipe describes selection, aggregation, spatial arrangement, and emitted semantic records. Vue components still
 own representation details, and the custom renderer still exclusively owns Three.js objects.
 
+Procedural geometry adds a separate authored-geometry pass without adding operator objects to the logical scene tree:
+
+```
+Vue refs → computed GeometrySource → immutable geometry DAG → GeometrySet records
+                                                     → Mesh / Line / InstancedMesh batches
+                                                     → one logical GeometryNode
+```
+
 ---
 
 ## Key abstractions
@@ -88,6 +96,26 @@ Extends `Node` and realizes a keyed semantic collection as one `THREE.InstancedM
 item IDs, applies one transform and color encoding per item, reports the encoded batch bounds to parent layouts, and
 maps raycast `instanceId` values back to `VxMouseEvent.vxInstance`. It is intentionally one logical node: the first
 draft has one shared geometry/material and one whole-batch connector endpoint.
+
+### Procedural geometry (`geometry/`)
+
+The procedural package separates three representations:
+
+- immutable authored nodes from `geo.*`, which contain named inputs and parameters but no Three.js resources;
+- evaluated `GeometrySet` records, which carry a shared prototype, matrix, color, visibility, stable key, and field
+  context;
+- realized objects owned by `GeometryNode`, which groups compatible records into `InstancedMesh` batches and renders
+  zero-thickness lines separately.
+
+`defineGeometry()` packages a parametrized subgraph without changing its output type. A module call remains a
+`GeometrySource`, so modules can call modules, shared sources can form a DAG, and bounded construction-time recursion
+can express self-similar models. Graph operators are not `Base`/`Node` subclasses and do not register with the stage.
+Only `<vx-geometry>` is a renderer element and semantic scene node.
+
+The `GeometryNode` compiler effect reads the shallow graph prop, evaluates it deterministically, reconciles keyed
+instance records, and reports compiled bounds. Separate effects apply material and layout/identity state so geometry
+evaluation does not mutate a reactive dependency it consumes. Prototype topology is cached by signature for the node's
+lifetime and disposed when no longer referenced or when the node unmounts.
 
 ### Composition recipes (`composition/index.ts`)
 
@@ -134,6 +162,7 @@ parallel edges remain independent. `MeshNode.state.connection` remains the short
 | `ConnectorNode` | Declarative link between nodes        | `syncWithThree()`                    |
 | `BusConnectorNode` | Shared one-to-many route          | `syncWithThree()`                    |
 | `InstanceNode`  | Keyed GPU-instanced semantic repeater | `InstanceEncoding`, `instanceHitAt()`|
+| `GeometryNode`  | Procedural graph output and batching  | Reactive compiler, generated bounds  |
 | `Root`          | Tree root, owns destroy               | —                                    |
 
 ### `Element3d` (`three/element3d.ts`)

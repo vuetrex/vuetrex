@@ -922,11 +922,11 @@ export class VuetrexStage extends Scene implements VxStage {
         ev.vxNode = el3d.node;
         ev.vxPosition = el3d.mesh?.position.clone();
         const instanceNode = el3d.node as Node & {
-            instanceHitAt?: (instanceIndex: number) => InstanceHit<unknown> | undefined
+            instanceHitAt?: (instanceIndex: number, object?: THREE.Object3D) => InstanceHit<unknown> | undefined
         };
         ev.vxInstance = this.selectedInstanceId === undefined
             ? undefined
-            : instanceNode.instanceHitAt?.(this.selectedInstanceId);
+            : instanceNode.instanceHitAt?.(this.selectedInstanceId, mesh);
         return ev;
     }
 

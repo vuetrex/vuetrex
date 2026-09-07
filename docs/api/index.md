@@ -194,6 +194,20 @@ its source `from-port`. It emits one shared trunk and one branch per resolved ta
 
 `anchor` is `base`, `center`, or `origin`. See [Large scenes](/guide/large-scenes) for encoding and current limitations.
 
+### Procedural geometry
+
+```vue
+<vx-geometry
+  :graph="geometry"
+  :material="{ color: 0xffffff, roughness: 0.7 }"
+  anchor="base"
+/>
+```
+
+`graph` accepts a `GeometrySource` created by the exported `geo` primitives/operators or `defineGeometry()` modules.
+The result is one semantic Vuetrex node backed by as many compatible Three.js instance batches and thin lines as the
+graph requires. `anchor` is `base`, `center`, or `origin`. See [Procedural geometry](/guide/procedural-geometry).
+
 ### Display wall
 
 ```vue
@@ -254,3 +268,5 @@ The package exports:
 - `registerElement()` and custom element registry types
 - Instance geometry, encoding, key, anchor, item, and hit types
 - The complete [composition API](/api/composition)
+- `geo`, `defineGeometry()`, `geometryField`, `GeometryNode`, and the procedural geometry source, module, field,
+  distribution, transform, randomization, and primitive option types

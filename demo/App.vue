@@ -37,6 +37,12 @@
         <TabE />
       </section>
     </tab>
+    <tab title="Procedural plant">
+      <h1>Reactive procedural plant</h1>
+      <section>
+        <TabF />
+      </section>
+    </tab>
   </tabs>
 
 </template>
@@ -47,6 +53,7 @@ import TabB from './components/TabB.vue';
 import TabC from './components/TabC.vue';
 import TabD from './components/TabD.vue';
 import TabE from './components/TabE.vue';
+import TabF from './components/TabF.vue';
 import Tabs from './components/Tabs.vue';
 import Tab from './components/Tab.vue';
 import {defineComponent, ref, reactive} from 'vue';
@@ -58,6 +65,7 @@ export default defineComponent( {
     TabC,
     TabD,
     TabE,
+    TabF,
     Tabs,
     Tab
   },

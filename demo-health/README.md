@@ -19,7 +19,9 @@ The server listens on <http://127.0.0.1:4100>. Set `HEALTH_HOST` or `HEALTH_PORT
 
 With the repository Vite server running, a small five-deployment research client is available at
 <http://127.0.0.1:5173/demo-health/v-ui/>. Its transport, scene-model, and visual component layers are kept separate so
-it can serve as a starting point for contextual composition experiments.
+it can serve as a starting point for contextual composition experiments. Each displayed deployment also has a
+deterministic procedural signature: its service identity selects the motif while live replica and metric values shape
+the generated detail, color, and variation.
 
 ## Timeline control
 
