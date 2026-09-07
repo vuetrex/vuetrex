@@ -220,6 +220,17 @@ describe('keyed connector registry', () => {
         renderer.dispose()
     })
 
+    it('uses the stage connector color for solid routes and arrowheads', () => {
+        const scene = new THREE.Scene()
+        const renderer = new LineRenderer({
+            scene,
+            settings: { connectorColor: 0x26313a },
+        } as unknown as VuetrexStage)
+
+        expect(((renderer as any).material as THREE.MeshBasicMaterial).color.getHex()).toBe(0x26313a)
+        renderer.dispose()
+    })
+
     it('keeps every bend of a three-segment orthogonal line route', () => {
         const { scene, connectors, addEndpoint } = makeRegistryHarness()
         const a = addEndpoint('a')

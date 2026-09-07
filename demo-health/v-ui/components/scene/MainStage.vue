@@ -4,7 +4,7 @@
       <vx-cylinder
         id="stage-platform-surface"
         name="Stage platform surface"
-        :size="14"
+        :size="PLATFORM_SIZE"
         :height="0.2"
         :material="platformMaterial"
         disabled
@@ -62,11 +62,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, markRaw, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { Quaternion, Vector3 } from 'three'
 import { compose, type Placement } from '@/lib-components/index.js'
 import DeploymentNode from './DeploymentNode.vue'
 import { deploymentRecipe } from '../../recipes/deploymentRecipe.js'
+import { PLATFORM_DEPTH_SCALE, PLATFORM_SIZE } from '../../sceneGeometry.js'
+import { createPlatformDotTexture } from '../../visuals/platformDotTexture.js'
 import type {
   CompositionPattern,
   DeploymentViewModel,
@@ -97,15 +99,23 @@ const originPlacement: Placement = {
 const platformPlacement: Placement = {
   position: new Vector3(0, -0.2, 0),
   orientation: new Quaternion(),
-  scale: new Vector3(1, 1, 0.68),
+  scale: new Vector3(1, 1, PLATFORM_DEPTH_SCALE),
 }
 
+const platformTexture = shallowRef(markRaw(createPlatformDotTexture(props.theme)))
+watch(() => props.theme, theme => {
+  platformTexture.value.dispose()
+  platformTexture.value = markRaw(createPlatformDotTexture(theme))
+})
+onBeforeUnmount(() => platformTexture.value.dispose())
+
 const platformMaterial = computed(() => ({
-  color: props.theme === 'light' ? 0xb8c4c8 : 0x566267,
-  roughness: 0.72,
-  metalness: 0.08,
-  transparent: true,
-  opacity: props.theme === 'light' ? 0.52 : 0.34,
+  color: props.theme === 'light' ? 0xc8d0d3 : 0x3f4d52,
+  roughness: props.theme === 'light' ? 0.82 : 0.72,
+  metalness: props.theme === 'light' ? 0.03 : 0.08,
+  transparent: props.theme !== 'light',
+  opacity: props.theme === 'light' ? 1 : 0.42,
+  map: platformTexture.value,
 }))
 
 const compositionNodes = computed(() => compose(deploymentRecipe, {

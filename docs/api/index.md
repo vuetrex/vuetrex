@@ -199,12 +199,11 @@ its source `from-port`. It emits one shared trunk and one branch per resolved ta
 ```vue
 <vx-display-wall
   shape="curved"
-  mode="continuous"
   :surface="surface"
 />
 ```
 
-See [Display walls](/guide/display-walls) for continuous and independent screen modes.
+See [Display walls](/guide/display-walls) for canvas, SVG, and image-backed surfaces.
 
 ## Materials and hover
 
@@ -218,6 +217,7 @@ interface VxMaterialProps {
   emissive?: number
   emissiveIntensity?: number
   wireframe?: boolean
+  map?: THREE.Texture | null
 }
 
 interface VxHoverProps extends VxMaterialProps {
@@ -227,6 +227,7 @@ interface VxHoverProps extends VxMaterialProps {
 ```
 
 Use RGB hex numbers such as `0x3e91c7`. Set `transparent: true` when using opacity below `1`.
+Texture ownership remains with the caller, including disposal when a texture is replaced or its component unmounts.
 
 ## Events
 
@@ -246,7 +247,7 @@ Click and double-click bubble through the logical node tree. Pointer enter and l
 
 The package exports:
 
-- `Vuetrex`, `VxStage`, `VxSettings`, `VxDiagnosticsSettings`, `VxMouseEvent`, and camera/animation option types
+- `Vuetrex`, `VxStage`, `VxSettings`, `VxFogSettings`, `VxDiagnosticsSettings`, `VxMouseEvent`, and camera/animation option types
 - Material and hover types
 - `DisplayWall`, `InstanceNode`, `Panel`, `Spacer`, `BusConnectorNode`, `Node`, and `Base`
 - Connector port, route, lane, and bus option types

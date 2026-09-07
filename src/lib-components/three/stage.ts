@@ -65,12 +65,22 @@ export interface VxDiagnosticsSettings {
     nodeIds?: boolean
 }
 
+export interface VxFogSettings {
+    /** Fog starts at this camera distance, in world units. */
+    near?: number
+    /** Scene is fully fogged at this camera distance, in world units. */
+    far?: number
+    /** Fog colour. Defaults to the stage background colour. */
+    color?: number
+}
+
 export interface VxSettings {
     color?: number
     backgroundColor?: number
     mirrorOpacity?: number
     floorColor?: number
     highlightColor?: number
+    connectorColor?: number
     particleColor?: number
     captionColor?: number
 
@@ -85,6 +95,7 @@ export interface VxSettings {
     unit?: number
     distance?: number
     gap?: number
+    fog?: VxFogSettings
     wall?: VxWallSettings
     diagnostics?: boolean | VxDiagnosticsSettings
     floorGrid?: boolean
@@ -173,6 +184,18 @@ export function createBackgroundWallGeometry(settings: VxWallSettings): THREE.Bu
         )
     }
     return new THREE.PlaneGeometry(settings.width ?? 11, height, 32, 1)
+}
+
+export function createSceneFog(settings: VxSettings): THREE.Fog | null {
+    if (!settings.fog) return null
+
+    const near = Math.max(0, settings.fog.near ?? 18)
+    const far = Math.max(near + 0.001, settings.fog.far ?? 42)
+    return new THREE.Fog(
+        settings.fog.color ?? settings.backgroundColor ?? 0x808080,
+        near,
+        far,
+    )
 }
 
 function cssColor(color: number): string {
@@ -322,6 +345,7 @@ export class VuetrexStage extends Scene implements VxStage {
         this.colorMain = new THREE.Color(settings.color || 0x555555);
         this.colorHighlight = new THREE.Color(settings.highlightColor || 0x4c7fb2);
         this.scene.background = new THREE.Color(settings.backgroundColor ?? 0x808080);
+        this.scene.fog = createSceneFog(settings)
         this.renderer.shadowMap.enabled = this.shadowsEnabled()
         this.diagnosticsGroup.name = 'vx-diagnostics'
         this.diagnosticsGroup.renderOrder = 1000

@@ -40,14 +40,6 @@
           </select>
         </label>
 
-        <label>
-          Wall
-          <select :value="wallMode" @change="changeWallMode">
-            <option value="continuous">Canvas wall</option>
-            <option value="displays">Display set</option>
-          </select>
-        </label>
-
         <button type="button" @click="seekToIncident">t=120</button>
         <button type="button" :aria-pressed="diagnostics" @click="emit('diagnostics', !diagnostics)">
           Diagnostics
@@ -133,7 +125,6 @@ import type {
   RenderFeatures,
   TimelinePatch,
   ThemeMode,
-  WallDisplayMode,
 } from '../types.js'
 
 const props = defineProps<{
@@ -141,7 +132,6 @@ const props = defineProps<{
   currentTime: number
   connection: ConnectionStatus
   composition: CompositionPattern
-  wallMode: WallDisplayMode
   diagnostics: boolean
   renderFeatures: RenderFeatures
   theme: ThemeMode
@@ -150,7 +140,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   patch: [patch: TimelinePatch]
   composition: [pattern: CompositionPattern]
-  wallMode: [mode: WallDisplayMode]
   diagnostics: [enabled: boolean]
   renderFeatures: [features: RenderFeatures]
   theme: [mode: ThemeMode]
@@ -185,10 +174,6 @@ function changeRate(event: Event) {
 
 function changeComposition(event: Event) {
   emit('composition', (event.target as HTMLSelectElement).value as CompositionPattern)
-}
-
-function changeWallMode(event: Event) {
-  emit('wallMode', (event.target as HTMLSelectElement).value as WallDisplayMode)
 }
 
 function changeTime(event: Event) {

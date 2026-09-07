@@ -2,11 +2,13 @@ import Vuetrex from '@/lib-components/vuetrex.js'
 import * as THREE from 'three'
 import { shallowMount } from '@vue/test-utils'
 import { describe, it, expect, vi } from 'vitest'
+import Scene from '@/lib-components/three/scene.js'
 import { createRendererForStage } from '@/lib-components/renderer.js';
 import {
     attachFloorOverlay,
     cameraFrameForBounds,
     createBackgroundWallGeometry,
+    createSceneFog,
     VuetrexStage,
     worldBoundsOf,
 } from '@/lib-components/three/stage.js';
@@ -28,6 +30,32 @@ describe('The Vuetrex Stage object', () => {
         });
         expect(wrapper).toBeDefined();
         expect(wrapper.vm.camera).toBe("camera");
+    })
+
+    it('never accepts or settles on a camera position below the floor', () => {
+        const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 64)
+        camera.position.set(0, 2, 8)
+        camera.lookAt(0, 0, 0)
+        const scene = Object.create(Scene.prototype) as Scene
+        Object.assign(scene as any, {
+            camera,
+            cameraBase: new THREE.Vector3(0, 2, 8),
+            cameraTarget: new THREE.Vector3(),
+            lifecycle: { timer: { current: 0 } },
+            startCameraRotation: new THREE.Quaternion(),
+            targetCameraRotation: new THREE.Quaternion(),
+        })
+
+        scene.retargetCamera(new THREE.Vector3(), new THREE.Vector3(0, -4, 6), 1)
+        expect((scene as any).endCameraPos.y).toBe(0)
+        scene.cameraAnimationFn()(500, 1)
+        expect(camera.position.y).toBeGreaterThanOrEqual(0)
+
+        scene.cameraBase.y = -3
+        ;(scene as any).startTime = -1
+        scene.cameraAnimationFn()(1000, 2)
+        expect(scene.cameraBase.y).toBe(0)
+        expect(camera.position.y).toBe(0)
     })
 
     it('paints the floor grid with an explicit color when there are no captions', () => {
@@ -109,6 +137,26 @@ describe('The Vuetrex Stage object', () => {
         expect(curvedSize.y).toBeCloseTo(4)
         expect(curvedSize.x).toBeGreaterThan(10)
         expect(curvedSize.z).toBeGreaterThan(2)
+    })
+
+    it('creates optional distance fog using the background as its default colour', () => {
+        expect(createSceneFog({ backgroundColor: 0x123456 })).toBeNull()
+
+        const fog = createSceneFog({
+            backgroundColor: 0x123456,
+            fog: { near: 20, far: 38 },
+        })
+        expect(fog).toBeInstanceOf(THREE.Fog)
+        expect(fog?.color.getHex()).toBe(0x123456)
+        expect(fog?.near).toBe(20)
+        expect(fog?.far).toBe(38)
+
+        const boundedFog = createSceneFog({
+            fog: { color: 0xaabbcc, near: -2, far: -4 },
+        })
+        expect(boundedFog?.color.getHex()).toBe(0xaabbcc)
+        expect(boundedFog?.near).toBe(0)
+        expect(boundedFog?.far).toBeCloseTo(0.001)
     })
 
     it('paints a wall texture without depending on floor captions', () => {

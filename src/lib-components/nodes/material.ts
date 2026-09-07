@@ -1,4 +1,4 @@
-import {MeshStandardMaterial} from 'three';
+import {MeshStandardMaterial, type Texture} from 'three';
 
 export interface VxMaterialProps {
     color?: number
@@ -9,6 +9,7 @@ export interface VxMaterialProps {
     emissive?: number
     emissiveIntensity?: number
     wireframe?: boolean
+    map?: Texture | null
 }
 
 /**
@@ -30,4 +31,8 @@ export function applyMaterialProps(mat: MeshStandardMaterial, props: VxMaterialP
     if (props.emissive !== undefined) mat.emissive.setHex(props.emissive);
     if (props.emissiveIntensity !== undefined) mat.emissiveIntensity = props.emissiveIntensity;
     if (props.wireframe !== undefined) mat.wireframe = props.wireframe;
+    if (props.map !== undefined && mat.map !== props.map) {
+        mat.map = props.map;
+        mat.needsUpdate = true;
+    }
 }

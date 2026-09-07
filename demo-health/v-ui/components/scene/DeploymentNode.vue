@@ -107,15 +107,15 @@ const statusColor = computed(() => {
 })
 const panelMaterial = computed(() => ({
   color: props.theme === 'light'
-    ? props.selected ? 0x9dcada : 0xd8e0e3
-    : props.selected ? 0x315064 : 0x26313a,
+    ? props.selected ? 0xccebf8 : 0xf5f6f5
+    : props.selected ? 0x3c647a : 0x34464f,
   roughness: 0.55,
   metalness: 0.12,
   emissive: statusColor.value,
   emissiveIntensity: props.selected ? 0.24 : props.deployment.status === 'healthy' ? 0.05 : 0.18,
 }))
 const hoverMaterial = computed(() => ({
-  color: props.theme === 'light' ? 0xb6ced6 : 0x3e5968,
+  color: props.theme === 'light' ? 0xe4f1f7 : 0x3e5968,
   emissive: statusColor.value,
   emissiveIntensity: 0.28,
   scale: 1.035,
@@ -127,14 +127,14 @@ const podBatchMaterial = computed(() => ({
   metalness: 0.18,
 }))
 const trafficMaterial = {
-  color: 0x3e91c7,
+  color: 0x318fe4,
   roughness: 0.42,
   metalness: 0.1,
   emissive: 0x1d5978,
   emissiveIntensity: 0.16,
 }
 const latencyMaterial = computed(() => ({
-  color: props.deployment.metrics.latencyP95Ms > 180 ? 0xc17a32 : 0x6a91a5,
+  color: props.deployment.metrics.latencyP95Ms > 180 ? 0xef826e : 0x68a7d7,
   roughness: 0.42,
   metalness: 0.1,
   emissive: props.deployment.metrics.latencyP95Ms > 180 ? 0x6f341e : 0x294c5e,

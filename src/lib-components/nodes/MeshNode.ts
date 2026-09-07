@@ -85,6 +85,7 @@ function captureProps(mat: MeshStandardMaterial): VxMaterialProps {
         emissive: mat.emissive.getHex(),
         emissiveIntensity: mat.emissiveIntensity,
         wireframe: mat.wireframe,
+        map: mat.map,
     };
 }
 
@@ -352,6 +353,10 @@ export abstract class MeshNode extends Node {
             gsap.to(mat.emissive, { r: c.r, g: c.g, b: c.b, duration: t });
         }
         if (hover.emissiveIntensity !== undefined) gsap.to(mat, { emissiveIntensity: hover.emissiveIntensity, duration: t });
+        if (hover.map !== undefined && mat.map !== hover.map) {
+            mat.map = hover.map;
+            mat.needsUpdate = true;
+        }
         if (hover.scale !== undefined) {
             gsap.to(mesh.scale, { x: hover.scale, y: hover.scale, z: hover.scale, duration: t, ease: 'sine.out' });
         }
@@ -393,6 +398,10 @@ export abstract class MeshNode extends Node {
         }
         if (hover.emissiveIntensity !== undefined && base.emissiveIntensity !== undefined) {
             gsap.to(mat, { emissiveIntensity: base.emissiveIntensity, duration: t });
+        }
+        if (hover.map !== undefined && base.map !== undefined && mat.map !== base.map) {
+            mat.map = base.map;
+            mat.needsUpdate = true;
         }
         if (hover.scale !== undefined) {
             gsap.to(mesh.scale, { x: 1, y: 1, z: 1, duration: t, ease: 'sine.inOut' });

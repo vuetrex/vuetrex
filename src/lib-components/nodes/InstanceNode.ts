@@ -112,6 +112,24 @@ export class InstanceNode<T = unknown> extends Node {
         return this.hitBySlot[instanceIndex]
     }
 
+    /** Resolve one semantic instance to its current world-space bounds. */
+    instanceWorldBounds(id: string, target = new THREE.Box3()): THREE.Box3 | undefined {
+        const slot = this.slotById.get(id)
+        if (slot === undefined || !this.mesh) return undefined
+
+        const localBounds = this.mesh.geometry.boundingBox
+        if (!localBounds) {
+            this.mesh.geometry.computeBoundingBox()
+        }
+        if (!this.mesh.geometry.boundingBox) return undefined
+
+        const instanceMatrix = new THREE.Matrix4()
+        this.mesh.getMatrixAt(slot, instanceMatrix)
+        this.mesh.updateWorldMatrix(true, false)
+        instanceMatrix.premultiply(this.mesh.matrixWorld)
+        return target.copy(this.mesh.geometry.boundingBox).applyMatrix4(instanceMatrix)
+    }
+
     protected override intrinsicSize(): THREE.Vector3 {
         const bounds = this.encodedBounds()
         return bounds.isEmpty() ? new THREE.Vector3() : bounds.getSize(new THREE.Vector3())

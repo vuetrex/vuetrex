@@ -1,7 +1,6 @@
 export type HealthStatus = 'healthy' | 'degraded' | 'unavailable'
 export type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected'
 export type CompositionPattern = 'row' | 'radial' | 'temporal'
-export type WallDisplayMode = 'continuous' | 'displays'
 export type ThemeMode = 'dark' | 'light'
 
 export interface RenderFeatures {

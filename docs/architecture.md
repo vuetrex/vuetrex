@@ -130,7 +130,7 @@ parallel edges remain independent. `MeshNode.state.connection` remains the short
 | `Stack`         | Vertical stacking container           | `stackLayout`                        |
 | `Ring`          | Circular layout container             | `ringLayout`                         |
 | `Panel`         | Visual top-surface container          | Split label/content regions          |
-| `DisplayWall`   | Canvas/SVG-backed display surface      | Continuous or independent screens    |
+| `DisplayWall`   | Canvas/SVG-backed display surface      | Flat or curved wall geometry          |
 | `ConnectorNode` | Declarative link between nodes        | `syncWithThree()`                    |
 | `BusConnectorNode` | Shared one-to-many route          | `syncWithThree()`                    |
 | `InstanceNode`  | Keyed GPU-instanced semantic repeater | `InstanceEncoding`, `instanceHitAt()`|
@@ -201,7 +201,7 @@ enables recursive nesting of containers.
 the label occupies the named `label-region`, while children are uniformly shrink-fitted into the complementary region.
 The panel remains one measured, named connector endpoint; its label does not participate in child layout.
 
-`DisplayWall` owns its frame geometry and canvas textures. Structural props rebuild the curved wall or screen set;
+`DisplayWall` owns its closed frame geometry and canvas texture. Structural props rebuild the flat or curved wall;
 surface changes repaint existing textures. Inline SVG is rasterized into the same canvas path, so Canvas 2D, SVG, and
 existing canvas/image sources share one scene-node contract.
 

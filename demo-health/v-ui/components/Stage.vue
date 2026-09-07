@@ -12,7 +12,6 @@
         :deployments="deployments"
         :relations="relations"
         :current-time="currentTime"
-        :mode="wallMode"
         :theme="theme"
       />
       <MainStage
@@ -36,6 +35,10 @@
       <span><strong>{{ visibleDeploymentCount }}</strong> visible deployments</span>
       <span><strong>{{ visiblePodCount }}</strong> visible pods</span>
       <span><strong>{{ readyPodCount }}</strong> ready</span>
+      <span v-if="lightingProgress > 0" class="studio-light">
+        <strong>{{ lightingProgress < 1 ? `${Math.round(lightingProgress * 100)}%` : 'ready' }}</strong>
+        studio light
+      </span>
     </aside>
 
     <aside v-if="selected" class="inspector">
@@ -68,10 +71,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
-import { Vuetrex, type VxSettings, type VxStage } from '@/lib-components/index.js'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { AdditiveBlending, NormalBlending } from 'three'
+import { Vuetrex, type VuetrexStage, type VxSettings, type VxStage } from '@/lib-components/index.js'
 import BackgroundWall from './scene/BackgroundWall.vue'
 import MainStage from './scene/MainStage.vue'
+import {
+  startProgressiveStudioLight,
+  type ProgressiveStudioLight,
+} from '../lighting/progressiveStudioLight.js'
+import {
+  createSelectedPodLight,
+  type SelectedPodLight,
+} from '../lighting/selectedPodLight.js'
 import type {
   CompositionPattern,
   DeploymentViewModel,
@@ -80,13 +92,11 @@ import type {
   RenderFeatures,
   RelationViewModel,
   ThemeMode,
-  WallDisplayMode,
 } from '../types.js'
 
 const props = defineProps<{
   camera: string
   composition: CompositionPattern
-  wallMode: WallDisplayMode
   diagnostics: boolean
   renderFeatures: RenderFeatures
   theme: ThemeMode
@@ -110,14 +120,21 @@ const settings = computed<VxSettings>(() => ({
   unit: 1,
   distance: 0.34,
   gap: 0.34,
-  color: props.theme === 'light' ? 0x687d86 : 0x38434a,
-  backgroundColor: props.theme === 'light' ? 0xdde4e6 : 0x111719,
-  highlightColor: props.theme === 'light' ? 0x247f9d : 0x4e9cbe,
-  floorColor: props.theme === 'light' ? 0xcbd3d6 : 0x171b1d,
-  captionColor: props.theme === 'light' ? 0x1c292f : 0xe8ecee,
-  particleColor: props.theme === 'light' ? 0x1687a8 : 0x72d6e8,
-  lightColor1: props.theme === 'light' ? 0xffffff : 0x9ac7d6,
-  lightColor2: 0xffffff,
+  color: props.theme === 'light' ? 0x737d85 : 0x38434a,
+  backgroundColor: props.theme === 'light' ? 0xffffff : 0x111719,
+  fog: {
+    color: props.theme === 'light' ? 0xffffff : 0x111719,
+    near: 18,
+    far: 38,
+  },
+  highlightColor: props.theme === 'light' ? 0x2588df : 0x4e9cbe,
+  floorColor: props.theme === 'light' ? 0xf7f6f3 : 0x171b1d,
+  captionColor: props.theme === 'light' ? 0x273039 : 0xe8ecee,
+  connectorColor: props.theme === 'light' ? 0x26313a : 0xa0ffff,
+  particleColor: props.theme === 'light' ? 0x26313a : 0x72d6e8,
+  particleBlending: props.theme === 'light' ? NormalBlending : AdditiveBlending,
+  lightColor1: props.theme === 'light' ? 0xfffbf5 : 0x9ac7d6,
+  lightColor2: props.theme === 'light' ? 0xe2edff : 0xffffff,
   mirrorOpacity: 0.76,
   particleSpread: 0.016,
   particleVolume: 36,
@@ -138,14 +155,10 @@ const stageKey = computed(() => [
 ].map(value => value ? '1' : '0').join(''))
 
 let stage: VxStage | undefined
-
-function onReady(value: VxStage) {
-  stage = value
-  stage.setDiagnostics(props.diagnostics)
-}
-
-watch(() => props.diagnostics, enabled => stage?.setDiagnostics(enabled))
-
+let studioLight: ProgressiveStudioLight | undefined
+let podLight: SelectedPodLight | undefined
+let studioLightTimer: ReturnType<typeof setTimeout> | undefined
+const lightingProgress = ref(0)
 const visiblePodCount = computed(() =>
   props.deployments.reduce((count, item) => count + item.pods.length, 0),
 )
@@ -155,6 +168,68 @@ const visibleDeploymentCount = computed(() =>
 const readyPodCount = computed(() =>
   props.deployments.reduce((count, item) => count + item.readyReplicas, 0),
 )
+
+function onReady(value: VxStage) {
+  disposeStudioLight()
+  podLight?.dispose()
+  stage = value
+  stage.setDiagnostics(props.diagnostics)
+  podLight = createSelectedPodLight(value as VuetrexStage, { theme: props.theme })
+  syncSelectedPodLight()
+  scheduleStudioLight()
+}
+
+watch(() => props.diagnostics, enabled => stage?.setDiagnostics(enabled))
+watch(
+  () => [props.selected?.id, props.selectedPod?.id, props.camera],
+  syncSelectedPodLight,
+  { flush: 'post' },
+)
+watch(
+  () => [visibleDeploymentCount.value, props.composition],
+  scheduleStudioLight,
+  { flush: 'post' },
+)
+
+function syncSelectedPodLight() {
+  podLight?.setTarget(
+    props.selected?.id,
+    props.selectedPod?.id,
+    Boolean(props.selectedPod && props.camera !== 'scene'),
+  )
+}
+
+function scheduleStudioLight() {
+  if (studioLightTimer !== undefined) clearTimeout(studioLightTimer)
+  if (!stage || visibleDeploymentCount.value === 0) return
+  studioLightTimer = setTimeout(() => {
+    studioLight?.dispose()
+    lightingProgress.value = 0.001
+    studioLight = startProgressiveStudioLight(stage as VuetrexStage, {
+      theme: props.theme,
+      onProgress(progress) {
+        lightingProgress.value = progress
+      },
+    })
+    if (!studioLight) lightingProgress.value = 0
+  }, 500)
+}
+
+function disposeStudioLight() {
+  if (studioLightTimer !== undefined) {
+    clearTimeout(studioLightTimer)
+    studioLightTimer = undefined
+  }
+  studioLight?.dispose()
+  studioLight = undefined
+  lightingProgress.value = 0
+}
+
+onBeforeUnmount(() => {
+  disposeStudioLight()
+  podLight?.dispose()
+  podLight = undefined
+})
 </script>
 
 <style scoped>
@@ -175,6 +250,7 @@ const readyPodCount = computed(() =>
   font-size: 11px;
 }
 .scene-summary strong { color: var(--text-strong); }
+.scene-summary .studio-light { color: var(--accent); }
 .inspector { top: 24px; right: 20px; width: 260px; padding: 16px; }
 .inspector p {
   margin: 0 0 4px;

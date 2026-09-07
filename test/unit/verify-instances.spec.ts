@@ -144,6 +144,24 @@ describe('InstanceNode', () => {
         expect(node.instanceHitAt(1)).toBeUndefined()
     })
 
+    it('resolves semantic instances to world-space bounds', async () => {
+        const { node, parent } = fixture()
+        node.setStateValue('items', [{ id: 'pod-a', x: 1, color: 0xffffff }])
+        node.setStateValue('encoding', encoding)
+        node.syncWithThree()
+        await nextTick()
+
+        const mesh = node.element.mesh as THREE.InstancedMesh
+        mesh.position.set(0, 0, 0)
+        parent.group.position.set(4, 1, -2)
+        parent.group.scale.setScalar(2)
+
+        const bounds = node.instanceWorldBounds('pod-a')
+        expect(bounds?.getCenter(new THREE.Vector3()).toArray()).toEqual([6, 2, -2])
+        expect(bounds?.getSize(new THREE.Vector3()).toArray()).toEqual([2, 2, 2])
+        expect(node.instanceWorldBounds('missing')).toBeUndefined()
+    })
+
     it('adds the semantic hit to stage pointer events', async () => {
         const { node } = fixture()
         const item = { id: 'pod-a', x: 0, color: 0xffffff }

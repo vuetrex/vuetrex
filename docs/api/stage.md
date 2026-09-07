@@ -120,10 +120,12 @@ import type { VxSettings } from '@exceeder/vuetrex'
 
 const settings: VxSettings = {
   backgroundColor: 0x101719,
+  fog: { near: 18, far: 42 },
   floorColor: 0x263338,
   color: 0x3d8295,
   highlightColor: 0x58b7c0,
   captionColor: 0xe7eef0,
+  connectorColor: 0x34444c,
   particleColor: 0x73cad1,
   floorGrid: false,
   floorMirror: false,
@@ -137,6 +139,7 @@ const settings: VxSettings = {
 |---|---|
 | `color` | Default node material color |
 | `backgroundColor` | Renderer background |
+| `fog` | Optional linear distance fog; accepts `near`, `far`, and an optional `color` that defaults to `backgroundColor` |
 | `floorColor` | Floor and floor texture color |
 | `mirrorOpacity` | Floor reflection strength |
 | `floorGrid` | Draw the floor grid; defaults to `true` |
@@ -145,6 +148,7 @@ const settings: VxSettings = {
 | `shadows` | Enable renderer shadow maps, shadow lights, and mesh shadow flags; defaults to `true` |
 | `highlightColor` | Default interactive highlight |
 | `captionColor` | Shared caption color |
+| `connectorColor` | Solid connector and arrowhead color |
 | `particleColor` | Connector particle color |
 | `lightColor1..3` | Stage light colors |
 | `particleSpread` | Particle route spread |

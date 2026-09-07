@@ -21,6 +21,7 @@ export class LineRenderer implements ConnectorRenderer {
     private signature = ''
 
     constructor(private stage: VuetrexStage) {
+        this.material.color.setHex(stage.settings?.connectorColor ?? 0xa0ffff)
         this.stage.scene.add(this.group);
     }
 

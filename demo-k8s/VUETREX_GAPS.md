@@ -157,16 +157,13 @@ This is the closest pattern to current capability and the health demo already pr
    match the reference's visual hierarchy even though its endpoint and route geometry can now be reproduced.
 6. Camera policy cannot intentionally frame the wall and selected floor node as one authored shot. The overview uses a
    fixed direction, so the demo currently changes physical platform depth and wall position to improve the composition.
-7. `displays` mode supplies independent framed screens but no shared architectural backing. The demo therefore defaults
-   to one continuous canvas and paints eight screen-like regions into that dynamic texture. This matches the intended wall
-   silhouette, but the regions are pixels rather than independent nodes; the optional display-set mode still needs a
-   second backing wall with manually coordinated radius, arc, and placement.
+7. The wall is one continuous canvas, so its screen-like regions are pixels rather than independent semantic nodes.
 8. Display texture resolution does not automatically follow the rendered surface aspect. The demo calculates a
    2657-by-768 continuous texture from wall radius, arc, height, thickness, and bezel so canvas pixels remain square in
    world space. This calculation belongs in `DisplayWall` behind a pixel-aspect or automatic-resolution option.
 
 The display wall itself is no longer the principal blocker. A composition-owned textured floor/platform, semantic
-display hit regions, one wall-plus-displays composition contract, connector styling, and camera-shot options are.
+display hit regions, connector styling, and camera-shot options are.
 
 ### Pattern 3: Graph + Detail Portal
 

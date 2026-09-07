@@ -8,6 +8,13 @@ interface MousePosition {
     y: number
 }
 
+const CAMERA_MIN_Y = 0
+
+function keepCameraAboveFloor(position: THREE.Vector3): THREE.Vector3 {
+    position.y = Math.max(CAMERA_MIN_Y, position.y)
+    return position
+}
+
 /**
  * Scene is tying together renderer, composer, camera, animation frames and events. It is meant to be an
  * abstract base for the particular 3D setup.
@@ -145,6 +152,7 @@ export default class Scene extends LifeCycle {
             64
         );
         camera.position.copy(this.cameraBase)
+        keepCameraAboveFloor(camera.position)
         return camera;
     }
 
@@ -208,6 +216,7 @@ export default class Scene extends LifeCycle {
         this.cameraBase.x = this.cameraTarget.x + radius * Math.sin(newPhi) * Math.sin(newTheta);
         this.cameraBase.y = this.cameraTarget.y + radius * Math.cos(newPhi);
         this.cameraBase.z = this.cameraTarget.z + radius * Math.sin(newPhi) * Math.cos(newTheta);
+        keepCameraAboveFloor(this.cameraBase)
     }
 
     onCanvasClick(event: MouseEvent) {
@@ -289,24 +298,27 @@ export default class Scene extends LifeCycle {
     cameraTransitionDuration = 1000;
 
     retargetCamera(lookAt: THREE.Vector3, atPosition: THREE.Vector3, duration = 1) {
+        keepCameraAboveFloor(this.camera.position)
+        keepCameraAboveFloor(this.cameraBase)
+        const safePosition = keepCameraAboveFloor(atPosition.clone())
         this.startCameraPos = this.camera.position.clone();
-        this.endCameraPos = atPosition.clone();
+        this.endCameraPos = safePosition;
         this.cameraTarget.copy(lookAt);
         this.cameraTransitionDuration = Math.max(0, duration * 1000);
 
         this.startCameraRotation.copy(this.camera.quaternion);
         //determine target camera rotation
         const pos = this.camera.position.clone();
-        this.camera.position.copy(atPosition);
-        this.cameraBase.copy(atPosition);
+        this.camera.position.copy(safePosition);
+        this.cameraBase.copy(safePosition);
         this.camera.lookAt(lookAt);
         //restore it back
         this.targetCameraRotation.copy(this.camera.quaternion);
         this.camera.position.copy(pos);
         this.camera.quaternion.copy(this.startCameraRotation);
         if (this.cameraTransitionDuration === 0) {
-            this.camera.position.copy(atPosition);
-            this.cameraBase.copy(atPosition);
+            this.camera.position.copy(safePosition);
+            this.cameraBase.copy(safePosition);
             this.camera.lookAt(lookAt);
             this.startCameraRotation.copy(this.camera.quaternion);
             this.targetCameraRotation.copy(this.camera.quaternion);
@@ -329,6 +341,7 @@ export default class Scene extends LifeCycle {
                     ? 1
                     : (timer - this.startTime) / this.cameraTransitionDuration;
                 this.camera.position.lerpVectors(this.startCameraPos, this.endCameraPos, this.easeInOut(progress))
+                keepCameraAboveFloor(this.camera.position)
 
                 this.camera.quaternion.slerpQuaternions(this.startCameraRotation, this.targetCameraRotation,
                     this.easeInOut(progress)
@@ -336,6 +349,7 @@ export default class Scene extends LifeCycle {
             } else {
                 //todo make camera move a little when idle for 5 seconds
                 //const phi = Math.sin(timer / 2000);
+                keepCameraAboveFloor(this.cameraBase)
                 this.camera.position.x = this.cameraBase.x; // + this.cameraMotion.x * Math.cos(phi);
                 this.camera.position.y = this.cameraBase.y;
                 this.camera.position.z = this.cameraBase.z; // + this.cameraMotion.z * Math.sin(phi);

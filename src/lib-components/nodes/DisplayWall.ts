@@ -1,8 +1,10 @@
 import { reactive, watch, watchEffect, type WatchStopHandle } from 'vue'
 import {
+    BufferGeometry,
     CanvasTexture,
     CylinderGeometry,
     DoubleSide,
+    Float32BufferAttribute,
     Group,
     LinearFilter,
     Mesh,
@@ -17,7 +19,6 @@ import * as THREEx from '@/lib-components/three/three.imports.js'
 import { Node } from '@/lib-components/nodes/Node.js'
 import type { VuetrexStage } from '@/lib-components/three/stage.js'
 
-export type VxDisplayWallMode = 'continuous' | 'displays'
 export type VxDisplayWallShape = 'flat' | 'curved'
 
 export interface VxDisplayPaintContext {
@@ -39,7 +40,6 @@ export interface VxDisplaySurface {
 
 interface DisplayWallState {
     text: string
-    mode: VxDisplayWallMode
     shape: VxDisplayWallShape
     width: number
     height: number
@@ -48,12 +48,10 @@ interface DisplayWallState {
     thickness: number
     bezel: number
     segments: number
-    displayWidth: number
     frameColor: number
     textureWidth: number
     textureHeight: number
     surface?: VxDisplaySurface
-    surfaces: VxDisplaySurface[]
 }
 
 interface ScreenRecord {
@@ -65,7 +63,6 @@ interface ScreenRecord {
 }
 
 interface DisplayWallGeometryConfig {
-    mode: VxDisplayWallMode
     shape: VxDisplayWallShape
     width: number
     height: number
@@ -74,11 +71,9 @@ interface DisplayWallGeometryConfig {
     thickness: number
     bezel: number
     segments: number
-    displayWidth: number
     frameColor: number
     textureWidth: number
     textureHeight: number
-    displayCount: number
 }
 
 /** A curved display uses 128 radial segments by default, twice the old wall resolution. */
@@ -100,15 +95,49 @@ export function createDisplayWallGeometry(
     )
 }
 
+/** Close the two radial ends of a curved wall shell. */
+export function createDisplayWallEndCaps(
+    innerRadius: number,
+    outerRadius: number,
+    height: number,
+    arc: number,
+): BufferGeometry {
+    const positions: number[] = []
+    const uvs: number[] = []
+    const indices: number[] = []
+    const halfHeight = height / 2
+    const angles = [Math.PI - arc / 2, Math.PI + arc / 2]
+
+    angles.forEach(angle => {
+        const base = positions.length / 3
+        const sin = Math.sin(angle)
+        const cos = Math.cos(angle)
+        positions.push(
+            innerRadius * sin, -halfHeight, innerRadius * cos,
+            outerRadius * sin, -halfHeight, outerRadius * cos,
+            outerRadius * sin, halfHeight, outerRadius * cos,
+            innerRadius * sin, halfHeight, innerRadius * cos,
+        )
+        uvs.push(0, 0, 1, 0, 1, 1, 0, 1)
+        indices.push(base, base + 1, base + 2, base, base + 2, base + 3)
+    })
+
+    const geometry = new BufferGeometry()
+    geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
+    geometry.setAttribute('uv', new Float32BufferAttribute(uvs, 2))
+    geometry.setIndex(indices)
+    geometry.computeVertexNormals()
+    return geometry
+}
+
 /**
- * Canvas-backed wall display. A continuous wall owns one texture; display-set
- * mode realizes a short list of independently textured screens.
+ * Canvas-backed wall display with one reactive texture surface.
  */
 export class DisplayWall extends Node {
     public readonly type = 'DisplayWall'
     private readonly root = new Group()
     private stopHandles: WatchStopHandle[] = []
-    private screens: ScreenRecord[] = []
+    private screen?: ScreenRecord
 
     declare protected state: DisplayWallState
 
@@ -116,7 +145,6 @@ export class DisplayWall extends Node {
         super(stage)
         this.state = reactive({
             text: '',
-            mode: 'continuous',
             shape: 'curved',
             width: 11,
             height: 4.8,
@@ -125,12 +153,10 @@ export class DisplayWall extends Node {
             thickness: 0.14,
             bezel: 0.12,
             segments: 128,
-            displayWidth: 0,
             frameColor: 0x3f4944,
             textureWidth: 1536,
             textureHeight: 768,
             surface: undefined,
-            surfaces: [],
         }) as DisplayWallState
         this.element.mesh = this.root as any
     }
@@ -147,10 +173,6 @@ export class DisplayWall extends Node {
     }
 
     override setStateValue(key: string, value: any): void {
-        if (key === 'mode') {
-            if (value === 'continuous' || value === 'displays') this.state.mode = value
-            return
-        }
         if (key === 'shape') {
             if (value === 'flat' || value === 'curved') this.state.shape = value
             return
@@ -172,7 +194,6 @@ export class DisplayWall extends Node {
         }))
 
         this.stopHandles.push(watch(() => [
-            this.state.mode,
             this.state.shape,
             this.state.width,
             this.state.height,
@@ -181,14 +202,11 @@ export class DisplayWall extends Node {
             this.state.thickness,
             this.state.bezel,
             this.state.segments,
-            this.state.displayWidth,
             this.state.frameColor,
             this.state.textureWidth,
             this.state.textureHeight,
-            this.state.mode === 'displays' ? this.state.surfaces.length : 1,
         ].join('|'), () => {
             const geometry: DisplayWallGeometryConfig = {
-                mode: this.state.mode,
                 shape: this.state.shape,
                 width: this.state.width,
                 height: this.state.height,
@@ -197,21 +215,19 @@ export class DisplayWall extends Node {
                 thickness: this.state.thickness,
                 bezel: this.state.bezel,
                 segments: this.state.segments,
-                displayWidth: this.state.displayWidth,
                 frameColor: this.state.frameColor,
                 textureWidth: this.state.textureWidth,
                 textureHeight: this.state.textureHeight,
-                displayCount: this.state.mode === 'displays' ? Math.max(1, this.state.surfaces.length) : 1,
             }
             this.rebuild(geometry)
             this.stage.invalidateContentBounds?.()
         }, { immediate: true }))
 
         this.stopHandles.push(watchEffect(() => {
-            const surfaces = this.state.mode === 'continuous'
-                ? [this.state.surface ?? {}]
-                : this.state.surfaces
-            this.screens.forEach((screen, index) => this.paintScreen(screen, surfaces[index] ?? {}, index))
+            // Read the surface even while a structural rebuild is between screens,
+            // so Vue keeps this effect subscribed to later surface changes.
+            const surface = this.state.surface ?? {}
+            if (this.screen) this.paintScreen(this.screen, surface)
         }))
     }
 
@@ -228,14 +244,11 @@ export class DisplayWall extends Node {
             side: DoubleSide,
         })
 
-        if (config.mode === 'continuous') {
-            this.buildContinuous(config, frameMaterial)
-        } else {
-            this.buildDisplays(config, frameMaterial)
-        }
+        this.buildWall(config, frameMaterial)
+        if (this.screen) this.paintScreen(this.screen, this.state.surface ?? {})
     }
 
-    private buildContinuous(
+    private buildWall(
         config: DisplayWallGeometryConfig,
         frameMaterial: MeshStandardMaterial,
     ): void {
@@ -251,7 +264,13 @@ export class DisplayWall extends Node {
                 createDisplayWallGeometry(radius + thickness, height, arc, config.segments),
                 frameMaterial,
             )
-            this.root.add(frame, outer)
+            const sides = new Mesh(
+                createDisplayWallEndCaps(radius, radius + thickness, height, arc),
+                frameMaterial,
+            )
+            sides.name = `el-${this.id}-sides`
+            sides.userData.el = this.element
+            this.root.add(frame, outer, sides)
 
             const screenArc = Math.max(THREE_EPSILON, arc - 2 * bezel / radius)
             const screen = this.createScreen(
@@ -282,55 +301,6 @@ export class DisplayWall extends Node {
         this.root.add(screen.mesh)
     }
 
-    private buildDisplays(
-        config: DisplayWallGeometryConfig,
-        frameMaterial: MeshStandardMaterial,
-    ): void {
-        const count = config.displayCount
-        const height = Math.max(0.1, config.height)
-        const thickness = Math.max(0.01, config.thickness)
-        const bezel = Math.max(0.02, Math.min(config.bezel, height / 4))
-        const arc = Math.max(THREE_EPSILON, Math.min(Math.PI * 1.9, config.arc * Math.PI / 180))
-        const slot = arc / count
-        const automaticWidth = config.shape === 'curved'
-            ? 2 * Math.max(0.5, config.radius) * Math.sin(slot / 2) * 0.86
-            : Math.max(0.1, config.width / count - bezel)
-        const panelWidth = Math.max(0.1, config.displayWidth > 0 ? config.displayWidth : automaticWidth)
-
-        for (let index = 0; index < count; index++) {
-            const panel = new Group()
-            if (config.shape === 'curved') {
-                const angle = -arc / 2 + slot * (index + 0.5)
-                panel.position.set(
-                    config.radius * Math.sin(angle),
-                    0,
-                    -config.radius * Math.cos(angle),
-                )
-                panel.rotation.y = -angle
-            } else {
-                panel.position.x = (index - (count - 1) / 2) * (panelWidth + bezel)
-            }
-
-            const frame = new Mesh(
-                new THREEx.RoundedBoxGeometry(panelWidth, height, thickness, 8, Math.min(0.08, bezel * 0.6)),
-                frameMaterial,
-            )
-            panel.add(frame)
-            const screen = this.createScreen(
-                new PlaneGeometry(
-                    Math.max(0.08, panelWidth - bezel * 2),
-                    Math.max(0.08, height - bezel * 2),
-                ),
-                config.textureWidth,
-                config.textureHeight,
-                false,
-            )
-            screen.mesh.position.z = thickness / 2 + 0.002
-            panel.add(screen.mesh)
-            this.root.add(panel)
-        }
-    }
-
     private createScreen(
         geometry: CylinderGeometry | PlaneGeometry,
         requestedWidth: number,
@@ -354,15 +324,15 @@ export class DisplayWall extends Node {
         }
         const material = new MeshBasicMaterial({ map: texture, side: DoubleSide, toneMapped: false })
         const mesh = new Mesh(geometry, material)
-        mesh.name = `el-${this.id}-display-${this.screens.length}`
+        mesh.name = `el-${this.id}-screen`
         mesh.userData.el = this.element
         mesh.renderOrder = 2
         const record = { canvas, context, texture, mesh, loadToken: 0 }
-        this.screens.push(record)
+        this.screen = record
         return record
     }
 
-    private paintScreen(screen: ScreenRecord, surface: VxDisplaySurface, index: number): void {
+    private paintScreen(screen: ScreenRecord, surface: VxDisplaySurface): void {
         const { canvas, context, texture } = screen
         screen.loadToken += 1
         context.save()
@@ -376,8 +346,8 @@ export class DisplayWall extends Node {
             context,
             width: canvas.width,
             height: canvas.height,
-            index,
-            id: surface.id ?? `display-${index}`,
+            index: 0,
+            id: surface.id ?? 'display',
         })
         context.restore()
         texture.needsUpdate = true
@@ -395,7 +365,7 @@ export class DisplayWall extends Node {
     }
 
     private clearVisuals(): void {
-        for (const screen of this.screens) screen.loadToken += 1
+        if (this.screen) this.screen.loadToken += 1
         this.root.traverse(object => {
             const mesh = object as Mesh
             mesh.geometry?.dispose()
@@ -409,7 +379,7 @@ export class DisplayWall extends Node {
             }
         })
         this.root.clear()
-        this.screens = []
+        this.screen = undefined
     }
 
     onRemoved(): void {

@@ -1,39 +1,19 @@
 <template>
   <vx-group id="background-wall" name="Background wall" :placement="wallPlacement">
     <vx-display-wall
-      v-if="mode === 'displays'"
-      id="health-display-backing"
-      name="Health display backing"
+      id="health-wall"
+      name="Canvas wall"
       shape="curved"
-      mode="continuous"
-      :radius="7.25"
-      :arc="108"
-      :height="4.05"
-      :thickness="0.2"
-      :bezel="0.12"
+      :radius="PLATFORM_RADIUS"
+      :arc="WALL_ARC_DEGREES"
+      :height="WALL_HEIGHT"
+      :thickness="WALL_THICKNESS"
+      :bezel="WALL_BEZEL"
       :segments="128"
-      :frame-color="wallPalette.frame"
-      :surface="backingSurface"
-      :participates-in-layout="false"
-      disabled
-    />
-    <vx-display-wall
-      id="health-displays"
-      name="Health displays"
-      shape="curved"
-      :mode="mode"
-      :radius="mode === 'continuous' ? 7.2 : 7.0"
-      :arc="mode === 'continuous' ? 108 : 100"
-      :height="mode === 'continuous' ? 4.05 : 2.25"
-      :thickness="0.16"
-      :bezel="0.11"
-      :segments="128"
-      :display-width="mode === 'continuous' ? 0 : 2.0"
       :texture-width="textureWidth"
       :texture-height="textureHeight"
       :frame-color="wallPalette.frame"
-      :surface="continuousSurface"
-      :surfaces="displaySurfaces"
+      :surface="wallSurface"
       :participates-in-layout="false"
     />
   </vx-group>
@@ -47,13 +27,20 @@ import type {
   VxDisplayPaintContext,
   VxDisplaySurface,
 } from '@/lib-components/index.js'
-import type { DeploymentViewModel, RelationViewModel, ThemeMode, WallDisplayMode } from '../../types.js'
+import {
+  PLATFORM_DEPTH_SCALE,
+  PLATFORM_RADIUS,
+  WALL_ARC_DEGREES,
+  WALL_BEZEL,
+  WALL_HEIGHT,
+  WALL_THICKNESS,
+} from '../../sceneGeometry.js'
+import type { DeploymentViewModel, RelationViewModel, ThemeMode } from '../../types.js'
 
 const props = defineProps<{
   deployments: DeploymentViewModel[]
   relations: RelationViewModel[]
   currentTime: number
-  mode: WallDisplayMode
   theme: ThemeMode
 }>()
 
@@ -66,29 +53,25 @@ interface ChartData {
 }
 
 const textureHeight = 768
-const textureWidth = computed(() => {
-  const bezel = 0.11
-  const wallHeight = props.mode === 'continuous' ? 4.05 : 2.25
-  const screenHeight = wallHeight - bezel * 2
-
-  if (props.mode === 'displays') {
-    const screenWidth = 2.0 - bezel * 2
-    return Math.round(textureHeight * screenWidth / screenHeight)
+const textureWidth = (() => {
+  const screenHeight = WALL_HEIGHT - WALL_BEZEL * 2
+  const screenRadius = PLATFORM_RADIUS
+    - Math.min(WALL_THICKNESS * 0.35, PLATFORM_RADIUS * 0.02)
+  const wallArc = WALL_ARC_DEGREES * Math.PI / 180
+  const screenArc = wallArc - 2 * WALL_BEZEL / PLATFORM_RADIUS
+  const steps = 128
+  let screenWidth = 0
+  for (let index = 0; index < steps; index++) {
+    const angle = -screenArc / 2 + screenArc * (index + 0.5) / steps
+    const tangentX = screenRadius * Math.cos(angle)
+    const tangentZ = screenRadius * PLATFORM_DEPTH_SCALE * Math.sin(angle)
+    screenWidth += Math.hypot(tangentX, tangentZ) * screenArc / steps
   }
-
-  const radius = 7.2
-  const thickness = 0.16
-  const arc = 108 * Math.PI / 180
-  const screenRadius = radius - Math.min(thickness * 0.35, radius * 0.02)
-  const screenArc = arc - 2 * bezel / radius
-  const screenWidth = screenRadius * screenArc
   return Math.round(textureHeight * screenWidth / screenHeight)
-})
+})()
 
 interface WallPalette {
   canvas: string
-  backingTop: string
-  backingBottom: string
   frame: number
   panel: string
   panelBorder: string
@@ -104,25 +87,21 @@ interface WallPalette {
 }
 
 const wallPalette = computed<WallPalette>(() => props.theme === 'light' ? {
-  canvas: '#dce4e7',
-  backingTop: '#d8dfe1',
-  backingBottom: '#b9c4c8',
-  frame: 0x8d9a9f,
-  panel: '#f7f9fa',
-  panelBorder: '#aab8bd',
-  grid: '#d5dee1',
-  track: '#c8d3d7',
-  heading: '#17242b',
-  primary: '#1d2b32',
-  secondary: '#41545d',
-  muted: '#586b73',
-  subtle: '#74858c',
-  node: '#dce5e8',
-  relation: '#809097',
+  canvas: '#f2f2f1',
+  frame: 0xe7e6e3,
+  panel: '#fbfbfa',
+  panelBorder: '#c5c7c9',
+  grid: '#dfe1e2',
+  track: '#d8dade',
+  heading: '#27313b',
+  primary: '#34404a',
+  secondary: '#66717a',
+  muted: '#7b858e',
+  subtle: '#9aa1a7',
+  node: '#edf0f2',
+  relation: '#aab0b5',
 } : {
   canvas: '#111719',
-  backingTop: '#252e31',
-  backingBottom: '#171d1f',
   frame: 0x46514d,
   panel: '#182124',
   panelBorder: '#344248',
@@ -138,9 +117,10 @@ const wallPalette = computed<WallPalette>(() => props.theme === 'light' ? {
 })
 
 const wallPlacement = computed<Placement>(() => ({
-  position: new Vector3(0, 2.05, 3.35),
+  position: new Vector3(0, 1.88, 0),
   orientation: new Quaternion(),
-  scale: new Vector3(1, 1, 1),
+  // The same depth scale turns the circular wall into the platform's ellipse.
+  scale: new Vector3(1, 1, PLATFORM_DEPTH_SCALE),
 }))
 
 const chartData = computed<ChartData[]>(() => {
@@ -161,7 +141,7 @@ const chartData = computed<ChartData[]>(() => {
   ]
 })
 
-const continuousSurface = computed<VxDisplaySurface>(() => {
+const wallSurface = computed<VxDisplaySurface>(() => {
   const charts = chartData.value
   const deployments = props.deployments
   const relations = props.relations
@@ -174,70 +154,6 @@ const continuousSurface = computed<VxDisplaySurface>(() => {
     },
   }
 })
-
-const backingSurface = computed<VxDisplaySurface>(() => ({
-  id: 'display-backing',
-  background: wallPalette.value.backingBottom,
-  paint({ context: ctx, width, height }) {
-    const gradient = ctx.createLinearGradient(0, 0, 0, height)
-    gradient.addColorStop(0, wallPalette.value.backingTop)
-    gradient.addColorStop(1, wallPalette.value.backingBottom)
-    ctx.fillStyle = gradient
-    ctx.fillRect(0, 0, width, height)
-  },
-}))
-
-const displaySurfaces = computed<VxDisplaySurface[]>(() => {
-  const [traffic, latency, readiness] = chartData.value
-  return [
-    {
-      id: traffic.id,
-      background: wallPalette.value.canvas,
-      paint(target) { paintSingleChart(target, traffic, props.currentTime) },
-    },
-    {
-      id: 'service-health',
-      background: wallPalette.value.canvas,
-      paint(target) { paintHealthSummary(target, props.deployments, props.currentTime) },
-    },
-    {
-      id: latency.id,
-      background: wallPalette.value.canvas,
-      // Inline SVG is rasterized onto this display's private canvas texture.
-      svg: chartSvg(latency, props.currentTime, textureWidth.value, textureHeight),
-    },
-    {
-      id: readiness.id,
-      background: wallPalette.value.canvas,
-      paint(target) { paintSingleChart(target, readiness, props.currentTime) },
-    },
-    {
-      id: 'capacity',
-      background: wallPalette.value.canvas,
-      paint(target) { paintCapacity(target, props.deployments, props.currentTime) },
-    },
-  ]
-})
-
-function paintHealthSummary(
-  target: VxDisplayPaintContext,
-  deployments: DeploymentViewModel[],
-  time: number,
-) {
-  const { context: ctx, width, height } = target
-  paintHealthPanel(ctx, deployments, width * 0.07, height * 0.08, width * 0.86, height * 0.78)
-  paintLiveFooter(ctx, width, height, time)
-}
-
-function paintCapacity(
-  target: VxDisplayPaintContext,
-  deployments: DeploymentViewModel[],
-  time: number,
-) {
-  const { context: ctx, width, height } = target
-  paintCapacityPanel(ctx, deployments, width * 0.07, height * 0.08, width * 0.86, height * 0.78)
-  paintLiveFooter(ctx, width, height, time)
-}
 
 function paintHealthPanel(
   ctx: CanvasRenderingContext2D,
@@ -421,12 +337,6 @@ function shortName(id: string): string {
   return id.replace('-api', '').replace('edge-', '')
 }
 
-function paintLiveFooter(ctx: CanvasRenderingContext2D, width: number, height: number, time: number) {
-  ctx.fillStyle = wallPalette.value.subtle
-  ctx.font = `500 ${Math.round(height * 0.025)}px Inter, sans-serif`
-  ctx.fillText(`LIVE  t=${time.toFixed(1)}`, width * 0.08, height * 0.94)
-}
-
 function paintDashboard(
   target: VxDisplayPaintContext,
   charts: ChartData[],
@@ -467,14 +377,6 @@ function paintDashboard(
   paintTopologyPanel(ctx, deployments, relations, margin + panelWidth + gap, bottomY, panelWidth, bottomHeight)
   paintCapacityPanel(ctx, deployments, margin + (panelWidth + gap) * 2, bottomY, panelWidth, bottomHeight)
   paintWorkloadPanel(ctx, deployments, margin + (panelWidth + gap) * 3, bottomY, panelWidth, bottomHeight)
-}
-
-function paintSingleChart(target: VxDisplayPaintContext, chart: ChartData, time: number) {
-  const { context: ctx, width, height } = target
-  paintChart(ctx, chart, width * 0.07, height * 0.08, width * 0.86, height * 0.78)
-  ctx.fillStyle = wallPalette.value.subtle
-  ctx.font = `500 ${Math.round(height * 0.025)}px Inter, sans-serif`
-  ctx.fillText(`LIVE  t=${time.toFixed(1)}`, width * 0.07, height * 0.94)
 }
 
 function paintPanelSurface(
@@ -579,32 +481,6 @@ function paintLineChart(
     else ctx.lineTo(px, py)
   })
   ctx.stroke()
-}
-
-function chartSvg(chart: ChartData, time: number, width: number, height: number): string {
-  const colors = wallPalette.value
-  const max = Math.max(1, ...chart.values)
-  const left = width * 0.072
-  const right = width * 0.925
-  const graphTop = height * 0.39
-  const graphBottom = height * 0.78
-  const points = chart.values.map((value, index) => {
-    const x = left + index * ((right - left) / Math.max(1, chart.values.length - 1))
-    const y = graphBottom - value / max * (graphBottom - graphTop)
-    return `${x.toFixed(1)},${y.toFixed(1)}`
-  }).join(' ')
-  const gridLines = [0, 1, 2, 3].map(index => {
-    const y = graphTop + (graphBottom - graphTop) * index / 3
-    return `M${left.toFixed(1)} ${y.toFixed(1)} H${right.toFixed(1)}`
-  }).join(' ')
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-    <rect x="${width * 0.042}" y="${height * 0.073}" width="${width * 0.916}" height="${height * 0.807}" rx="18" fill="${colors.panel}" stroke="${colors.panelBorder}" stroke-width="3"/>
-    <text x="${left}" y="${height * 0.195}" fill="${colors.muted}" font-family="Inter,sans-serif" font-size="38" font-weight="700">${chart.title}</text>
-    <text x="${left}" y="${height * 0.319}" fill="${colors.primary}" font-family="Inter,sans-serif" font-size="72" font-weight="700">${chart.value}</text>
-    <path d="${gridLines}" stroke="${colors.grid}" stroke-width="2"/>
-    <polyline points="${points}" fill="none" stroke="${chart.color}" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="${left}" y="${height * 0.948}" fill="${colors.subtle}" font-family="Inter,sans-serif" font-size="24">LIVE  t=${time.toFixed(1)}</text>
-  </svg>`
 }
 
 function roundRect(

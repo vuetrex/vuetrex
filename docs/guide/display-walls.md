@@ -10,7 +10,7 @@ description: Put live Canvas 2D, SVG, or existing image content onto flat and cu
 A 3D topology is useful for structure and movement. Dense text, charts, legends, and trends are often clearer on a 2D
 surface. A display wall combines both: it is a Vuetrex scene node whose screen is backed by a canvas texture.
 
-## Add one continuous display
+## Add a display wall
 
 ```vue
 <script setup lang="ts">
@@ -43,7 +43,6 @@ const surface = computed<VxDisplaySurface>(() => ({
   <vx-display-wall
     name="operations-display"
     shape="curved"
-    mode="continuous"
     :radius="7.2"
     :arc="110"
     :height="4.8"
@@ -60,7 +59,8 @@ surface changes repaint existing textures.
 ## Choose flat or curved geometry
 
 `shape="flat"` uses `width`, `height`, and `thickness`. `shape="curved"` uses `radius`, `arc` in degrees, `height`, and
-`thickness`. Curved displays default to 128 radial segments for a smooth profile.
+`thickness`. Curved displays default to 128 radial segments for a smooth profile, and their radial ends are closed by
+solid frame caps.
 
 ```vue
 <vx-display-wall
@@ -70,30 +70,6 @@ surface changes repaint existing textures.
   :thickness="0.16"
   :surface="surface"
 />
-```
-
-## Split the wall into independent displays
-
-Use `mode="displays"` when each chart needs its own texture and update path:
-
-```vue
-<vx-display-wall
-  shape="curved"
-  mode="displays"
-  :radius="7"
-  :arc="105"
-  :height="2.8"
-  :bezel="0.12"
-  :surfaces="displays"
-/>
-```
-
-```ts
-const displays: VxDisplaySurface[] = [
-  { id: 'traffic', background: '#101719', paint: drawTraffic },
-  { id: 'latency', background: '#101719', svg: latencyChartSvg },
-  { id: 'readiness', background: '#101719', canvas: readinessCanvas },
-]
 ```
 
 Each surface accepts one or more of:

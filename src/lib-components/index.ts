@@ -4,13 +4,13 @@ export type {
     VxAnimOptions,
     VxDiagnosticsSettings,
     VxFitOptions,
+    VxFogSettings,
     VxWallSettings,
 } from '@/lib-components/three/stage.js';
 export { DisplayWall } from '@/lib-components/nodes/DisplayWall.js';
 export type {
     VxDisplayPaintContext,
     VxDisplaySurface,
-    VxDisplayWallMode,
     VxDisplayWallShape,
 } from '@/lib-components/nodes/DisplayWall.js';
 export type { VxMaterialProps, VxHoverProps } from '@/lib-components/nodes/material.js';

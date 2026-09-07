@@ -2,6 +2,7 @@ import { nextTick } from 'vue'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as THREE from 'three'
 import {
+    createDisplayWallEndCaps,
     createDisplayWallGeometry,
     DisplayWall,
     type VxDisplaySurface,
@@ -47,7 +48,19 @@ describe('DisplayWall', () => {
         expect(geometry.getAttribute('position').count).toBeGreaterThan(64 * 2)
     })
 
-    it('reactively realizes one canvas or a set of independent canvases', async () => {
+    it('creates UV-mapped side caps for both open ends of a curved wall', () => {
+        const geometry = createDisplayWallEndCaps(7, 7.2, 4, Math.PI * 0.6)
+        geometry.computeBoundingBox()
+
+        expect(geometry.getAttribute('position').count).toBe(8)
+        expect(geometry.getAttribute('normal').count).toBe(8)
+        expect(geometry.getAttribute('uv').count).toBe(8)
+        expect(geometry.index?.count).toBe(12)
+        expect(geometry.boundingBox?.min.y).toBeCloseTo(-2)
+        expect(geometry.boundingBox?.max.y).toBeCloseTo(2)
+    })
+
+    it('reactively paints one canvas-backed surface', async () => {
         const context = mockCanvasContext()
         vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context)
         const wall = new DisplayWall(makeStage())
@@ -61,19 +74,16 @@ describe('DisplayWall', () => {
         wall.syncWithThree()
         await nextTick()
 
-        let screens = (wall.element.mesh as THREE.Group).getObjectsByProperty('type', 'Mesh')
-            .filter(object => object.name.includes('-display-'))
+        const screens = (wall.element.mesh as THREE.Group).getObjectsByProperty('type', 'Mesh')
+            .filter(object => object.name.endsWith('-screen'))
         expect(screens).toHaveLength(1)
         expect(painted).toContain('overview')
 
-        wall.setStateValue('mode', 'displays')
-        wall.setStateValue('surfaces', [surface('traffic'), surface('latency'), surface('readiness')])
+        wall.setStateValue('surface', surface('traffic'))
         await nextTick()
 
-        screens = (wall.element.mesh as THREE.Group).getObjectsByProperty('type', 'Mesh')
-            .filter(object => object.name.includes('-display-'))
-        expect(screens).toHaveLength(3)
-        expect(painted).toEqual(expect.arrayContaining(['traffic', 'latency', 'readiness']))
+        expect(screens).toHaveLength(1)
+        expect(painted).toContain('traffic')
         wall.onRemoved()
     })
 })
