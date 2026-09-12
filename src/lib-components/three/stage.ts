@@ -319,7 +319,10 @@ export class VuetrexStage extends Scene implements VxStage {
         updateFn: () => {}
     }
     private captions: Array<{x:number, y:number, text:string, visible: boolean}> = []
-    private groundMirror?: THREE.Object3D
+    private groundMirror?: THREEx.Reflector
+    private floorOverlay?: THREE.Mesh
+    private backgroundWall?: THREE.Mesh
+    private backgroundWallTexture?: THREEx.DynamicTexture
     private readonly nodesById = new Map<string, Node>()
     private readonly nodesByName = new Map<string, Node>()
     private diagnostics: boolean | VxDiagnosticsSettings = false
@@ -480,6 +483,7 @@ export class VuetrexStage extends Scene implements VxStage {
         });
         material.toneMapped = false;
         const plane = new THREE.Mesh(new THREE.PlaneGeometry(caps.planeSize, caps.planeSize), material);
+        this.floorOverlay = plane
         attachFloorOverlay(scene, plane, this.groundMirror)
         plane.receiveShadow = this.shadowsEnabled()
     }
@@ -490,6 +494,7 @@ export class VuetrexStage extends Scene implements VxStage {
         const opacity = THREE.MathUtils.clamp(settings.opacity ?? 1, 0, 1)
 
         const texture = new THREEx.DynamicTexture(1024, 512)
+        this.backgroundWallTexture = texture
         this.paintBackgroundWallTexture(texture, settings)
         texture.texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy()
         texture.texture.minFilter = THREE.LinearMipmapLinearFilter
@@ -509,6 +514,7 @@ export class VuetrexStage extends Scene implements VxStage {
         })
         const height = settings.height ?? 5
         const wall = new THREE.Mesh(createBackgroundWallGeometry(settings), material)
+        this.backgroundWall = wall
         wall.name = 'vx-background-wall'
         wall.position.set(
             0,
@@ -902,16 +908,47 @@ export class VuetrexStage extends Scene implements VxStage {
     }
 
     destroy() {
+        if (this.destroyed) return
         this.destroyed = true
         if (this.refitFrame !== undefined && typeof cancelAnimationFrame === 'function') {
             cancelAnimationFrame(this.refitFrame)
             this.refitFrame = undefined
         }
-        super.destroy();
         this.clearDiagnostics()
+        this.connectors.clear();
+        this.disposeStageSurfaces()
         this.nodesById.clear()
         this.nodesByName.clear()
-        this.connectors.clear();
+        super.destroy();
+    }
+
+    private disposeStageSurfaces() {
+        this.disposeOwnedMesh(this.floorOverlay)
+        this.floorOverlay = undefined
+        this.caps.texture?.texture.dispose()
+        this.caps.texture = null
+        this.caps.updateFn = () => {}
+
+        this.disposeOwnedMesh(this.backgroundWall)
+        this.backgroundWall = undefined
+        this.backgroundWallTexture?.texture.dispose()
+        this.backgroundWallTexture = undefined
+
+        if (this.groundMirror) {
+            this.groundMirror.removeFromParent()
+            this.groundMirror.geometry.dispose()
+            this.groundMirror.dispose()
+            this.groundMirror = undefined
+        }
+    }
+
+    private disposeOwnedMesh(mesh?: THREE.Mesh) {
+        if (!mesh) return
+
+        mesh.removeFromParent()
+        mesh.geometry.dispose()
+        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+        for (const material of materials) material.dispose()
     }
 
     // --- events ---

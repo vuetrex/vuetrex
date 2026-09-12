@@ -58,7 +58,7 @@
 </template>
 
 <script lang="ts">
-import {defineComponent, SetupContext, ref} from 'vue';
+import {defineComponent, ref} from 'vue';
 import {Vuetrex, VxSettings} from '@/lib-components/index.js';
 
 export default defineComponent({
@@ -71,9 +71,7 @@ export default defineComponent({
       default: () => ([])
     }
   },
-  setup(props: object, context: SetupContext) {
-    const counter = ref(0);
-    const elevation = ref(0.5)
+  setup() {
     const camera = ref("scene")
     const settings: VxSettings = {
         particleVolume: 5
@@ -87,16 +85,9 @@ export default defineComponent({
       }
     }
 
-    setInterval(() => {
-      counter.value  ++;
-      elevation.value = 0.1 + 0.2 * Math.sin(Math.PI/32*counter.value);
-    }, 100);
-
     return {
       camera,
       settings,
-      counter,
-      elevation,
       click3d
     }
   }

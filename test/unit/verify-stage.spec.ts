@@ -1,5 +1,6 @@
 import Vuetrex from '@/lib-components/vuetrex.js'
 import * as THREE from 'three'
+import { Reflector } from 'three/examples/jsm/objects/Reflector.js'
 import { shallowMount } from '@vue/test-utils'
 import { describe, it, expect, vi } from 'vitest'
 import Scene from '@/lib-components/three/scene.js'
@@ -331,5 +332,129 @@ describe('The Vuetrex Stage object', () => {
         callbacks[0](0)
         expect(fits).toBe(1)
         vi.unstubAllGlobals()
+    })
+
+    it('disconnects resize observation and disposes renderer-owned GPU resources', () => {
+        const observer = {
+            observe: vi.fn(),
+            disconnect: vi.fn(),
+        }
+        vi.stubGlobal('ResizeObserver', class {
+            constructor(_callback: ResizeObserverCallback) {}
+            observe = observer.observe
+            disconnect = observer.disconnect
+        })
+
+        try {
+            const domParent = document.createElement('div')
+            const canvas = document.createElement('canvas')
+            domParent.appendChild(canvas)
+            const previousEventCleanup = vi.fn()
+            const renderPass = { dispose: vi.fn() }
+            const composer = { dispose: vi.fn() }
+            const renderer = {
+                domElement: canvas,
+                dispose: vi.fn(),
+                forceContextLoss: vi.fn(),
+            }
+            const scene = Object.create(Scene.prototype) as Scene
+            Object.assign(scene as any, {
+                domParent,
+                renderer,
+                renderPass,
+                composer,
+                scene: new THREE.Scene(),
+                camera: new THREE.PerspectiveCamera(),
+                mouse: { x: 0, y: 0 },
+                removeEventListeners: previousEventCleanup,
+                stopRenderLoop: vi.fn(),
+                onWindowResize: vi.fn(),
+                onMouseWheel: vi.fn(),
+                onCanvasMouseMove: vi.fn(),
+                onCanvasClick: vi.fn(),
+                onCanvasDblClick: vi.fn(),
+            })
+
+            scene.bindEvents(domParent)
+            scene.destroy()
+            scene.destroy()
+
+            expect(previousEventCleanup).toHaveBeenCalledOnce()
+            expect(observer.observe).toHaveBeenCalledWith(domParent)
+            expect(observer.disconnect).toHaveBeenCalledOnce()
+            expect(renderPass.dispose).toHaveBeenCalledOnce()
+            expect(composer.dispose).toHaveBeenCalledOnce()
+            expect(renderer.dispose).toHaveBeenCalledOnce()
+            expect(renderer.forceContextLoss).toHaveBeenCalledOnce()
+            expect(domParent.children).toHaveLength(0)
+        } finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
+    it('disposes stage-owned floor, wall, and reflector resources', () => {
+        const scene = new THREE.Scene()
+        const floorTexture = new THREE.Texture()
+        const wallTexture = new THREE.Texture()
+        const floor = new THREE.Mesh(
+            new THREE.PlaneGeometry(4, 4),
+            new THREE.MeshStandardMaterial({ map: floorTexture }),
+        )
+        const wall = new THREE.Mesh(
+            new THREE.PlaneGeometry(4, 2),
+            new THREE.MeshBasicMaterial({ map: wallTexture }),
+        )
+        const mirror = new Reflector(new THREE.PlaneGeometry(4, 4), {
+            textureWidth: 4,
+            textureHeight: 4,
+        })
+        mirror.add(floor)
+        scene.add(mirror, wall)
+
+        const floorGeometryDisposed = vi.fn()
+        const floorMaterialDisposed = vi.fn()
+        const floorTextureDisposed = vi.fn()
+        const wallGeometryDisposed = vi.fn()
+        const wallMaterialDisposed = vi.fn()
+        const wallTextureDisposed = vi.fn()
+        const mirrorGeometryDisposed = vi.fn()
+        const mirrorMaterialDisposed = vi.fn()
+        const mirrorTargetDisposed = vi.fn()
+        floor.geometry.addEventListener('dispose', floorGeometryDisposed)
+        ;(floor.material as THREE.Material).addEventListener('dispose', floorMaterialDisposed)
+        floorTexture.addEventListener('dispose', floorTextureDisposed)
+        wall.geometry.addEventListener('dispose', wallGeometryDisposed)
+        ;(wall.material as THREE.Material).addEventListener('dispose', wallMaterialDisposed)
+        wallTexture.addEventListener('dispose', wallTextureDisposed)
+        mirror.geometry.addEventListener('dispose', mirrorGeometryDisposed)
+        mirror.material.addEventListener('dispose', mirrorMaterialDisposed)
+        mirror.getRenderTarget().addEventListener('dispose', mirrorTargetDisposed)
+
+        const stage = Object.create(VuetrexStage.prototype) as VuetrexStage
+        Object.assign(stage as any, {
+            floorOverlay: floor,
+            backgroundWall: wall,
+            backgroundWallTexture: { texture: wallTexture },
+            groundMirror: mirror,
+            caps: { texture: { texture: floorTexture }, updateFn: vi.fn() },
+        })
+
+        ;(stage as any).disposeStageSurfaces()
+
+        expect(floorGeometryDisposed).toHaveBeenCalledOnce()
+        expect(floorMaterialDisposed).toHaveBeenCalledOnce()
+        expect(floorTextureDisposed).toHaveBeenCalledOnce()
+        expect(wallGeometryDisposed).toHaveBeenCalledOnce()
+        expect(wallMaterialDisposed).toHaveBeenCalledOnce()
+        expect(wallTextureDisposed).toHaveBeenCalledOnce()
+        expect(mirrorGeometryDisposed).toHaveBeenCalledOnce()
+        expect(mirrorMaterialDisposed).toHaveBeenCalledOnce()
+        expect(mirrorTargetDisposed).toHaveBeenCalledOnce()
+        expect(floor.parent).toBeNull()
+        expect(wall.parent).toBeNull()
+        expect(mirror.parent).toBeNull()
+        expect((stage as any).caps.texture).toBeNull()
+        expect((stage as any).backgroundWallTexture).toBeUndefined()
+        expect((stage as any).groundMirror).toBeUndefined()
     })
 })

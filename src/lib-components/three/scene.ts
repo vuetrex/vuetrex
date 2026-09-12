@@ -44,7 +44,9 @@ export default class Scene extends LifeCycle {
     public colorMain = new THREE.Color(0x555555);
     public colorHighlight = new THREE.Color(0x3377bb);
 
-    private removeEventListeners: Function = () => {};
+    private removeEventListeners: () => void = () => {};
+    private resizeObserver?: ResizeObserver;
+    private sceneDestroyed = false;
 
 
     /**
@@ -81,24 +83,35 @@ export default class Scene extends LifeCycle {
     }
 
     bindEvents(domParent: HTMLElement) {
-        const resizer = () => this.onWindowResize();
+        this.removeEventListeners();
+
+        const resizer = () => {
+            if (!this.sceneDestroyed) this.onWindowResize();
+        };
         const wheeler = (e:WheelEvent) => this.onMouseWheel(e)
         const mouseListener = (e:MouseEvent) => this.onCanvasMouseMove(e)
         const clickListener = (e:MouseEvent) => this.onCanvasClick(e)
         const dblclickListener = (e:MouseEvent) => this.onCanvasDblClick(e)
 
-        const resizeObserver = new ResizeObserver(entries => {
+        const resizeObserver = new ResizeObserver(() => {
             resizer();
         });
+        this.resizeObserver = resizeObserver;
         resizeObserver.observe(domParent);
-        //window.addEventListener("resize", resizer, false)
         window.addEventListener('wheel', wheeler, false)
         domParent.addEventListener("mousemove", mouseListener)
         domParent.addEventListener("mousedown", clickListener)
         domParent.addEventListener("dblclick", dblclickListener)
 
+        let removed = false;
         this.removeEventListeners = ()  => {
-            window.removeEventListener("resize", resizer)
+            if (removed) return;
+            removed = true;
+
+            resizeObserver.disconnect();
+            if (this.resizeObserver === resizeObserver) {
+                this.resizeObserver = undefined;
+            }
             window.removeEventListener("wheel", wheeler)
             domParent.removeEventListener("mousemove", mouseListener)
             domParent.removeEventListener("mousedown", clickListener)
@@ -115,13 +128,19 @@ export default class Scene extends LifeCycle {
     }
 
     destroy() {
+        if (this.sceneDestroyed) return;
+        this.sceneDestroyed = true;
+
         this.stopRenderLoop();
         this.removeEventListeners();
+        this.renderPass.dispose();
+        this.composer.dispose();
         this.scene.clear();
         this.camera.clear();
         while (this.domParent.lastChild) {
             this.domParent.removeChild(this.domParent.lastChild);
         }
+        this.renderer.dispose();
         this.renderer.forceContextLoss();
     }
 
