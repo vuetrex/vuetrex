@@ -4,11 +4,8 @@ import * as THREE from 'three';
 
 export class Cylinder extends MeshNode {
 
-    readonly material: THREE.MeshStandardMaterial;
-
     constructor(stage: VuetrexStage) {
         super(stage, { height: 0.33 });
-        this.material = this.stage.createElementMaterial()
     }
 
     private beveledCylinder(height: number, size: number): THREE.BufferGeometry {

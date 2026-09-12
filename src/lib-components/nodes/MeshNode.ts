@@ -150,17 +150,19 @@ export abstract class MeshNode extends Node {
     setHeight(height: number) { this.state.height = height; }
 
     /**
-     * Removes the current mesh from the scene and resets the event subscription flag
-     * so that the next renderMesh call starts clean and events can be re-wired to
-     * the new mesh object. Called both on geometry rebuild and on node removal.
+     * Disposes the generated geometry, removes the current mesh from the scene, and
+     * resets event subscriptions so the replacement mesh can be wired cleanly.
+     * The material is node-owned and reused across geometry rebuilds; onRemoved()
+     * disposes it after the final mesh has been cleared.
      */
     private clearMesh() {
         if (!this.element.mesh) return;
+        const mesh = this.element.mesh;
         if (this.subscribed) {
-            this.element.mesh.removeEventListener(Node.CLICK, this.clickListener);
-            this.element.mesh.removeEventListener(Node.DBLCLICK, this.dblclickListener);
-            this.element.mesh.removeEventListener(Node.MOUSE_OVER, this.mouseOverListener);
-            this.element.mesh.removeEventListener(Node.MOUSE_OUT, this.mouseOutListener);
+            mesh.removeEventListener(Node.CLICK, this.clickListener);
+            mesh.removeEventListener(Node.DBLCLICK, this.dblclickListener);
+            mesh.removeEventListener(Node.MOUSE_OVER, this.mouseOverListener);
+            mesh.removeEventListener(Node.MOUSE_OUT, this.mouseOutListener);
             this.subscribed = false;
         }
         this.isHovered = false;
@@ -169,6 +171,7 @@ export abstract class MeshNode extends Node {
         // recreate it when reactive deps re-fire.
         this.disposeLabel();
         this.stage.removeObject(this.element);
+        (mesh as Mesh).geometry.dispose();
     }
 
     private disposeLabel() {
@@ -191,9 +194,7 @@ export abstract class MeshNode extends Node {
         if (this.stopHandle) return;
 
         // Capture creation-time material defaults as the initial restore target.
-        // By this point Box (or any subclass) has already overwritten this.material
-        // in its own constructor, so we read the final material here.
-        this.baseProps = captureProps(this.material as MeshStandardMaterial);
+        this.baseProps = captureProps(this.material);
 
         // Geometry watchEffect — rebuilds mesh when layout or geometry params change.
         this.stopHandle = watchEffect(() => {
@@ -426,6 +427,7 @@ export abstract class MeshNode extends Node {
             this.labelStopHandle = undefined;
         }
         this.clearMesh();
+        this.material.dispose();
         this.stage.unregisterConnection(this.connectionRegistrationId);
         this.registeredConnection = undefined;
         this.state.connection = null;

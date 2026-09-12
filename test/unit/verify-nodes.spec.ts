@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { Base } from '@/lib-components/nodes/Base.js'
 import { patchProp } from '@/lib-components/patchProp.js'
 import { Box } from '@/lib-components/nodes/shapes/Box.js'
@@ -65,6 +65,47 @@ describe('Base tree hierarchy', () => {
         parent.appendChild(c2)
         expect(c1.nextSibling.value).toBe(c2)
         expect(c2.nextSibling.value).toBeNull()
+    })
+
+    it('moves existing children without duplicating or unmounting them', () => {
+        const parent = new TestNode()
+        const c1 = new TestNode()
+        const c2 = new TestNode()
+        const c3 = new TestNode()
+        const onRemoved = vi.spyOn(c1, 'onRemoved')
+        parent.appendChild(c1)
+        parent.appendChild(c2)
+        parent.appendChild(c3)
+
+        parent.insertBefore(c3, c1)
+        parent.appendChild(c1)
+
+        expect(parent.elements.value).toEqual([c3, c2, c1])
+        expect(new Set(parent.elements.value)).toHaveLength(3)
+        expect(c3.myIdx.value).toBe(0)
+        expect(c2.myIdx.value).toBe(1)
+        expect(c1.myIdx.value).toBe(2)
+        expect(onRemoved).not.toHaveBeenCalled()
+
+        parent.removeChild(c1)
+        expect(parent.elements.value).toEqual([c3, c2])
+        expect(c1.parent.value).toBeNull()
+        expect(onRemoved).toHaveBeenCalledOnce()
+    })
+
+    it('moves a child between parents without running removal cleanup', () => {
+        const firstParent = new TestNode()
+        const secondParent = new TestNode()
+        const child = new TestNode()
+        const onRemoved = vi.spyOn(child, 'onRemoved')
+        firstParent.appendChild(child)
+
+        secondParent.appendChild(child)
+
+        expect(firstParent.elements.value).toEqual([])
+        expect(secondParent.elements.value).toEqual([child])
+        expect(child.parent.value).toBe(secondParent)
+        expect(onRemoved).not.toHaveBeenCalled()
     })
 
     it('elements omits non-renderable children', () => {

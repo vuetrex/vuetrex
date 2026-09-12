@@ -34,7 +34,8 @@ export default defineComponent({
         const elRef = ref(null);
         const maxWidth = ref(4096);
         const maxHeight = ref(4096);
-         let stageRoot: Root | null = null;
+        let stageRoot: Root | null = null;
+        let vuetrexRenderer: ReturnType<typeof createRendererForStage> | null = null;
         const vuetrexComponent = getCurrentInstance();
 
         if (!vuetrexComponent) {
@@ -74,7 +75,7 @@ export default defineComponent({
             }
 
             const stage = new VuetrexStage(elRef.value, {...props.settings});
-            const vuetrexRenderer = createRendererForStage(stage, props.elements);
+            vuetrexRenderer = createRendererForStage(stage, props.elements);
             stageRoot = new Root(stage);
 
             stage.mount();
@@ -95,15 +96,23 @@ export default defineComponent({
 
             nextTick().then(() => {
                 if (stageRoot) {
-                    vuetrexRenderer(h(Connector, slots.default), stageRoot);
+                    vuetrexRenderer?.(h(Connector, slots.default), stageRoot);
                 }
             });
         });
 
         onUnmounted(() => {
             if (stageRoot) {
-                stageRoot.destroy();
-                stageRoot = null;
+                const root = stageRoot;
+                try {
+                    // Unmount the custom-rendered Vue tree before destroying its
+                    // Three.js host so component effects and hooks cannot outlive it.
+                    vuetrexRenderer?.(null, root);
+                } finally {
+                    stageRoot = null;
+                    vuetrexRenderer = null;
+                    root.destroy();
+                }
             }
         });
 

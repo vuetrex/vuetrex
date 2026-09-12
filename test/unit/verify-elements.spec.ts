@@ -115,6 +115,52 @@ describe('nodeOps', () => {
 // ── nodeOps.createElement — per-instance extraTypes ──────────────────────────
 
 describe('compound components in the custom renderer', () => {
+    it('keeps one logical child per keyed vnode after reordering', async () => {
+        const items = ref(['a', 'b', 'c'])
+        const KeyedFixture = defineComponent({
+            setup() {
+                return () => h('vx-row', null, items.value.map(item =>
+                    h('vx-box', { key: item, lines: [item] }),
+                ))
+            },
+        })
+        const { render } = createRenderer<Base, Base>({
+            patchProp,
+            ...nodeOps(mockStage, {
+                'vx-row': CompoundElement as unknown as ClassComponent,
+                'vx-box': CompoundElement as unknown as ClassComponent,
+            }),
+        })
+        const root = new CompoundElement(mockStage)
+
+        render(h(KeyedFixture), root)
+        await nextTick()
+        const row = root.elements.value[0] as CompoundElement
+        const originalByKey = new Map(row.elements.value.map(child => [
+            (child as CompoundElement).state.lines[0],
+            child,
+        ]))
+
+        items.value = ['c', 'a', 'b']
+        await nextTick()
+
+        expect(row.elements.value.map(child => (child as CompoundElement).state.lines[0]))
+            .toEqual(['c', 'a', 'b'])
+        expect(new Set(row.elements.value)).toHaveLength(3)
+        expect(row.elements.value).toEqual([
+            originalByKey.get('c'),
+            originalByKey.get('a'),
+            originalByKey.get('b'),
+        ])
+
+        items.value = ['c', 'b']
+        await nextTick()
+        expect(row.elements.value).toEqual([
+            originalByKey.get('c'),
+            originalByKey.get('b'),
+        ])
+    })
+
     it('updates nested elements with inline reactive props without rendering recursively', async () => {
         const label = ref('first')
         const visible = ref(true)

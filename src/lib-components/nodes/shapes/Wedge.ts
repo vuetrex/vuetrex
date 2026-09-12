@@ -18,12 +18,10 @@ interface ExplicitArcProfile {
 
 export class Wedge extends MeshNode {
 
-    readonly material: THREE.MeshStandardMaterial;
     declare protected state: WedgeState;
 
     constructor(stage: VuetrexStage) {
         super(stage, { height: 0.33, thickness: undefined } as Partial<WedgeState>);
-        this.material = stage.createElementMaterial();
     }
 
     private cylindricalSleeveSegment(height: number, size: number, segmentCount: number,

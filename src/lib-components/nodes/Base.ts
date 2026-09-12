@@ -90,7 +90,25 @@ export abstract class Base {
         this.parent.value = parent;
     }
 
+    /**
+     * Detach a child for Vue's hostInsert move operation without running the
+     * unmount lifecycle. Remove every occurrence defensively so a subsequent
+     * move also repairs trees corrupted by the old insertion behavior.
+     */
+    private detachChildForMove(child: Base): void {
+        let removed = false;
+        for (let idx = this.childList.indexOf(child); idx >= 0; idx = this.childList.indexOf(child)) {
+            this.childList.splice(idx, 1);
+            removed = true;
+        }
+        if (removed) {
+            triggerRef(this.children);
+            this.registerSync();
+        }
+    }
+
     appendChild(child: Base) {
+        child.parentNodeValue?.detachChildForMove(child);
         child.setParent(this);
         if (child.isRenderableNode()) {
             const node = child as any;
@@ -123,6 +141,9 @@ export abstract class Base {
     }
 
     insertBefore(child: Base, anchor: Base) {
+        // Match Node.insertBefore(): inserting a node before itself is a no-op.
+        if (child === anchor) return;
+        child.parentNodeValue?.detachChildForMove(child);
         child.setParent(this);
         if (child.isRenderableNode()) {
             const node = child as any;
