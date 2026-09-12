@@ -38,8 +38,12 @@ export default class LifeCycle {
         this.lifecycle.paused = false
     }
 
-    registerAnimation(fn: (timer: number, tick: number) => void) {
+    registerAnimation(fn: (timer: number, tick: number) => void): () => void {
         this.animations.push(fn)
+        return () => {
+            const index = this.animations.indexOf(fn)
+            if (index >= 0) this.animations.splice(index, 1)
+        }
     }
 
     stopRenderLoop() {

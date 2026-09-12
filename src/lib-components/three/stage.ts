@@ -5,6 +5,7 @@ import {Element3d, VxEventMap} from '@/lib-components/three/element3d.js';
 import {Node} from '@/lib-components/nodes/Node.js';
 import type {InstanceHit} from '@/lib-components/nodes/InstanceNode.js';
 import type {GeometryHit} from '@/lib-components/geometry/types.js';
+import type {ParticleHit} from '@/lib-components/particles/types.js';
 import {Connectors} from '@/lib-components/three/connectors/connectors.js';
 import type {BusRouteOptions, ConnectorRouteOptions} from '@/lib-components/three/connectors/types.js';
 import gsap from 'gsap';
@@ -44,7 +45,7 @@ export interface VxFitOptions {
 
 export interface VxStage {
     getScene(): THREE.Scene
-    onEachFrame(fn: (time: number, tick:number) => void): void
+    onEachFrame(fn: (time: number, tick:number) => void): () => void
     /**
      * Animate the named node's transform to the given target values.
      * Isolates callers from Three.js internals — use this instead of
@@ -123,7 +124,7 @@ export interface VxWallSettings {
 export interface VxMouseEvent extends MouseEvent {
     vxNode: Node;
     vxPosition: any;
-    vxInstance?: InstanceHit<unknown> | GeometryHit<unknown>;
+    vxInstance?: InstanceHit<unknown> | GeometryHit<unknown> | ParticleHit<unknown>;
 }
 
 let BOX_RADIUS = 1.0;
@@ -356,8 +357,8 @@ export class VuetrexStage extends Scene implements VxStage {
         return this.scene;
     }
 
-    onEachFrame(fn: (time: number, tick:number) => void): void {
-        // this.onAnimate(fn);
+    onEachFrame(fn: (time: number, tick:number) => void): () => void {
+        return this.registerAnimation(fn)
     }
 
     mount() {
@@ -926,7 +927,7 @@ export class VuetrexStage extends Scene implements VxStage {
             instanceHitAt?: (
                 instanceIndex: number,
                 object?: THREE.Object3D,
-            ) => InstanceHit<unknown> | GeometryHit<unknown> | undefined
+            ) => InstanceHit<unknown> | GeometryHit<unknown> | ParticleHit<unknown> | undefined
         };
         ev.vxInstance = this.selectedInstanceId === undefined
             ? undefined

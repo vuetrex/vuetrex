@@ -271,6 +271,7 @@ export default class Scene extends LifeCycle {
                 );
                 const labelObject = <THREE.Mesh> (found && found.object);
                 const instanceId = found?.instanceId
+                    ?? (labelObject?.userData.vxParticles ? found?.index : undefined);
                 if (labelObject && (
                     labelObject !== this.selectedObject || instanceId !== this.selectedInstanceId
                 )) {

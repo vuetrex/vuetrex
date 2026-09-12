@@ -29,13 +29,18 @@
           foliage: { color: 0xffffff, roughness: 0.68, metalness: 0.01 },
         }"
       />
+      <vx-particles
+        :graph="fireflies"
+        anchor="origin"
+        :participates-in-layout="false"
+      />
     </Vuetrex>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Vuetrex, geo } from '@/lib-components/index.js'
+import { Vuetrex, geo, particles } from '@/lib-components/index.js'
 import { tree } from '../geometry/plant.js'
 
 const seed = ref(31)
@@ -58,6 +63,27 @@ const plantGeometry = computed(() =>
   }), {
     rotate: [0, seed.value * 0.053, 0],
   }),
+)
+
+const fireflies = computed(() =>
+  particles.cloud('procedural-tree', {
+    count: 1024,
+    radius: 'bounds',
+    distribution: 'surface',
+    seed: `plant-fireflies-${seed.value}`,
+  })
+    .appearance({
+      color: ({ random }) => random > 0.68 ? 0xd9822b : 0x27845d,
+      size: ({ random }) => 0.11 + random * 0.1,
+      opacity: ({ random }) => 0.8 + random * 0.18,
+      blending: 'normal',
+    })
+    .motion({
+      turbulence: ({ random }) => 0.025 + random * 0.04,
+      turbulenceScale: 1.35,
+      orbit: { axis: [0, 1, 0], speed: 0.11 },
+    })
+    .named('plant-fireflies'),
 )
 </script>
 

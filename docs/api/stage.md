@@ -76,12 +76,15 @@ Supported targets are `positionY`, `scale`, `scaleX`, `scaleY`, and `scaleZ`. Pe
 Registers a callback with the stage animation loop:
 
 ```ts
-stage.onEachFrame((time, tick) => {
+const stop = stage.onEachFrame((time, tick) => {
   // Reserve for integration work that cannot be expressed reactively.
 })
+
+stop()
 ```
 
-Prefer reactive props for normal scene updates. A per-frame callback couples application code to render frequency.
+The returned function unregisters the callback. Prefer reactive props for normal scene updates. A per-frame callback
+couples application code to render frequency.
 
 ### `getScene()`
 

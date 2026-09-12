@@ -55,7 +55,7 @@ export default defineConfig({
         template: {
             compilerOptions: {
                 isCustomElement: (tag:string) =>
-                    /^vx-(group|layer|row|stack|ring|panel|instances|geometry|display-wall|spacer|box|cylinder|wedge|connector|bus-connector)$/.test(tag)
+                    /^vx-(group|layer|row|stack|ring|panel|instances|geometry|particles|display-wall|spacer|box|cylinder|wedge|connector|bus-connector)$/.test(tag)
                     || tag === 'bus-connector'
             }
         }}),

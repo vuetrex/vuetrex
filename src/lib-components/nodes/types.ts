@@ -12,6 +12,7 @@ import {InstanceNode} from '@/lib-components/nodes/InstanceNode.js';
 import {DisplayWall} from '@/lib-components/nodes/DisplayWall.js';
 import {Spacer} from '@/lib-components/nodes/Spacer.js';
 import {GeometryNode} from '@/lib-components/geometry/GeometryNode.js';
+import {ParticleNode} from '@/lib-components/particles/ParticleNode.js';
 
 import {Box} from '@/lib-components/nodes/shapes/Box.js';
 import {Cylinder} from '@/lib-components/nodes/shapes/Cylinder.js';
@@ -46,6 +47,7 @@ const builtins: ElementRegistry = {
     'vx-display-wall': DisplayWall,
     'vx-spacer': Spacer,
     'vx-geometry': GeometryNode,
+    'vx-particles': ParticleNode,
     //models
     'vx-box': Box,
     'vx-cylinder': Cylinder,

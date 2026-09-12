@@ -216,6 +216,29 @@ Every `GeometrySource` supports immutable fluent composition through `.transform
 `.parameterMap()`, `.material()`, `.named()`, `.randomize()`, `.join()`, and `.pipe()`. The existing functional
 `geo.transform(source, options)` style remains supported and interoperable.
 
+### Particle systems
+
+```vue
+<vx-particles
+  :graph="particleEffect"
+  :parameters="{ size, speed }"
+  anchor="origin"
+  :paused="false"
+  :time-scale="1"
+  :interactive="false"
+/>
+```
+
+`graph` accepts a `ParticleSource` created with `particles.path()`, `particles.paths()`, `particles.cloud()`, or
+`particles.clouds()`. `parameters` resolves `particles.param()` values. `anchor` is `origin`, `center`, or `base`;
+`paused` stops only this particle system and `time-scale` scales its clock.
+`interactive` defaults to `false`; enable it only when individual particle/node pointer events are useful.
+
+Every source supports `.appearance()`, `.motion()`, `.simulate()`, `.named()`, `.join()`, and `.pipe()`, with matching
+functional operators on `particles`. The built-in `cpu` backend renders soft point batches and supports basic forces;
+custom GPU/FBO execution is available through `registerParticleBackend()`. See
+[Data-driven particles](/guide/particles).
+
 ### Display wall
 
 ```vue
@@ -259,7 +282,7 @@ Built-in interactive nodes support `click`, `dblclick`, `pointerenter`, and `poi
 interface VxMouseEvent extends MouseEvent {
   vxNode: Node
   vxPosition: unknown
-  vxInstance?: InstanceHit<unknown> | GeometryHit<unknown>
+  vxInstance?: InstanceHit<unknown> | GeometryHit<unknown> | ParticleHit<unknown>
 }
 ```
 
@@ -279,3 +302,5 @@ The package exports:
 - `geo`, `defineGeometry()`, `defineGeometryOutputs()`, parameter and point-domain helpers, `GeometryNode`, graph
   inspection functions, and the procedural geometry source, output, material-channel, semantic, diagnostic, and
   operator option types
+- `particles`, `defineParticles()`, `defineParticleOutputs()`, `ParticleNode`, particle graph/field types, and the
+  custom backend registration API

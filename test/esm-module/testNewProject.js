@@ -47,7 +47,7 @@ try {
             vue({
                 template: {
                     compilerOptions: {
-                        isCustomElement: tag => /^vx-(group|layer|row|stack|ring|panel|instances|geometry|box|cylinder|wedge|connector)$/.test(tag),
+                        isCustomElement: tag => /^vx-(group|layer|row|stack|ring|panel|instances|geometry|particles|box|cylinder|wedge|connector)$/.test(tag),
                     },
                 },
             }),

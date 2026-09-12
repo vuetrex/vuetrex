@@ -28,13 +28,14 @@
           :parameters="{ scale: 1.15 }"
           :materials="{ accent: { color: 0x55aadd } }"
         />
+        <vx-particles name="consumer-flow" :graph="particleEffect" />
       </vx-layer>
     </Vuetrex>
   </div>
 </template>
 
 <script>
-import { Vuetrex, defineGeometryOutputs, geo, inspectGeometry } from '@exceeder/vuetrex';
+import { Vuetrex, defineGeometryOutputs, geo, inspectGeometry, particles } from '@exceeder/vuetrex';
 import { getCurrentInstance } from 'vue';
 export default {
   components: {
@@ -56,11 +57,15 @@ export default {
     const proceduralGeometry = parts.whole
       .material('accent')
       .parameterMap({ scale: geo.param('scale', 1) })
+    const particleEffect = particles.path([[-1, 0.5, 0], [1, 0.5, 0]], { count: 12 })
+      .appearance({ color: 0x55ccff, size: 0.06 })
+      .motion({ speed: 0.4 })
     console.log("Current Instance:",getCurrentInstance())
     console.log("Vuetrex loaded:",Vuetrex)
     console.log("Procedural inspection:", inspectGeometry(proceduralGeometry, { scale: 1.15 }))
     return {
       proceduralGeometry,
+      particleEffect,
     }
   }
 }

@@ -60,6 +60,7 @@ export default {
                     {text: 'Large scenes', link: '/guide/large-scenes'},
                     {text: 'Display walls', link: '/guide/display-walls'},
                     {text: 'Procedural geometry', link: '/guide/procedural-geometry'},
+                    {text: 'Data-driven particles', link: '/guide/particles'},
                     {text: 'Recursive cubes tutorial', link: '/guide/recursive-cubes'}
                 ]
             },

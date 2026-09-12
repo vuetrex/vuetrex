@@ -52,6 +52,14 @@ Vue refs → computed GeometrySource → immutable geometry DAG → GeometrySet 
                                                      → one logical GeometryNode
 ```
 
+Particle effects use the corresponding time-dependent pass:
+
+```
+Vue refs → computed ParticleSource → immutable particle DAG → CompiledParticleProgram
+                                                        → CPU or registered GPU backend
+                                                        → one logical ParticleNode
+```
+
 ---
 
 ## Key abstractions
@@ -121,6 +129,19 @@ instance batches without rebuilding topology. Separate effects apply default/cha
 state so geometry evaluation does not mutate a reactive dependency it consumes. Prototype topology is cached by
 signature in a stage-scoped reference-counted pool and disposed after its final procedural node owner unmounts.
 
+### Particle systems (`particles/`)
+
+Particle authoring also uses immutable nodes with a shared non-enumerable fluent prototype. `particles.path()` and
+`particles.cloud()` establish emitter domains; Appearance, Motion, Simulation, Named, and Join operators wrap sources
+without becoming logical scene nodes. Fields retain the emitter's typed data item so counts and visual attributes can
+encode application metrics.
+
+`ParticleNode` compiles the authored DAG into a backend-neutral `CompiledParticleProgram`. The built-in CPU backend
+groups compatible appearances into soft point-shader batches and updates path, cloud, turbulence, orbit, and basic
+force motion from the stage clock. Named cloud targets resolve through semantic node IDs on every frame. A registered
+backend owns its Three.js object, time stepping, hit mapping, bounds, and disposal; this is the extension boundary for
+FBO or compute implementations. Only `<vx-particles>` enters the logical/Three.js scene pipeline.
+
 ### Composition recipes (`composition/index.ts`)
 
 `RepresentationRecipe` is a pure data-to-plan contract with four phases: `select`, `aggregate`, `arrange`, and `emit`.
@@ -167,6 +188,7 @@ parallel edges remain independent. `MeshNode.state.connection` remains the short
 | `BusConnectorNode` | Shared one-to-many route          | `syncWithThree()`                    |
 | `InstanceNode`  | Keyed GPU-instanced semantic repeater | `InstanceEncoding`, `instanceHitAt()`|
 | `GeometryNode`  | Procedural graph output and batching  | Reactive compiler, generated bounds  |
+| `ParticleNode`  | Particle graph and execution backend  | Time stepping, buffers, generated bounds |
 | `Root`          | Tree root, owns destroy               | —                                    |
 
 ### `Element3d` (`three/element3d.ts`)
