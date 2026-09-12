@@ -4,6 +4,7 @@ import Scene from '@/lib-components/three/scene.js';
 import {Element3d, VxEventMap} from '@/lib-components/three/element3d.js';
 import {Node} from '@/lib-components/nodes/Node.js';
 import type {InstanceHit} from '@/lib-components/nodes/InstanceNode.js';
+import type {GeometryHit} from '@/lib-components/geometry/types.js';
 import {Connectors} from '@/lib-components/three/connectors/connectors.js';
 import type {BusRouteOptions, ConnectorRouteOptions} from '@/lib-components/three/connectors/types.js';
 import gsap from 'gsap';
@@ -122,13 +123,13 @@ export interface VxWallSettings {
 export interface VxMouseEvent extends MouseEvent {
     vxNode: Node;
     vxPosition: any;
-    vxInstance?: InstanceHit<unknown>;
+    vxInstance?: InstanceHit<unknown> | GeometryHit<unknown>;
 }
 
 let BOX_RADIUS = 1.0;
 let BOX_DISTANCE = 1.0;
 const FLOOR_Y = -0.2495;
-const FLOOR_REFLECTOR_Y = -0.251;
+const FLOOR_REFLECTOR_Y = 0.0;
 const DEVELOPMENT_CHECKS = (import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV ?? true;
 
 /**
@@ -155,7 +156,7 @@ export function attachFloorOverlay(
 
     if (reflector) {
         // Reflector's local +Z is world +Y after its -90 degree X rotation.
-        overlay.position.set(0, 0, FLOOR_Y - FLOOR_REFLECTOR_Y)
+        overlay.position.set(0, 0, FLOOR_REFLECTOR_Y)
         overlay.rotation.set(0, 0, 0)
         overlay.renderOrder = 1
         reflector.add(overlay)
@@ -922,7 +923,10 @@ export class VuetrexStage extends Scene implements VxStage {
         ev.vxNode = el3d.node;
         ev.vxPosition = el3d.mesh?.position.clone();
         const instanceNode = el3d.node as Node & {
-            instanceHitAt?: (instanceIndex: number, object?: THREE.Object3D) => InstanceHit<unknown> | undefined
+            instanceHitAt?: (
+                instanceIndex: number,
+                object?: THREE.Object3D,
+            ) => InstanceHit<unknown> | GeometryHit<unknown> | undefined
         };
         ev.vxInstance = this.selectedInstanceId === undefined
             ? undefined

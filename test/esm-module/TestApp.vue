@@ -22,14 +22,19 @@
             <vx-box size="0.4" height="0.15"/>
           </vx-stack>
         </vx-panel>
-        <vx-geometry name="procedural-boxes" :graph="proceduralGeometry" />
+        <vx-geometry
+          name="procedural-boxes"
+          :graph="proceduralGeometry"
+          :parameters="{ scale: 1.15 }"
+          :materials="{ accent: { color: 0x55aadd } }"
+        />
       </vx-layer>
     </Vuetrex>
   </div>
 </template>
 
 <script>
-import { Vuetrex, geo } from '@exceeder/vuetrex';
+import { Vuetrex, defineGeometryOutputs, geo, inspectGeometry } from '@exceeder/vuetrex';
 import { getCurrentInstance } from 'vue';
 export default {
   components: {
@@ -40,12 +45,22 @@ export default {
     msg: String
   },
   setup() {
+    const parts = defineGeometryOutputs('consumer.parts', () => {
+      const core = geo.box()
+      const satellites = geo.distribute(
+        geo.icosphere({ radius: 0.2 }),
+        geo.radialPoints({ count: 4, radius: 1 }),
+      )
+      return { core, satellites, whole: geo.join([core, satellites]) }
+    })({})
+    const proceduralGeometry = parts.whole
+      .material('accent')
+      .parameterMap({ scale: geo.param('scale', 1) })
     console.log("Current Instance:",getCurrentInstance())
     console.log("Vuetrex loaded:",Vuetrex)
+    console.log("Procedural inspection:", inspectGeometry(proceduralGeometry, { scale: 1.15 }))
     return {
-      proceduralGeometry: geo.distribute(geo.box(), {
-        points: [[0, 0, 0], [1.5, 0, 0]],
-      }),
+      proceduralGeometry,
     }
   }
 }

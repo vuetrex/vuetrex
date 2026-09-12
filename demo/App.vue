@@ -43,6 +43,12 @@
         <TabF />
       </section>
     </tab>
+    <tab title="Recursive quads">
+      <h1>Five-level recursive quads</h1>
+      <section>
+        <TabG />
+      </section>
+    </tab>
   </tabs>
 
 </template>
@@ -54,6 +60,7 @@ import TabC from './components/TabC.vue';
 import TabD from './components/TabD.vue';
 import TabE from './components/TabE.vue';
 import TabF from './components/TabF.vue';
+import TabG from './components/TabG.vue';
 import Tabs from './components/Tabs.vue';
 import Tab from './components/Tab.vue';
 import {defineComponent, ref, reactive} from 'vue';
@@ -66,6 +73,7 @@ export default defineComponent( {
     TabD,
     TabE,
     TabF,
+    TabG,
     Tabs,
     Tab
   },

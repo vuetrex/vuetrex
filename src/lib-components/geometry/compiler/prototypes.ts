@@ -2,11 +2,13 @@ import * as THREE from 'three'
 import type {
     BoxParameters,
     GeometryPrototype,
+    GeometryParameterValues,
     GeometrySource,
     IcosphereParameters,
     LineParameters,
     PlaneParameters,
 } from '@/lib-components/geometry/types.js'
+import { resolveGeometryValue } from '@/lib-components/geometry/parameters.js'
 import { finiteNumber, integer, toVector3 } from '@/lib-components/geometry/values.js'
 
 interface PrototypeEntry {
@@ -24,11 +26,12 @@ function numberSignature(value: number): string {
     return Number.isInteger(value) ? String(value) : value.toPrecision(12)
 }
 
-function linePoints(parameters: LineParameters): THREE.Vector3[] {
-    if (parameters.points && parameters.points.length >= 2) {
-        return parameters.points.map(point => toVector3(point))
+function linePoints(parameters: LineParameters, values: GeometryParameterValues): THREE.Vector3[] {
+    const configuredPoints = resolveGeometryValue(parameters.points, values)
+    if (configuredPoints && configuredPoints.length >= 2) {
+        return configuredPoints.map(point => toVector3(point))
     }
-    const length = finiteNumber(parameters.length, 1, 0)
+    const length = finiteNumber(resolveGeometryValue(parameters.length, values), 1, 0)
     return [new THREE.Vector3(), new THREE.Vector3(0, length, 0)]
 }
 
@@ -48,10 +51,10 @@ function lineCurve(
     return path
 }
 
-function describeLine(parameters: LineParameters): PrototypeDescription {
-    const points = linePoints(parameters)
+function describeLine(parameters: LineParameters, values: GeometryParameterValues): PrototypeDescription {
+    const points = linePoints(parameters, values)
     const closed = parameters.closed === true
-    const thickness = finiteNumber(parameters.thickness, 0, 0)
+    const thickness = finiteNumber(resolveGeometryValue(parameters.thickness, values), 0, 0)
     const pointSignature = points.map(point => point.toArray().map(numberSignature).join(',')).join(';')
     if (thickness <= 0) {
         const renderedPoints = closed ? [...points, points[0]] : points
@@ -62,9 +65,9 @@ function describeLine(parameters: LineParameters): PrototypeDescription {
         }
     }
 
-    const radialSegments = integer(parameters.radialSegments, 8, 3)
+    const radialSegments = integer(resolveGeometryValue(parameters.radialSegments, values), 8, 3)
     const tubularSegments = integer(
-        parameters.tubularSegments,
+        resolveGeometryValue(parameters.tubularSegments, values),
         Math.max(8, (points.length - 1) * 8),
         1,
     )
@@ -85,11 +88,11 @@ function describeLine(parameters: LineParameters): PrototypeDescription {
     }
 }
 
-function describePlane(parameters: PlaneParameters): PrototypeDescription {
-    const width = finiteNumber(parameters.width, 1, 0.000001)
-    const depth = finiteNumber(parameters.depth, 1, 0.000001)
-    const widthSegments = integer(parameters.widthSegments, 1, 1)
-    const depthSegments = integer(parameters.depthSegments, 1, 1)
+function describePlane(parameters: PlaneParameters, values: GeometryParameterValues): PrototypeDescription {
+    const width = finiteNumber(resolveGeometryValue(parameters.width, values), 1, 0.000001)
+    const depth = finiteNumber(resolveGeometryValue(parameters.depth, values), 1, 0.000001)
+    const widthSegments = integer(resolveGeometryValue(parameters.widthSegments, values), 1, 1)
+    const depthSegments = integer(resolveGeometryValue(parameters.depthSegments, values), 1, 1)
     return {
         signature: `plane:${numberSignature(width)}:${numberSignature(depth)}:${widthSegments}:${depthSegments}`,
         topology: 'mesh',
@@ -101,13 +104,13 @@ function describePlane(parameters: PlaneParameters): PrototypeDescription {
     }
 }
 
-function describeBox(parameters: BoxParameters): PrototypeDescription {
-    const width = finiteNumber(parameters.width, 1, 0.000001)
-    const height = finiteNumber(parameters.height, 1, 0.000001)
-    const depth = finiteNumber(parameters.depth, 1, 0.000001)
-    const widthSegments = integer(parameters.widthSegments, 1, 1)
-    const heightSegments = integer(parameters.heightSegments, 1, 1)
-    const depthSegments = integer(parameters.depthSegments, 1, 1)
+function describeBox(parameters: BoxParameters, values: GeometryParameterValues): PrototypeDescription {
+    const width = finiteNumber(resolveGeometryValue(parameters.width, values), 1, 0.000001)
+    const height = finiteNumber(resolveGeometryValue(parameters.height, values), 1, 0.000001)
+    const depth = finiteNumber(resolveGeometryValue(parameters.depth, values), 1, 0.000001)
+    const widthSegments = integer(resolveGeometryValue(parameters.widthSegments, values), 1, 1)
+    const heightSegments = integer(resolveGeometryValue(parameters.heightSegments, values), 1, 1)
+    const depthSegments = integer(resolveGeometryValue(parameters.depthSegments, values), 1, 1)
     return {
         signature: [
             'box', numberSignature(width), numberSignature(height), numberSignature(depth),
@@ -118,9 +121,9 @@ function describeBox(parameters: BoxParameters): PrototypeDescription {
     }
 }
 
-function describeIcosphere(parameters: IcosphereParameters): PrototypeDescription {
-    const radius = finiteNumber(parameters.radius, 1, 0.000001)
-    const detail = integer(parameters.detail, 0, 0)
+function describeIcosphere(parameters: IcosphereParameters, values: GeometryParameterValues): PrototypeDescription {
+    const radius = finiteNumber(resolveGeometryValue(parameters.radius, values), 1, 0.000001)
+    const detail = integer(resolveGeometryValue(parameters.detail, values), 0, 0)
     return {
         signature: `icosphere:${numberSignature(radius)}:${detail}`,
         topology: 'mesh',
@@ -128,27 +131,19 @@ function describeIcosphere(parameters: IcosphereParameters): PrototypeDescriptio
     }
 }
 
-export class GeometryPrototypeRegistry {
-    private readonly entries = new Map<string, PrototypeEntry>()
-    private generation = 0
+interface SharedPrototypeEntry {
+    prototype: GeometryPrototype
+    references: number
+}
 
-    beginCompilation(): void {
-        this.generation++
-    }
+export class GeometryPrototypePool {
+    private readonly entries = new Map<string, SharedPrototypeEntry>()
+    private creations = 0
 
-    resolve(source: GeometrySource): GeometryPrototype {
-        let description: PrototypeDescription
-        switch (source.kind) {
-            case 'line': description = describeLine(source.parameters as LineParameters); break
-            case 'plane': description = describePlane(source.parameters as PlaneParameters); break
-            case 'box': description = describeBox(source.parameters as BoxParameters); break
-            case 'icosphere': description = describeIcosphere(source.parameters as IcosphereParameters); break
-            default: throw new Error(`'${source.kind}' is not a procedural geometry primitive.`)
-        }
-
+    acquire(description: PrototypeDescription): GeometryPrototype {
         const existing = this.entries.get(description.signature)
         if (existing) {
-            existing.generation = this.generation
+            existing.references++
             return existing.prototype
         }
         const geometry = description.create()
@@ -159,6 +154,66 @@ export class GeometryPrototypeRegistry {
             topology: description.topology,
             geometry,
         })
+        this.entries.set(description.signature, { prototype, references: 1 })
+        this.creations++
+        return prototype
+    }
+
+    release(signature: string): void {
+        const entry = this.entries.get(signature)
+        if (!entry) return
+        entry.references--
+        if (entry.references > 0) return
+        entry.prototype.geometry.dispose()
+        this.entries.delete(signature)
+    }
+
+    get size(): number {
+        return this.entries.size
+    }
+
+    get creationCount(): number {
+        return this.creations
+    }
+}
+
+const sharedPools = new WeakMap<object, GeometryPrototypePool>()
+
+export function geometryPrototypePoolFor(owner: object): GeometryPrototypePool {
+    let pool = sharedPools.get(owner)
+    if (!pool) {
+        pool = new GeometryPrototypePool()
+        sharedPools.set(owner, pool)
+    }
+    return pool
+}
+
+export class GeometryPrototypeRegistry {
+    private readonly entries = new Map<string, PrototypeEntry>()
+    private generation = 0
+
+    constructor(readonly pool = new GeometryPrototypePool()) {}
+
+    beginCompilation(): void {
+        this.generation++
+    }
+
+    resolve(source: GeometrySource, values: GeometryParameterValues = {}): GeometryPrototype {
+        let description: PrototypeDescription
+        switch (source.kind) {
+            case 'line': description = describeLine(source.parameters as LineParameters, values); break
+            case 'plane': description = describePlane(source.parameters as PlaneParameters, values); break
+            case 'box': description = describeBox(source.parameters as BoxParameters, values); break
+            case 'icosphere': description = describeIcosphere(source.parameters as IcosphereParameters, values); break
+            default: throw new Error(`'${source.kind}' is not a procedural geometry primitive.`)
+        }
+
+        const existing = this.entries.get(description.signature)
+        if (existing) {
+            existing.generation = this.generation
+            return existing.prototype
+        }
+        const prototype = this.pool.acquire(description)
         this.entries.set(description.signature, { prototype, generation: this.generation })
         return prototype
     }
@@ -166,17 +221,25 @@ export class GeometryPrototypeRegistry {
     endCompilation(): void {
         for (const [signature, entry] of this.entries) {
             if (entry.generation === this.generation) continue
-            entry.prototype.geometry.dispose()
+            this.pool.release(signature)
             this.entries.delete(signature)
         }
     }
 
     dispose(): void {
-        for (const entry of this.entries.values()) entry.prototype.geometry.dispose()
+        for (const signature of this.entries.keys()) this.pool.release(signature)
         this.entries.clear()
     }
 
     get size(): number {
         return this.entries.size
+    }
+
+    get sharedSize(): number {
+        return this.pool.size
+    }
+
+    get sharedCreationCount(): number {
+        return this.pool.creationCount
     }
 }

@@ -199,14 +199,22 @@ its source `from-port`. It emits one shared trunk and one branch per resolved ta
 ```vue
 <vx-geometry
   :graph="geometry"
+  :parameters="{ scale, color }"
   :material="{ color: 0xffffff, roughness: 0.7 }"
+  :materials="{ foliage: { roughness: 0.55 } }"
   anchor="base"
 />
 ```
 
-`graph` accepts a `GeometrySource` created by the exported `geo` primitives/operators or `defineGeometry()` modules.
-The result is one semantic Vuetrex node backed by as many compatible Three.js instance batches and thin lines as the
-graph requires. `anchor` is `base`, `center`, or `origin`. See [Procedural geometry](/guide/procedural-geometry).
+`graph` accepts a `GeometrySource` created by the exported `geo` primitives/operators or geometry modules. The result
+is one semantic Vuetrex node backed by as many compatible Three.js instance batches and thin lines as the graph
+requires. `parameters` resolves `geo.param()` bindings without replacing the graph. `materials` maps `geo.material()`
+channel names to `VxMaterialProps`. `anchor` is `base`, `center`, or `origin`. See
+[Procedural geometry](/guide/procedural-geometry).
+
+Every `GeometrySource` supports immutable fluent composition through `.transform()`, `.distribute()`,
+`.parameterMap()`, `.material()`, `.named()`, `.randomize()`, `.join()`, and `.pipe()`. The existing functional
+`geo.transform(source, options)` style remains supported and interoperable.
 
 ### Display wall
 
@@ -251,7 +259,7 @@ Built-in interactive nodes support `click`, `dblclick`, `pointerenter`, and `poi
 interface VxMouseEvent extends MouseEvent {
   vxNode: Node
   vxPosition: unknown
-  vxInstance?: InstanceHit<unknown>
+  vxInstance?: InstanceHit<unknown> | GeometryHit<unknown>
 }
 ```
 
@@ -268,5 +276,6 @@ The package exports:
 - `registerElement()` and custom element registry types
 - Instance geometry, encoding, key, anchor, item, and hit types
 - The complete [composition API](/api/composition)
-- `geo`, `defineGeometry()`, `geometryField`, `GeometryNode`, and the procedural geometry source, module, field,
-  distribution, transform, randomization, and primitive option types
+- `geo`, `defineGeometry()`, `defineGeometryOutputs()`, parameter and point-domain helpers, `GeometryNode`, graph
+  inspection functions, and the procedural geometry source, output, material-channel, semantic, diagnostic, and
+  operator option types

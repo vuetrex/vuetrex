@@ -6,8 +6,9 @@ outline: deep
 
 # Procedural Geometry Graph Implementation Plan
 
-**Status:** Implemented on 2026-09-06. Automated verification is complete; interactive browser visual QA remains
-pending because the available browser blocks localhost previews.
+**Status:** Initial implementation completed on 2026-09-06 and the composability/runtime expansion completed on
+2026-09-07. Automated verification is complete; interactive browser visual QA remains pending because the available
+browser blocks localhost previews.
 
 **Goal:** Add a procedural geometry package under `src/lib-components/geometry/` that can express Blender Geometry
 Nodes-like pipelines while retaining Vue reactivity. Geometry primitives and operators must compose uniformly, support
@@ -823,3 +824,23 @@ The first version is complete when:
     transformed, randomized, distributed, or combined at the top level.
 12. Documentation explicitly states first-version limitations and leaves an additive route to named outputs, typed
     point/curve domains, true CSG operations, and an optional Vue template facade.
+
+---
+
+## 2026-09-07 composability and runtime expansion
+
+The additive routes reserved by the initial plan are now implemented without removing the first-version API:
+
+- [x] Add stable `geo.param()` bindings and `<vx-geometry :parameters>` so attribute-only changes preserve authored
+      graph identity and GPU topology.
+- [x] Add typed `defineGeometryOutputs()` modules plus `geo.named()` semantic groups.
+- [x] Add `geo.material()` channels and `<vx-geometry :materials>` batch material overrides.
+- [x] Add reusable explicit, curve, radial, and mapped point domains.
+- [x] Add semantic record queries, generated hit metadata, and local/world/item bounds.
+- [x] Add `geo.join()` and retain `geo.boolean()` as a deprecated compatibility alias; true CSG remains a separate
+      future baking feature.
+- [x] Add serializable/DOT graph descriptions, offline inspection, mounted runtime diagnostics, update classification,
+      bounds, counts, timings, and key-stability warnings.
+- [x] Share immutable topology prototypes through a stage-scoped reference-counted pool.
+- [x] Exercise named outputs and materials in the plant demo and stable parameters/point domains in the health demo.
+- [x] Add focused composability tests and external ESM coverage for the expanded public surface.

@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { InstanceNode, type VuetrexStage } from '@/lib-components/index.js'
+import { GeometryNode, InstanceNode, type VuetrexStage } from '@/lib-components/index.js'
 import type { ThemeMode } from '../types.js'
 
 interface SelectedPodLightOptions {
@@ -60,7 +60,8 @@ export function createSelectedPodLight(
     let hasTarget = false
     if (active && deploymentId && podId) {
       const node = stage.getById(`${deploymentId}:pods`)?.node
-      if (node instanceof InstanceNode && node.instanceWorldBounds(podId, bounds)) {
+      if ((node instanceof InstanceNode || node instanceof GeometryNode)
+        && node.instanceWorldBounds(podId, bounds)) {
         bounds.getCenter(center)
         light.position.set(center.x, bounds.max.y + LIGHT_HEIGHT, center.z)
         lightTarget.position.set(center.x, 0, center.z)

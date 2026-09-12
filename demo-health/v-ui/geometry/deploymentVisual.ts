@@ -80,39 +80,27 @@ const gatewayVisual = defineGeometry<DeploymentVisualParameters>('health.gateway
     parameters.primary,
     'gateway-beam-color',
   )
-  const beams = geo.distribute(beam, {
-    key: 'gateway-beams',
-    pattern: 'custom',
-    count: rayCount,
-    placement(index, count) {
-      const unit = count <= 1 ? 0.5 : index / (count - 1)
+  const terminalSites = geo.points(Array.from({ length: rayCount }, (_, index) => {
+      const unit = rayCount <= 1 ? 0.5 : index / (rayCount - 1)
       const angle = (unit - 0.5) * 1.65
       return {
-        key: `beam-${index}`,
-        position: [0, 0.115, 0],
-        direction: [Math.sin(angle) * 0.95, 0.8, Math.cos(angle) * 0.24],
-        scale: 0.86 + unit * 0.2,
+        key: `terminal-${index}`,
+        position: [Math.sin(angle) * 0.105, 0.22 + Math.cos(angle) * 0.025, Math.cos(angle) * 0.04] as const,
       }
-    },
-  })
+  }))
+  const beamSites = geo.mapPoints(terminalSites, site => ({
+    key: site.key,
+    position: [0, 0.115, 0],
+    direction: [site.position.x, site.position.y - 0.115, site.position.z],
+    scale: 0.86 + (site.count <= 1 ? 0.5 : site.index / (site.count - 1)) * 0.2,
+  }))
+  const beams = geo.distribute(beam, beamSites)
   const terminals = geo.distribute(
     colorize(geo.icosphere({ key: 'gateway-terminal', radius: 0.026, detail: 1 }), parameters.accent, 'terminal-color'),
-    {
-      key: 'gateway-terminals',
-      pattern: 'custom',
-      count: rayCount,
-      placement(index, count) {
-        const unit = count <= 1 ? 0.5 : index / (count - 1)
-        const angle = (unit - 0.5) * 1.65
-        return {
-          key: `terminal-${index}`,
-          position: [Math.sin(angle) * 0.105, 0.22 + Math.cos(angle) * 0.025, Math.cos(angle) * 0.04],
-        }
-      },
-    },
+    terminalSites,
   )
 
-  return geo.boolean([
+  return geo.join([
     colorize(geo.line({ key: 'gateway-mast', length: 0.15, thickness: 0.016, radialSegments: 7 }), parameters.status, 'mast-color'),
     transform(colorize(geo.icosphere({ key: 'gateway-core', radius: 0.055, detail: 1 }), parameters.primary, 'core-color'), 'core-position', [0, 0.065, 0]),
     beams,
@@ -137,7 +125,7 @@ const lockVisual = defineGeometry<DeploymentVisualParameters>('health.lock-visua
     },
   )
 
-  return geo.boolean([
+  return geo.join([
     transform(
       colorize(geo.box({ key: 'lock-body', width: 0.23, height: 0.15, depth: 0.14 }), parameters.primary, 'lock-body-color'),
       'lock-body-position',
@@ -179,7 +167,7 @@ const catalogVisual = defineGeometry<DeploymentVisualParameters>('health.catalog
     },
   )
 
-  return geo.boolean([
+  return geo.join([
     colorize(geo.line({ key: 'catalog-spine', length: 0.31, thickness: 0.012, radialSegments: 6 }), parameters.status, 'catalog-spine-color'),
     geo.randomize(shelves, {
       key: 'catalog-shelf-variation',
@@ -198,11 +186,12 @@ const workflowVisual = defineGeometry<DeploymentVisualParameters>('health.workfl
     const x = (index % 2 === 0 ? -1 : 1) * (0.055 + parameters.stress * 0.025)
     return [x, 0.025 + unit * 0.285, Math.sin(index * 1.7) * 0.025] as const
   })
+  const workflowSites = geo.points(points.map((position, index) => ({
+    key: `step-${index}`,
+    position,
+  })))
   const nodes = geo.parameterMap(
-    geo.distribute(geo.box({ key: 'workflow-step', width: 0.052, height: 0.052, depth: 0.052 }), {
-      key: 'workflow-steps',
-      points: points.map((position, index) => ({ key: `step-${index}`, position })),
-    }),
+    geo.distribute(geo.box({ key: 'workflow-step', width: 0.052, height: 0.052, depth: 0.052 }), workflowSites),
     {
       key: 'workflow-step-colors',
       color: ({ index }) => index === nodeCount - 1
@@ -212,7 +201,7 @@ const workflowVisual = defineGeometry<DeploymentVisualParameters>('health.workfl
     },
   )
 
-  return geo.boolean([
+  return geo.join([
     colorize(geo.line({
       key: 'workflow-path',
       points,
@@ -255,7 +244,7 @@ const orbitVisual = defineGeometry<DeploymentVisualParameters>('health.orbit-vis
     },
   )
 
-  return geo.boolean([
+  return geo.join([
     colorize(geo.line({
       key: 'orbit-ring',
       points: circlePoints(radius, centerY, 18),
@@ -307,4 +296,44 @@ export function deploymentVisualFor(deployment: DeploymentViewModel): GeometrySo
     status: statusColor(deployment.status),
   }
   return factories[deploymentVisualKind(deployment.id)](parameters)
+}
+
+const stableGraphs = new Map<string, GeometrySource>()
+
+/** A graph whose identity changes only when structure or status changes. */
+export function stableDeploymentVisualFor(deployment: DeploymentViewModel): GeometrySource {
+  const cacheKey = `${deployment.id}:${deployment.pods.length}:${deployment.status}`
+  const existing = stableGraphs.get(cacheKey)
+  if (existing) return existing
+  const baseline: DeploymentViewModel = {
+    ...deployment,
+    readyReplicas: deployment.desiredReplicas,
+    metrics: {
+      ...deployment.metrics,
+      requestsPerSecond: 360,
+      latencyP95Ms: 80,
+      errorRate: 0,
+    },
+  }
+  const graph = geo.transform(deploymentVisualFor(baseline), {
+    key: 'health-live-parameters',
+    scale: geo.param('visualScale', 1),
+    rotate: geo.param('visualRotation', [0, 0, 0] as const),
+  })
+  stableGraphs.set(cacheKey, graph)
+  return graph
+}
+
+export function deploymentVisualParametersFor(
+  deployment: DeploymentViewModel,
+): Readonly<Record<string, unknown>> {
+  const readiness = deployment.desiredReplicas <= 0
+    ? 0
+    : clamp(deployment.readyReplicas / deployment.desiredReplicas)
+  const activity = clamp(deployment.metrics.requestsPerSecond / 900)
+  const stress = clamp(deployment.metrics.latencyP95Ms / 450 + deployment.metrics.errorRate * 8)
+  return {
+    visualScale: 0.94 + readiness * 0.04 + activity * 0.05,
+    visualRotation: [stress * 0.025, 0, stress * 0.055],
+  }
 }

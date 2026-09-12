@@ -1,7 +1,12 @@
 import * as THREE from 'three'
-import type { InstanceHit } from '@/lib-components/nodes/InstanceNode.js'
 import type { Element3d } from '@/lib-components/three/element3d.js'
-import type { GeometryPrototype, GeometryRecord, GeometrySet } from '@/lib-components/geometry/types.js'
+import type {
+    GeometryHit,
+    GeometryPrototype,
+    GeometryRecord,
+    GeometrySet,
+} from '@/lib-components/geometry/types.js'
+import { applyMaterialProps, type VxMaterialProps } from '@/lib-components/nodes/material.js'
 
 const hiddenMatrix = new THREE.Matrix4().makeScale(0, 0, 0)
 
@@ -13,10 +18,11 @@ function nextCapacity(required: number): number {
 
 interface MeshBatch {
     prototype: GeometryPrototype
+    materialKey: string
     mesh: THREE.InstancedMesh
     capacity: number
     slotByKey: Map<string, number>
-    hitBySlot: Array<InstanceHit<unknown> | undefined>
+    hitBySlot: Array<GeometryHit<unknown> | undefined>
     freeSlots: number[]
     nextSlot: number
 }
@@ -24,6 +30,7 @@ interface MeshBatch {
 interface LineEntry {
     line: THREE.Line
     material: THREE.LineBasicMaterial
+    materialKey: string
     recordColor: THREE.Color
 }
 
@@ -31,6 +38,8 @@ export class GeometryRealizer {
     private readonly batches = new Map<string, MeshBatch>()
     private readonly batchByObject = new WeakMap<THREE.Object3D, MeshBatch>()
     private readonly lines = new Map<string, LineEntry>()
+    private readonly channelMaterials = new Map<string, THREE.MeshStandardMaterial>()
+    private materialChannels: Readonly<Record<string, VxMaterialProps>> = {}
 
     constructor(
         readonly group: THREE.Group,
@@ -41,22 +50,25 @@ export class GeometryRealizer {
     realize(set: GeometrySet): void {
         const meshRecords = new Map<string, GeometryRecord[]>()
         const lineRecords = new Map<string, GeometryRecord>()
+        const activeMaterialKeys = new Set<string>()
         for (const record of set.records) {
+            activeMaterialKeys.add(record.materialKey)
             if (record.prototype.topology === 'mesh') {
-                const records = meshRecords.get(record.prototype.signature) ?? []
+                const batchKey = `${record.prototype.signature}\u0000${record.materialKey}`
+                const records = meshRecords.get(batchKey) ?? []
                 records.push(record)
-                meshRecords.set(record.prototype.signature, records)
+                meshRecords.set(batchKey, records)
             } else {
-                lineRecords.set(`${record.prototype.signature}\u0000${record.key}`, record)
+                lineRecords.set(`${record.prototype.signature}\u0000${record.materialKey}\u0000${record.key}`, record)
             }
         }
 
-        for (const [signature, batch] of [...this.batches]) {
-            if (meshRecords.has(signature)) continue
+        for (const [batchKey, batch] of [...this.batches]) {
+            if (meshRecords.has(batchKey)) continue
             this.removeBatch(batch)
-            this.batches.delete(signature)
+            this.batches.delete(batchKey)
         }
-        for (const [signature, records] of meshRecords) this.writeBatch(signature, records)
+        for (const [batchKey, records] of meshRecords) this.writeBatch(batchKey, records)
 
         for (const [key, entry] of [...this.lines]) {
             if (lineRecords.has(key)) continue
@@ -65,6 +77,11 @@ export class GeometryRealizer {
             this.lines.delete(key)
         }
         for (const [key, record] of lineRecords) this.writeLine(key, record)
+        for (const [key, material] of this.channelMaterials) {
+            if (activeMaterialKeys.has(key)) continue
+            material.dispose()
+            this.channelMaterials.delete(key)
+        }
     }
 
     updateIdentity(element: Element3d, id: string, disabled: boolean): void {
@@ -80,14 +97,15 @@ export class GeometryRealizer {
 
     updateLineMaterials(): void {
         for (const entry of this.lines.values()) {
-            entry.material.color.copy(this.material.color).multiply(entry.recordColor)
-            entry.material.opacity = this.material.opacity
-            entry.material.transparent = this.material.transparent
+            const channel = this.materialFor(entry.materialKey)
+            entry.material.color.copy(channel.color).multiply(entry.recordColor)
+            entry.material.opacity = channel.opacity
+            entry.material.transparent = channel.transparent
             entry.material.needsUpdate = true
         }
     }
 
-    instanceHitAt(instanceIndex: number, object?: THREE.Object3D): InstanceHit<unknown> | undefined {
+    instanceHitAt(instanceIndex: number, object?: THREE.Object3D): GeometryHit<unknown> | undefined {
         if (object) return this.batchByObject.get(object)?.hitBySlot[instanceIndex]
         if (this.batches.size === 1) return this.batches.values().next().value?.hitBySlot[instanceIndex]
         return undefined
@@ -101,20 +119,34 @@ export class GeometryRealizer {
             entry.material.dispose()
         }
         this.lines.clear()
+        for (const material of this.channelMaterials.values()) material.dispose()
+        this.channelMaterials.clear()
+    }
+
+    updateMaterials(channels: Readonly<Record<string, VxMaterialProps>> = {}): void {
+        this.materialChannels = channels
+        for (const [key, material] of this.channelMaterials) {
+            material.copy(this.material)
+            const props = channels[key]
+            if (props) applyMaterialProps(material, props)
+        }
+        for (const batch of this.batches.values()) batch.mesh.material = this.materialFor(batch.materialKey)
+        this.updateLineMaterials()
     }
 
     get batchCount(): number {
         return this.batches.size
     }
 
-    private makeBatch(prototype: GeometryPrototype, capacity: number): MeshBatch {
-        const mesh = new THREE.InstancedMesh(prototype.geometry, this.material, capacity)
+    private makeBatch(prototype: GeometryPrototype, materialKey: string, capacity: number): MeshBatch {
+        const mesh = new THREE.InstancedMesh(prototype.geometry, this.materialFor(materialKey), capacity)
         mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
         mesh.castShadow = this.shadowsEnabled()
         mesh.receiveShadow = this.shadowsEnabled()
         this.group.add(mesh)
         const batch: MeshBatch = {
             prototype,
+            materialKey,
             mesh,
             capacity,
             slotByKey: new Map(),
@@ -128,7 +160,7 @@ export class GeometryRealizer {
 
     private ensureCapacity(batch: MeshBatch, required: number): MeshBatch {
         if (required <= batch.capacity) return batch
-        const replacement = this.makeBatch(batch.prototype, nextCapacity(required))
+        const replacement = this.makeBatch(batch.prototype, batch.materialKey, nextCapacity(required))
         replacement.slotByKey = batch.slotByKey
         replacement.hitBySlot = batch.hitBySlot
         replacement.freeSlots = batch.freeSlots
@@ -137,8 +169,9 @@ export class GeometryRealizer {
         return replacement
     }
 
-    private writeBatch(signature: string, records: readonly GeometryRecord[]): void {
-        let batch = this.batches.get(signature) ?? this.makeBatch(records[0].prototype, nextCapacity(records.length))
+    private writeBatch(batchKey: string, records: readonly GeometryRecord[]): void {
+        let batch = this.batches.get(batchKey)
+            ?? this.makeBatch(records[0].prototype, records[0].materialKey, nextCapacity(records.length))
         const activeKeys = new Set(records.map(record => record.key))
         for (const [key, slot] of [...batch.slotByKey]) {
             if (activeKeys.has(key)) continue
@@ -154,7 +187,7 @@ export class GeometryRealizer {
             batch.slotByKey.set(record.key, slot)
         }
         batch = this.ensureCapacity(batch, Math.max(1, batch.nextSlot))
-        this.batches.set(signature, batch)
+        this.batches.set(batchKey, batch)
 
         const highestSlot = records.reduce((highest, record) => Math.max(highest, batch.slotByKey.get(record.key) ?? -1), -1)
         for (let slot = 0; slot <= highestSlot; slot++) {
@@ -166,9 +199,12 @@ export class GeometryRealizer {
             batch.mesh.setMatrixAt(slot, record.visible ? record.matrix : hiddenMatrix)
             batch.mesh.setColorAt(slot, record.color)
             batch.hitBySlot[slot] = {
-                id: record.key,
+                id: semanticId(record),
                 item: record.context.item,
                 instanceIndex: slot,
+                recordKey: record.key,
+                materialKey: record.materialKey,
+                groups: record.groups,
             }
         }
         batch.mesh.count = highestSlot + 1
@@ -185,10 +221,11 @@ export class GeometryRealizer {
             const line = new THREE.Line(record.prototype.geometry, material)
             line.matrixAutoUpdate = false
             this.group.add(line)
-            entry = { line, material, recordColor: record.color.clone() }
+            entry = { line, material, materialKey: record.materialKey, recordColor: record.color.clone() }
             this.lines.set(key, entry)
         }
         entry.recordColor.copy(record.color)
+        entry.materialKey = record.materialKey
         entry.line.matrix.copy(record.matrix)
         entry.line.matrixWorldNeedsUpdate = true
         entry.line.visible = record.visible
@@ -196,14 +233,35 @@ export class GeometryRealizer {
     }
 
     private updateLineMaterial(entry: LineEntry): void {
-        entry.material.color.copy(this.material.color).multiply(entry.recordColor)
-        entry.material.opacity = this.material.opacity
-        entry.material.transparent = this.material.transparent
+        const channel = this.materialFor(entry.materialKey)
+        entry.material.color.copy(channel.color).multiply(entry.recordColor)
+        entry.material.opacity = channel.opacity
+        entry.material.transparent = channel.transparent
     }
 
     private removeBatch(batch: MeshBatch): void {
         batch.mesh.removeFromParent()
         batch.mesh.dispose()
     }
+
+    private materialFor(key: string): THREE.MeshStandardMaterial {
+        if (key === 'default') return this.material
+        let material = this.channelMaterials.get(key)
+        if (!material) {
+            material = this.material.clone()
+            const props = this.materialChannels[key]
+            if (props) applyMaterialProps(material, props)
+            this.channelMaterials.set(key, material)
+        }
+        return material
+    }
 }
 
+function semanticId(record: GeometryRecord): string {
+    const item = record.context.item
+    if (item && typeof item === 'object' && 'id' in item) {
+        const id = (item as Record<string, unknown>).id
+        if (id !== undefined && id !== null && id !== '') return String(id)
+    }
+    return record.context.domainKey ?? record.key
+}

@@ -33,6 +33,7 @@
         :id="`${deployment.id}:procedural-visual`"
         :name="`${displayName} procedural signature`"
         :graph="proceduralVisual"
+        :parameters="proceduralParameters"
         :material="proceduralMaterial"
         anchor="base"
         disabled
@@ -79,7 +80,10 @@ import * as THREE from 'three'
 import { computed } from 'vue'
 import type { InstanceEncoding, InstanceHit, VxMouseEvent } from '@/lib-components/index.js'
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
-import { deploymentVisualFor } from '../../geometry/deploymentVisual.js'
+import {
+  deploymentVisualParametersFor,
+  stableDeploymentVisualFor,
+} from '../../geometry/deploymentVisual.js'
 import type { DeploymentViewModel } from '../../types.js'
 import type { ThemeMode } from '../../types.js'
 
@@ -155,7 +159,8 @@ const trafficHeight = computed(() =>
 const latencyHeight = computed(() =>
   0.10 + Math.min(0.24, props.deployment.metrics.latencyP95Ms / 800),
 )
-const proceduralVisual = computed(() => deploymentVisualFor(props.deployment))
+const proceduralVisual = computed(() => stableDeploymentVisualFor(props.deployment))
+const proceduralParameters = computed(() => deploymentVisualParametersFor(props.deployment))
 const proceduralMaterial = computed(() => ({
   color: props.theme === 'light' ? 0xffffff : 0xe8f3f6,
   roughness: 0.38,

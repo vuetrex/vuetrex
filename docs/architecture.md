@@ -107,15 +107,19 @@ The procedural package separates three representations:
 - realized objects owned by `GeometryNode`, which groups compatible records into `InstancedMesh` batches and renders
   zero-thickness lines separately.
 
-`defineGeometry()` packages a parametrized subgraph without changing its output type. A module call remains a
-`GeometrySource`, so modules can call modules, shared sources can form a DAG, and bounded construction-time recursion
-can express self-similar models. Graph operators are not `Base`/`Node` subclasses and do not register with the stage.
-Only `<vx-geometry>` is a renderer element and semantic scene node.
+`defineGeometry()` packages a parametrized subgraph without changing its output type; `defineGeometryOutputs()` exposes
+several independently composable named sources. A module output remains a `GeometrySource`, so modules can call
+modules, shared sources can form a DAG, and bounded construction-time recursion can express self-similar models. Point
+domains are immutable placement sources shared by Distribute operators. Graph operators are not `Base`/`Node`
+subclasses and do not register with the stage. Only `<vx-geometry>` is a renderer element and semantic scene node.
+Every immutable `GeometrySource` inherits the same non-enumerable fluent operator prototype, so chained and functional
+authoring construct identical graph nodes without adding wrappers to the evaluated DAG.
 
-The `GeometryNode` compiler effect reads the shallow graph prop, evaluates it deterministically, reconciles keyed
-instance records, and reports compiled bounds. Separate effects apply material and layout/identity state so geometry
-evaluation does not mutate a reactive dependency it consumes. Prototype topology is cached by signature for the node's
-lifetime and disposed when no longer referenced or when the node unmounts.
+The `GeometryNode` compiler effect reads the shallow graph and reactive parameter props, evaluates deterministically,
+reconciles keyed instance records, and reports compiled bounds. Parameter-only transform/color changes rewrite stable
+instance batches without rebuilding topology. Separate effects apply default/channel materials and layout/identity
+state so geometry evaluation does not mutate a reactive dependency it consumes. Prototype topology is cached by
+signature in a stage-scoped reference-counted pool and disposed after its final procedural node owner unmounts.
 
 ### Composition recipes (`composition/index.ts`)
 

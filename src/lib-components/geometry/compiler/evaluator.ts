@@ -1,18 +1,23 @@
 import * as THREE from 'three'
 import { evaluateField } from '@/lib-components/geometry/fields.js'
 import { keyedRandom, randomBetween } from '@/lib-components/geometry/random.js'
+import { resolveGeometryValue } from '@/lib-components/geometry/parameters.js'
 import type {
     ColorRange,
-    CombineOptions,
+    GeometryParameterValues,
     GeometryContext,
     GeometryRecord,
     GeometrySet,
     GeometrySource,
+    JoinOptions,
+    MaterialChannelOptions,
+    NamedGeometryOptions,
     NumberRange,
     ParameterMapOptions,
     RandomizeOptions,
     Vector3Like,
     VectorRange,
+    TransformParameters,
 } from '@/lib-components/geometry/types.js'
 import { composeTransform, toVector3 } from '@/lib-components/geometry/values.js'
 import { evaluateDistribution } from '@/lib-components/geometry/compiler/distribution.js'
@@ -133,7 +138,10 @@ export class GeometryEvaluator {
     private readonly cache = new WeakMap<GeometrySource<any>, GeometrySet>()
     private readonly visiting = new WeakMap<GeometrySource<any>, string>()
 
-    constructor(private readonly prototypes: GeometryPrototypeRegistry) {}
+    constructor(
+        private readonly prototypes: GeometryPrototypeRegistry,
+        private readonly parameters: GeometryParameterValues = {},
+    ) {}
 
     evaluate(source: GeometrySource<any>): GeometrySet {
         return this.evaluateNode(source, 'root')
@@ -154,10 +162,13 @@ export class GeometryEvaluator {
                 switch (source.kind) {
                     case 'module': result = this.evaluateNode(sourceInput(source, 'geometry'), `${path}/module`); break
                     case 'transform': result = this.evaluateTransform(source, path); break
-                    case 'boolean': result = this.evaluateBoolean(source, path); break
+                    case 'boolean':
+                    case 'join': result = this.evaluateJoin(source, path); break
                     case 'distribute': result = this.evaluateDistribute(source, path); break
                     case 'parameter-map': result = this.evaluateParameterMap(source, path); break
                     case 'randomize': result = this.evaluateRandomize(source, path); break
+                    case 'material': result = this.evaluateMaterial(source, path); break
+                    case 'named': result = this.evaluateNamed(source, path); break
                     default: throw new Error(`Unknown procedural geometry node kind: '${source.kind}'.`)
                 }
             }
@@ -170,7 +181,7 @@ export class GeometryEvaluator {
     }
 
     private evaluatePrimitive(source: GeometrySource, path: string): GeometrySet {
-        const prototype = this.prototypes.resolve(source)
+        const prototype = this.prototypes.resolve(source, this.parameters)
         const key = source.key ?? path
         const matrix = new THREE.Matrix4()
         const context: GeometryContext = Object.freeze({
@@ -186,6 +197,8 @@ export class GeometryEvaluator {
                 matrix,
                 color: new THREE.Color(0xffffff),
                 visible: true,
+                materialKey: 'default',
+                groups: Object.freeze([]),
                 context,
                 attributes: Object.freeze({}),
             })],
@@ -194,7 +207,13 @@ export class GeometryEvaluator {
 
     private evaluateTransform(source: GeometrySource, path: string): GeometrySet {
         const input = this.evaluateNode(sourceInput(source, 'geometry'), `${path}/geometry`)
-        const operatorMatrix = composeTransform(source.parameters)
+        const options = source.parameters as TransformParameters
+        const operatorMatrix = composeTransform({
+            translate: resolveGeometryValue(options.translate, this.parameters),
+            rotate: resolveGeometryValue(options.rotate, this.parameters),
+            scale: resolveGeometryValue(options.scale, this.parameters),
+            pivot: resolveGeometryValue(options.pivot, this.parameters),
+        })
         return {
             records: input.records.map((record, index) => {
                 const matrix = operatorMatrix.clone().multiply(record.matrix)
@@ -208,10 +227,10 @@ export class GeometryEvaluator {
         }
     }
 
-    private evaluateBoolean(source: GeometrySource, path: string): GeometrySet {
-        const options = source.parameters as CombineOptions
+    private evaluateJoin(source: GeometrySource, path: string): GeometrySet {
+        const options = source.parameters as JoinOptions
         if (options.operation !== 'combine') {
-            throw new Error(`Unsupported procedural Boolean operation: ${String(options.operation)}.`)
+            throw new Error(`Unsupported procedural join operation: ${String(options.operation)}.`)
         }
         return {
             records: sourceInputs(source, 'geometries').flatMap((input, inputIndex) =>
@@ -229,7 +248,7 @@ export class GeometryEvaluator {
         const surface = surfaceInput && !Array.isArray(surfaceInput)
             ? this.evaluateNode(surfaceInput as GeometrySource, `${path}/surface`)
             : undefined
-        const placements = evaluateDistribution(source.parameters as Record<string, unknown>, surface)
+        const placements = evaluateDistribution(source.parameters as Record<string, unknown>, surface, this.parameters)
         const records: GeometryRecord[] = []
         for (const placement of placements) {
             for (const sourceRecord of input.records) {
@@ -259,11 +278,11 @@ export class GeometryEvaluator {
             records: input.records.map((record, index) => {
                 const key = `${source.key ?? path}/${record.key}`
                 const context = Object.freeze({ ...record.context, key, index })
-                const position = evaluateField(options.position, context)
-                const rotation = evaluateField(options.rotation, context)
-                const scale = evaluateField(options.scale, context)
-                const colorValue = evaluateField(options.color, context)
-                const visibleValue = evaluateField(options.visible, context)
+                const position = evaluateField(options.position, context, this.parameters)
+                const rotation = evaluateField(options.rotation, context, this.parameters)
+                const scale = evaluateField(options.scale, context, this.parameters)
+                const colorValue = evaluateField(options.color, context, this.parameters)
+                const visibleValue = evaluateField(options.visible, context, this.parameters)
                 const localMatrix = composeTransform({ translate: position, rotate: rotation, scale })
                 const transformed = composeInRecordDomain(record, localMatrix)
                 const mappedRecord = { ...record, ...transformed, context } as GeometryRecord
@@ -281,16 +300,16 @@ export class GeometryEvaluator {
 
     private evaluateRandomize(source: GeometrySource, path: string): GeometrySet {
         const input = this.evaluateNode(sourceInput(source, 'geometry'), `${path}/geometry`)
-                const options = source.parameters as RandomizeOptions
-        const seed = options.seed ?? 0
+        const options = source.parameters as RandomizeOptions
+        const seed = resolveGeometryValue(options.seed, this.parameters) ?? 0
         const operatorKey = source.key ?? path
         return {
             records: input.records.map((record, index) => {
                 const key = `${operatorKey}/${record.key}`
                 const randomKey = `${operatorKey}:${record.context.domainKey ?? record.context.key}`
-                const translate = vectorJitter(options.translate, seed, randomKey, 'translate', 0)
-                const rotation = vectorJitter(options.rotation, seed, randomKey, 'rotation', 0)
-                const scale = randomScale(options.scale, seed, randomKey)
+                const translate = vectorJitter(resolveGeometryValue(options.translate, this.parameters), seed, randomKey, 'translate', 0)
+                const rotation = vectorJitter(resolveGeometryValue(options.rotation, this.parameters), seed, randomKey, 'rotation', 0)
+                const scale = randomScale(resolveGeometryValue(options.scale, this.parameters), seed, randomKey)
                 const localMatrix = composeTransform({ translate, rotate: rotation.toArray() as [number, number, number], scale })
                 const transformed = composeInRecordDomain(record, localMatrix)
                 const randomizedRecord = { ...record, ...transformed } as GeometryRecord
@@ -298,13 +317,55 @@ export class GeometryEvaluator {
                     key,
                     ...transformed,
                     context: contextAt(randomizedRecord, key, index),
-                    color: randomColor(options.color, seed, randomKey) ?? record.color.clone(),
+                    color: randomColor(resolveGeometryValue(options.color, this.parameters), seed, randomKey) ?? record.color.clone(),
+                })
+            }),
+        }
+    }
+
+    private evaluateMaterial(source: GeometrySource, path: string): GeometrySet {
+        const input = this.evaluateNode(sourceInput(source, 'geometry'), `${path}/geometry`)
+        const materialKey = resolveGeometryValue(
+            (source.parameters as MaterialChannelOptions).material,
+            this.parameters,
+        )
+        if (typeof materialKey !== 'string' || !materialKey.trim()) {
+            throw new TypeError('Procedural material channel names must be non-empty strings.')
+        }
+        return {
+            records: input.records.map((record, index) => {
+                const key = `${source.key ?? path}/${record.key}`
+                return cloneRecord(record, { key, materialKey, context: contextAt(record, key, index) })
+            }),
+        }
+    }
+
+    private evaluateNamed(source: GeometrySource, path: string): GeometrySet {
+        const input = this.evaluateNode(sourceInput(source, 'geometry'), `${path}/geometry`)
+        const name = resolveGeometryValue(
+            (source.parameters as NamedGeometryOptions).name,
+            this.parameters,
+        )
+        if (typeof name !== 'string' || !name.trim()) {
+            throw new TypeError('Procedural geometry group names must be non-empty strings.')
+        }
+        return {
+            records: input.records.map((record, index) => {
+                const key = `${source.key ?? path}/${record.key}`
+                return cloneRecord(record, {
+                    key,
+                    groups: Object.freeze([...record.groups, name]),
+                    context: contextAt(record, key, index),
                 })
             }),
         }
     }
 }
 
-export function evaluateGeometry(source: GeometrySource<any>, prototypes = new GeometryPrototypeRegistry()): GeometrySet {
-    return new GeometryEvaluator(prototypes).evaluate(source)
+export function evaluateGeometry(
+    source: GeometrySource<any>,
+    prototypes = new GeometryPrototypeRegistry(),
+    parameters: GeometryParameterValues = {},
+): GeometrySet {
+    return new GeometryEvaluator(prototypes, parameters).evaluate(source)
 }

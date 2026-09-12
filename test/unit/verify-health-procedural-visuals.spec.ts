@@ -5,7 +5,9 @@ import { GeometryPrototypeRegistry } from '@/lib-components/geometry/compiler/pr
 import { geometrySetBounds } from '@/lib-components/geometry/compiler/bounds.js'
 import {
   deploymentVisualFor,
+  deploymentVisualParametersFor,
   deploymentVisualKind,
+  stableDeploymentVisualFor,
 } from '../../demo-health/v-ui/geometry/deploymentVisual.js'
 import { researchNodeIds } from '../../demo-health/v-ui/model/sceneModel.js'
 import type { DeploymentViewModel } from '../../demo-health/v-ui/types.js'
@@ -87,5 +89,15 @@ describe('health deployment procedural visuals', () => {
     const stressedSet = evaluateGeometry(deploymentVisualFor(stressed))
     expect(stressedSet.records.length).toBeGreaterThan(calmSet.records.length)
     expect(stressedSet.records.some(record => record.color.getHex() === 0xd99a35)).toBe(true)
+  })
+
+  it('keeps the authored graph stable across continuous metric updates', () => {
+    const calm = deployment('payments-api')
+    const busy = deployment('payments-api', {
+      metrics: { ...calm.metrics, requestsPerSecond: 850, latencyP95Ms: 300, errorRate: 0.03 },
+    })
+
+    expect(stableDeploymentVisualFor(calm)).toBe(stableDeploymentVisualFor(busy))
+    expect(deploymentVisualParametersFor(calm)).not.toEqual(deploymentVisualParametersFor(busy))
   })
 })
