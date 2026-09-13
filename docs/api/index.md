@@ -43,15 +43,20 @@ The `ready` event receives the [`VxStage`](/api/stage) interface.
 
 | Element | Purpose | Important props |
 |---|---|---|
-| `<vx-group>` | Automatic or dynamic layout group | `layout`, `size`, `height`, `gap`, `placement` |
-| `<vx-row>` | X-axis layout | `size`, `height`, `gap`, alignment |
-| `<vx-layer>` | Z-axis layout and scaling boundary | `size`, `height`, `gap`, `scale`, `elevation` |
-| `<vx-stack>` | Y-axis layout | `size`, `height`, `gap` |
-| `<vx-ring>` | XZ circular layout | `radius`, `start-angle`, `direction`, `gap-ratio` |
+| `<vx-group>` | Automatic or dynamic layout group | `layout`, `size`, `height`, `gap`, `fit`, `direction`, `placement` |
+| `<vx-row>` | X-axis layout | `size`, `height`, `gap`, `fit`, `direction`, alignment |
+| `<vx-layer>` | Z-axis layout and scaling boundary | `size`, `height`, `gap`, `fit`, `direction`, `scale`, `elevation` |
+| `<vx-stack>` | Y-axis layout | `size`, `height`, `gap`, `fit`, `direction` |
+| `<vx-ring>` | XZ circular layout | `radius`, `start-angle`, `direction`, `gap-ratio`, `fit` |
 | `<vx-panel>` | Rounded visual container with label/content regions | panel props below |
 | `<vx-spacer>` | Empty measured layout reservation | `width`, `height`, `depth`, or `size` |
 
 Every group supports `align`, `align-x`, `align-y`, and `align-z` with `start`, `center`, or `end`.
+
+Every group also supports `fit="shrink|none"`. `shrink` is the default and uniformly scales oversized content down to
+an explicit `size` or `height`; `none` preserves scale and permits visible overflow. `direction="reverse"` reverses
+row, depth/layer, and stack order. On rings it reverses the angular sweep while keeping the first child at
+`start-angle`.
 
 `<vx-group layout>` accepts `grid`, `row`, `depth`, `stack`, and `ring`. `placement` accepts a composition
 [`Placement`](/api/composition#placements) and removes that group from its parent's automatic layout.

@@ -131,7 +131,8 @@ Values: `normal` (default) | `reverse`
 
 "Normal" for each container is defined in the container table above. `ring` additionally accepts `start-angle` (in degrees).
 
-**Status:** shipped for `ring`; linear-layout direction remains future work.
+**Status:** shipped for `ring`, `row`, `layer`/`depth`, and `stack`. Ring reverses its angular sweep; linear layouts
+reverse placement order without changing logical child order.
 
 ### `gap` — *Slots*
 
@@ -193,15 +194,14 @@ Controls behavior when a child's `bounds` exceed its slot.
 ```vue
 <vx-group fit="shrink" />
 <vx-group fit="none" />
-<vx-group fit="contain" />
-<vx-group fit="overflow" />
 ```
 
-Values:
-- `none` (default for mesh children): preserve child scale; no adjustment.
-- `shrink` (default for container children): uniformly scale child down until it fits; never scales up.
-- `contain`: uniformly scale child to fill the slot; may scale up or down.
-- `overflow`: preserve child scale; mark the child as overflowing for inspection.
+Shipped values:
+- `shrink` (default): uniformly scale the container subtree down when its measured content exceeds an explicit
+  `size` or `height`; never scale up.
+- `none`: preserve subtree scale and allow visible content to exceed the declared reservation.
+
+`contain` and explicit overflow diagnostics remain reserved for future design work.
 
 ### `wrap` — *Slots*
 

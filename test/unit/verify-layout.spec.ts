@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { Vector3 } from 'three'
 import {
-    horizontalLayout, depthLayout, stackLayout, ringLayout, gridLayout,
+    horizontalLayout, depthLayout, stackLayout, ringLayout, gridLayout, layoutWithDirection,
 } from '@/lib-components/nodes/layouts.js'
 
 const unit = () => new Vector3(1, 0.5, 1)
@@ -40,6 +40,25 @@ describe('stackLayout', () => {
         expect(stackLayout.place(1, c, 0.2).y).toBeCloseTo(0.7, 6)    // 0.5 + 0.2
         expect(stackLayout.place(2, c, 0.2).y).toBeCloseTo(1.23, 6)   // 0.5 + 0.33 + 0.4
         expect(stackLayout.measure(c, 0.2).y).toBeCloseTo(1.98, 6)    // 1.58 + 0.4
+    })
+})
+
+describe('linear layout direction', () => {
+    it('reverses child order without mismatching unequal footprints', () => {
+        const children = [
+            new Vector3(1, 0.5, 1),
+            new Vector3(2, 0.5, 1),
+            new Vector3(3, 0.5, 1),
+        ]
+        const reverse = layoutWithDirection(horizontalLayout, 'reverse')
+
+        expect(reverse.measure(children, 0.5)).toEqual(horizontalLayout.measure(children, 0.5))
+        expect(children.map((_, index) => reverse.place(index, children, 0.5).x))
+            .toEqual([3, 1, -2])
+    })
+
+    it('returns the original layout for normal direction', () => {
+        expect(layoutWithDirection(stackLayout, 'normal')).toBe(stackLayout)
     })
 })
 

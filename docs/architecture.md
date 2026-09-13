@@ -273,8 +273,9 @@ Layout is content-driven and runs bottom-up:
 - `layoutPositionOf()` asks the same layout to place a child in the container's local space.
 - `Node.renderOffset()` converts the base-center layout anchor into the mesh's visual center; mesh nodes add half their
   height on Y.
-- An explicit container `size` or `height` is a maximum reservation. `GroupNode.fitScale()` applies a uniform,
-  shrink-only scale when measured content exceeds that reservation.
+- An explicit container `size` or `height` is a maximum reservation. The default `fit="shrink"` behavior applies a
+  uniform, down-only scale when measured content exceeds that reservation. `fit="none"` preserves the subtree's scale
+  and allows it to render beyond the declared reservation.
 
 The effective gap follows `container state.gap → stage.gap → stage.boxDistance`. `Stack` overrides the stage fallback
 with its tighter `0.05` default while still accepting an explicit `gap`.

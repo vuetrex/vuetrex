@@ -1,102 +1,66 @@
 # AGENTS.md
 
-## Overview
+## Architecture
 
-Vuetrex is a Vue 3 library for authoring 3D diagrams with Vue templates and rendering them through Three.js. It replaces Vue's DOM renderer with a custom renderer and maintains a logical node tree that synchronizes into a Three.js scene.
+Vuetrex has two cooperating pipelines:
 
-Read [docs/architecture.md](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/docs/architecture.md?type=file&root=%252F) before making structural changes.
+```text
+Vue template → renderer host tree → spatial nodes → Three.js scene
+data → immutable recipe/graph → compiler → keyed realization → renderer host
+```
 
-## Working Model
+Read [docs/architecture.md](docs/architecture.md) before structural changes.
 
-Think about changes in this pipeline:
+## Choose the abstraction
 
-1. Vue template input
-2. Custom renderer hooks in `src/lib-components/nodeOps.ts` and `src/lib-components/patchProp.ts`
-3. Reactive `Base` / `Node` tree in `src/lib-components/nodes/`
-4. Three.js bridge objects in `src/lib-components/three/`
-5. WebGL scene output managed by `VuetrexStage`
+| Need | Use |
+|---|---|
+| Fixed visual element | `MeshNode` |
+| Spatial container | `GroupNode` |
+| Lifecycle-only renderer host | `Base`, not `Node` |
+| Repeated/data-driven geometry | `GeometrySource` → `GeometryNode` |
+| Particle behavior | `ParticleSource` → `ParticleNode` |
+| Data arrangement | Composition recipe / `Placement` |
+| Connector topology | Connector records; future graph work follows the [fluent connector proposal](docs/superpowers/plans/2026-09-12-fluent-connector-graph.md) |
+| GPU realization | Compiler/backend-owned resources |
 
-Most bugs are caused by changing one layer without updating the adjacent one.
+## Invariants
 
-## Key Areas
+- `Base` is renderer identity and lifecycle. `Node` adds spatial identity, layout, focus, events, and bounds.
+- Graph operators are immutable values, never renderer or Three.js objects. Functional and fluent forms must produce the same graph.
+- Prefer one host for many keyed records. Reconcile by stable data key, not array position.
+- Keep authoring, compilation, and realization separate. Parameter-only changes should not rebuild topology.
+- Vue `insert` also moves existing children; the logical child list must stay unique.
+- Unmount the inner Vue tree before destroying its stage.
+- The creator of geometry, materials, textures, targets, observers, timers, and watchers owns cleanup. Detaching or clearing does not dispose GPU resources.
+- Sync/watch installation and teardown must be idempotent. Do not mutate a dependency from the effect that consumes it.
+- Preserve the logical-tree/Three.js-scene distinction; do not patch structural problems in `stage.ts`.
 
-- [renderer.ts](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/src/lib-components/renderer.ts?type=file&root=%252F): creates the Vue custom renderer.
-- [nodeOps.ts](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/src/lib-components/nodeOps.ts?type=file&root=%252F): maps Vue tree operations onto Vuetrex nodes.
-- [patchProp.ts](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/src/lib-components/patchProp.ts?type=file&root=%252F): wires reactive props and events.
-- [Base.ts](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/src/lib-components/nodes/Base.ts?type=file&root=%252F): tree structure, deferred sync queue, parent-child operations.
-- [Node.ts](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/src/lib-components/nodes/Node.ts?type=file&root=%252F): stage access, event bubbling, local layout behavior.
-- [GroupNode.ts](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/src/lib-components/nodes/GroupNode.ts?type=file&root=%252F): local coordinate spaces for nested layouts.
-- [MeshNode.ts](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/src/lib-components/nodes/MeshNode.ts?type=file&root=%252F): shared geometry-node lifecycle, material, hover, render sync.
-- [types.ts](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/src/lib-components/nodes/types.ts?type=file&root=%252F): built-in element registry and custom element registration.
-- [stage.ts](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/src/lib-components/three/stage.ts?type=file&root=%252F): scene setup, camera, connectors, interaction, and animation.
-- [scene.ts](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/src/lib-components/three/scene.ts?type=file&root=%252F): DOM/canvas event binding and scene orchestration.
-- [material.ts](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/src/lib-components/nodes/material.ts?type=file&root=%252F): material and hover prop contracts.
-- [three/connectors/](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/src/lib-components/three/connectors?type=folder&root=%252F): connector rendering and particle/line behavior.
+## Change routing
 
-## Change Guidelines
+| Area | Primary files |
+|---|---|
+| Renderer tree and props | `renderer.ts`, `nodeOps.ts`, `patchProp.ts`, `nodes/Base.ts` |
+| Spatial nodes and layout | `nodes/Node.ts`, `nodes/GroupNode.ts`, `nodes/layouts.ts` |
+| Fixed shapes and materials | `nodes/MeshNode.ts`, `nodes/shapes/`, `nodes/material.ts` |
+| Composition | `composition/` |
+| Procedural geometry | `geometry/` authoring → compiler → `GeometryNode` |
+| Particles | `particles/` authoring → compiler → backend/`ParticleNode` |
+| Connectors | `nodes/*ConnectorNode.ts`, `three/connectors/` |
+| Scene lifecycle and GPU ownership | `three/scene.ts`, `three/stage.ts` |
+| Built-ins and public exports | `nodes/types.ts`, `index.ts` |
 
-### Adding a new shape
+A fixed shape extends `MeshNode`, implements `modelGen()`, and is registered in `nodes/types.ts`. Data-driven geometry belongs in the geometry graph instead.
 
-1. Add a class under `src/lib-components/nodes/shapes/` extending `MeshNode`.
-2. Implement `modelGen()`.
-3. Override `flushMode` only if the node must sync immediately.
-4. Register the tag in [types.ts](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/src/lib-components/nodes/types.ts?type=file&root=%252F).
-5. Add or update tests under [test/unit](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/test/unit?type=folder&root=%252F).
-6. Update docs if the public API changed.
+Do not modify `three/external/` without a specific vendored-code reason.
 
-### Adding a new layout/container
+## Verification
 
-1. Extend `GroupNode` when the node establishes a local coordinate space.
-2. Implement `layoutPositionOf(child)`.
-3. Verify nesting behavior, since children are parented through `nearestAncestorObject()`.
-4. Add tests that cover both layout math and nested composition.
+Use Node 24+ and pnpm. Run the narrowest relevant test first.
 
-### Changing events or props
+- Renderer/tree changes: `pnpm test:run`
+- Type or public API changes: `pnpm typecheck`
+- Packaging/exports: `pnpm build`, then `pnpm test:esm-project`
+- Documentation behavior: update docs/tests and run `pnpm docs:build`
 
-- Keep `patchProp.ts`, node setters, and stage/scene event flow aligned.
-- Click and double-click bubble through `Node`; pointer enter/leave do not.
-- If you change event semantics, update tests and docs together.
-
-### Changing sync behavior
-
-- Structural updates are deferred through `registerSync()` and `applySync()`.
-- `MeshNode.syncWithThree()` relies on reactive watchers; avoid introducing duplicate watchers or bypass paths.
-- Be careful with timing-sensitive changes around `flushMode`, hover animation, and stage rendering.
-
-## Commands
-
-Use Node 22+.
-
-- `yarn dev`: start the Vite dev server.
-- `yarn build`: generate declarations and build the library.
-- `yarn typecheck`: run `vue-tsc` without emitting files.
-- `yarn test`: run Vitest in watch mode.
-- `yarn test:run`: run tests once.
-- `yarn test:coverage`: run coverage.
-- `yarn test:esm-project`: validate external ESM consumption.
-- `yarn docs:dev`: rebuild the library and start VitePress.
-- `yarn docs:build`: build documentation.
-
-## Test Expectations
-
-For code changes, prefer running at least the narrowest relevant check:
-
-- renderer/tree changes: `yarn test:run`
-- type/API surface changes: `yarn typecheck`
-- packaging/export changes: `yarn build` and `yarn test:esm-project`
-- docs examples or public behavior changes: update docs and run the relevant tests if examples depend on them
-
-## Docs And Examples
-
-- Main docs live in [docs](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/docs?type=folder&root=%252F).
-- Architecture reference is [architecture.md](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/docs/architecture.md?type=file&root=%252F).
-- Demo app lives in [demo](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/demo?type=folder&root=%252F).
-- ESM integration coverage lives in [test/esm-module](air-file://kicm6ubdhg7b09hlspf9/Users/alex.pakka/dev/github/vuetrex/test/esm-module?type=folder&root=%252F).
-
-## Guardrails
-
-- Preserve the distinction between the logical node tree and the Three.js scene graph.
-- Prefer minimal changes in the correct layer instead of patching symptoms downstream in `stage.ts`.
-- Do not silently change built-in tag names or exported APIs without updating docs and tests.
-- Treat `src/lib-components/three/external/` as vendored code unless there is a clear reason to modify it.
-- Keep README, docs, and tests consistent with any user-visible behavior change.
+Graph tests should cover functional/fluent equivalence, immutability, signatures, bounds, and keyed reconciliation. Resource tests should assert disposal on replacement and unmount.

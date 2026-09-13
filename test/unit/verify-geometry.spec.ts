@@ -15,6 +15,7 @@
 
 import * as THREE from 'three'
 import { describe, it, expect } from 'vitest'
+import { nextTick } from 'vue'
 import { Ring }     from '@/lib-components/nodes/Ring.js'
 import { Stack }    from '@/lib-components/nodes/Stack.js'
 import { Row }      from '@/lib-components/nodes/Row.js'
@@ -216,6 +217,17 @@ describe('Row.layoutPositionOf', () => {
 
         expect(row.layoutPositionOf(box).x).toBeCloseTo(-0.5, 5)
     })
+
+    it('places children right-to-left when direction is reverse', () => {
+        const row = new Row(mockStage)
+        const boxes = [new Box(mockStage), new Box(mockStage), new Box(mockStage)]
+        boxes.forEach(box => row.appendChild(box))
+        row.setStateValue('direction', 'reverse')
+
+        const positions = boxes.map(box => row.layoutPositionOf(box).x)
+        expect(positions[0]).toBeGreaterThan(positions[1])
+        expect(positions[1]).toBeGreaterThan(positions[2])
+    })
 })
 
 describe('Stack alignment', () => {
@@ -226,6 +238,18 @@ describe('Stack alignment', () => {
         stack.setStateValue('align-z', 'end')
 
         expect(stack.layoutPositionOf(box).z).toBeCloseTo(0.5, 5)
+    })
+
+    it('places children top-to-bottom when direction is reverse', () => {
+        const stack = new Stack(mockStage)
+        const boxes = [new Box(mockStage), new Box(mockStage), new Box(mockStage)]
+        boxes.forEach(box => stack.appendChild(box))
+        stack.setStateValue('direction', 'reverse')
+
+        const positions = boxes.map(box => stack.layoutPositionOf(box).y)
+        expect(positions[0]).toBeGreaterThan(positions[1])
+        expect(positions[1]).toBeGreaterThan(positions[2])
+        expect(positions[2]).toBe(0)
     })
 })
 
@@ -244,6 +268,17 @@ describe('Layer.layoutPositionOf', () => {
         const dz = ps[1].z - ps[0].z
         expect(ps[2].z - ps[1].z).toBeCloseTo(dz, 5)
         ps.forEach(p => expect(p.x).toBeCloseTo(ps[0].x, 5))
+    })
+
+    it('places children back-to-front when direction is reverse', () => {
+        const layer = new Layer(mockStage)
+        const rows = [new Row(mockStage), new Row(mockStage), new Row(mockStage)]
+        rows.forEach(row => layer.appendChild(row))
+        layer.setStateValue('direction', 'reverse')
+
+        const positions = rows.map(row => layer.layoutPositionOf(row).z)
+        expect(positions[0]).toBeGreaterThan(positions[1])
+        expect(positions[1]).toBeGreaterThan(positions[2])
     })
 })
 
@@ -281,6 +316,16 @@ describe('GroupNode.layoutPositionOf (default grid layout)', () => {
         expect(positions[0].x).toBeCloseTo(0, 5)
         expect(positions[1].x).toBeCloseTo(0, 5)
         expect(positions[0].z).toBeLessThan(positions[1].z)
+    })
+
+    it('applies reverse direction to a dynamically selected linear layout', () => {
+        const group = new GroupNode(mockStage)
+        const boxes = [new Box(mockStage), new Box(mockStage)]
+        boxes.forEach(box => group.appendChild(box))
+        group.setStateValue('layout', 'row')
+        group.setStateValue('direction', 'reverse')
+
+        expect(group.layoutPositionOf(boxes[0]).x).toBeGreaterThan(group.layoutPositionOf(boxes[1]).x)
     })
 })
 
@@ -578,6 +623,25 @@ describe('GroupNode content-driven sizing', () => {
         expect(row.group.scale.x).toBeCloseTo(1 / 3.5, 5)
         expect(row.group.scale.y).toBeCloseTo(1 / 3.5, 5)
         expect(row.group.scale.z).toBeCloseTo(1 / 3.5, 5)
+    })
+
+    it('reactively switches between fit="shrink" and fit="none"', async () => {
+        const row = new Row(mockStage)
+        const boxes = [new Box(mockStage), new Box(mockStage)]
+        boxes.forEach(box => { box.setSize(1); row.appendChild(box) })
+        row.setStateValue('size', 1)
+        row.syncWithThree()
+
+        expect(row.measuredSize.value.x).toBeCloseTo(1, 5)
+        expect(row.group.scale.toArray()).toEqual([1 / 3.5, 1 / 3.5, 1 / 3.5])
+
+        row.setStateValue('fit', 'none')
+        await nextTick()
+        expect(row.group.scale.toArray()).toEqual([1, 1, 1])
+
+        row.setStateValue('fit', 'shrink')
+        await nextTick()
+        expect(row.group.scale.toArray()).toEqual([1 / 3.5, 1 / 3.5, 1 / 3.5])
     })
 })
 

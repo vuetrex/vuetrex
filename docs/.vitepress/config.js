@@ -56,6 +56,7 @@ export default {
                     {text: 'Live data and components', link: '/guide/live-data'},
                     {text: 'Layout in 3D', link: '/guide/layouts'},
                     {text: 'Connections and focus', link: '/guide/connections-and-focus'},
+                    {text: 'Designing legible data scenes', link: '/guide/visual-design'},
                     {text: 'Composition recipes', link: '/guide/composability'},
                     {text: 'Large scenes', link: '/guide/large-scenes'},
                     {text: 'Display walls', link: '/guide/display-walls'},

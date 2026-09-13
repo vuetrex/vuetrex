@@ -173,3 +173,9 @@ The chosen padding and duration are retained for later automatic refits.
 
 `click` and `dblclick` bubble through the logical Vuetrex tree. `pointerenter` and `pointerleave` do not. The event also
 contains `vxNode`, `vxPosition`, and, for an instanced item, `vxInstance`.
+
+## Give the scene a consistent visual hierarchy
+
+Connection layout is only part of readability. See [Designing legible data scenes](/guide/visual-design) for guidance
+on ground and air routes, luminance, colour, spatially anchored cards, lighting, geometry, motion, and future focus
+effects.

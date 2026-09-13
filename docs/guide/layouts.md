@@ -67,13 +67,32 @@ With no explicit size, a container derives its footprint from its children. `gap
 </vx-stack>
 ```
 
-An explicit `size` or `height` becomes a maximum reservation. If nested content is larger, the container uniformly
-shrinks its subtree to fit; it does not enlarge smaller content.
+An explicit `size` or `height` becomes a maximum reservation. The default `fit="shrink"` behavior uniformly shrinks
+larger nested content to fit; it does not enlarge smaller content.
 
 ```vue
 <vx-group :size="{ x: 5, y: 2, z: 3 }">
   <!-- measured content is fitted inside this reservation -->
 </vx-group>
+```
+
+Use `fit="none"` when the reservation should affect parent layout measurement without scaling the subtree:
+
+```vue
+<vx-row :size="4" fit="none">
+  <!-- Content may render beyond the four-unit reservation. -->
+</vx-row>
+```
+
+## Reverse linear layouts
+
+Rows, layers, and stacks accept `direction="reverse"`. It changes placement order without changing Vue child order,
+keys, or event bubbling.
+
+```vue
+<vx-row direction="reverse">
+  <vx-box v-for="service in services" :key="service.id" />
+</vx-row>
 ```
 
 ## Align when comparison matters

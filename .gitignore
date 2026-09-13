@@ -18,4 +18,6 @@ yarn.lock
 package-lock.json
 WARP.md
 .yarnrc.yml
-.vitepress/
+.pnpm-store
+docs/.vitepress/dist
+docs/.vitepress/cache

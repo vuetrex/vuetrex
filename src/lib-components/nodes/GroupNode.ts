@@ -4,6 +4,7 @@ import {
     gridLayout,
     horizontalLayout,
     Layout,
+    layoutWithDirection,
     ringLayout,
     stackLayout,
 } from '@/lib-components/nodes/layouts.js';
@@ -14,6 +15,7 @@ import type {Placement} from '@/lib-components/composition/index.js';
 
 export type Alignment = 'start' | 'center' | 'end'
 export type LayoutName = 'grid' | 'row' | 'depth' | 'stack' | 'ring'
+export type FitMode = 'shrink' | 'none'
 
 export interface GroupState {
     text: string
@@ -26,6 +28,7 @@ export interface GroupState {
     layout?: LayoutName
     startAngle: number
     direction: 'normal' | 'reverse'
+    fit: FitMode
     placement?: Placement
 }
 
@@ -50,6 +53,7 @@ export class GroupNode extends Node {
             alignZ: 'center',
             startAngle: 0,
             direction: 'normal',
+            fit: 'shrink',
             placement: undefined,
             ...stateDefaults,
             size: markRaw(new Vector3()),
@@ -72,17 +76,20 @@ export class GroupNode extends Node {
     }
 
     protected currentLayout(): Layout {
-        if (this.state.layout === 'row') return horizontalLayout
-        if (this.state.layout === 'depth') return depthLayout
-        if (this.state.layout === 'stack') return stackLayout
         if (this.state.layout === 'ring') {
             return ringLayout.withOptions({
                 startAngle: this.state.startAngle,
                 direction: this.state.direction,
             })
         }
-        if (this.state.layout === 'grid') return gridLayout
-        return this.layout
+
+        let layout = this.layout
+        if (this.state.layout === 'row') layout = horizontalLayout
+        if (this.state.layout === 'depth') layout = depthLayout
+        if (this.state.layout === 'stack') layout = stackLayout
+        if (this.state.layout === 'grid') layout = gridLayout
+        const supportsDirection = layout === horizontalLayout || layout === depthLayout || layout === stackLayout
+        return supportsDirection ? layoutWithDirection(layout, this.state.direction) : layout
     }
 
     protected contentSize(): Vector3 {
@@ -110,6 +117,7 @@ export class GroupNode extends Node {
     }
 
     private fitScale(): number {
+        if (this.state.fit === 'none') return 1.0
         if (!this.sizeOverridden && !this.heightOverridden) return 1.0
         const content = this.contentSize()
         const declared = this.intrinsicSize()
@@ -173,6 +181,10 @@ export class GroupNode extends Node {
         }
         if (key === 'direction') {
             if (value === 'normal' || value === 'reverse') this.state.direction = value
+            return
+        }
+        if (key === 'fit') {
+            if (value === 'shrink' || value === 'none') this.state.fit = value
             return
         }
         const alignKey = {

@@ -5,9 +5,26 @@ export interface Layout {
     place(index: number, children: Vector3[], gap: number): Vector3
 }
 
+export type LayoutDirection = 'normal' | 'reverse'
+
+export function layoutWithDirection(layout: Layout, direction: LayoutDirection): Layout {
+    if (direction === 'normal') return layout
+
+    const reversedChildren = (children: Vector3[]) => [...children].reverse()
+    return {
+        measure(children, gap) {
+            return layout.measure(reversedChildren(children), gap)
+        },
+        place(index, children, gap) {
+            const reversed = reversedChildren(children)
+            return layout.place(reversed.length - 1 - index, reversed, gap)
+        },
+    }
+}
+
 export interface RingOptions {
     startAngle?: number
-    direction?: 'normal' | 'reverse'
+    direction?: LayoutDirection
 }
 
 export interface RingLayout extends Layout {

@@ -5,16 +5,20 @@
 - Content-driven, pluggable measure/place layouts
 - Nested local coordinate spaces
 - Global and per-instance custom element registration
+- Functional-style custom node factories
 - Ring `start-angle` and `direction`
 - Shared container alignment
+- Reverse ordering for row, layer, and stack layouts
+- Explicit `fit="shrink|none"` container behavior
+- CI verification for typechecking, tests, builds, and ESM consumption
 
-## Remaining design work
+## Current priorities
 
-1. Define `fit="contain"` and `fit="overflow"` behavior.
-2. Add `wrap="grid"` for one-dimensional layouts.
-3. Reconcile the proposal's formal `bounds: Vector3` vocabulary with the existing `measuredSize`.
-4. Design functional-style node components.
-5. Expand documentation examples and publish coverage reporting.
+1. Develop the [fluent connector graph](docs/superpowers/plans/2026-09-12-fluent-connector-graph.md) without making connector declarations spatial nodes.
+2. Add automated visual regression coverage for representative 3D scenes.
+3. Consider `wrap="grid"` for one-dimensional layouts when a concrete authoring use case requires it.
+4. Consider `fit="contain"` or overflow diagnostics separately; avoid expanding the fit API without a demonstrated need.
+5. Publish test coverage reporting.
 
 ## Testing a source build in another project
 

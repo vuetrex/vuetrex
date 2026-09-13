@@ -93,11 +93,13 @@ realization.
 
 ## Design principles
 
-1. **The connector graph is not the scene tree.** Sources and operators are immutable descriptions, never `Base` or
-   `Node` instances.
-2. **One host can own many routes.** A data collection should not require one custom-renderer child per edge.
-3. **A host record is not a spatial node.** `<vx-connectors>` extends `Base`, not `Node`, and inherits non-renderable,
-   non-layout behavior.
+1. **The connector graph is semantic topology, not the scene tree.** It describes which things are related, directed,
+   weighted, or grouped. It remains useful when nothing is rendered and never turns each relationship into a `Base`
+   or `Node` instance.
+2. **One host owns many routes and their resources.** A graph with 10,000 edges should not require 10,000 renderer
+   children. One lifecycle owner reconciles keyed records, registers them with the stage, and disposes its resources.
+3. **The host is a lifecycle anchor, not a spatial node.** `<vx-connectors>` gives Vue somewhere to mount, update,
+   move, and unmount a connector graph. It has no bounds, transform, focus, layout role, or Three.js object of its own.
 4. **Every authoring stage remains composable.** Sources and operators consume and return `ConnectorSource`.
 5. **Topology, routing, and decoration are separate.** An edge or bus can change appearance without recomputing its
    path, and a route can change without recreating unrelated GPU resources.
@@ -115,6 +117,163 @@ realization.
     typed APIs that return unregister functions.
 12. **Legacy syntax lowers into the new model.** Existing tags remain compatible while the graph API becomes the
     preferred surface.
+
+### Three structures, each with one job
+
+The fluent API should not collapse the relationship model, the spatial route, and the rendered object into one
+mutable connector class.
+
+| Structure | Answers | Stable identity | Consumers |
+|---|---|---|---|
+| Semantic graph | What is connected? Is it directed? What are its weight, capacity, kind, and metadata? | Node and edge keys | graph algorithms, filtering, selection, serialization, application state |
+| Resolved route plan | Where should it travel? Which runs are shared? Where are its branches and anchors? | Edge key plus route revision | routing, bundling, labels, particles, picking |
+| Rendered presentation | How does it look and animate now? | Backend allocation keyed by edge or bundle | strokes, custom geometry, markers, particles, hit testing |
+
+The same semantic edge may be rendered as a low ground route, promoted to an air route, hidden inside a bundle, or
+temporarily highlighted without changing its graph identity. Changing its endpoints is a topology change even if the
+resulting curve happens to look identical.
+
+This also separates two meanings of "shortest route":
+
+- A **shortest graph path** walks semantic edges from one logical node to another using application-defined weights.
+- A **shortest spatial route** finds a drawable path between two resolved endpoint positions while respecting routing
+  surfaces, obstacles, clearances, and bend costs.
+
+Those operations may inform each other, but neither should silently redefine the other.
+
+### What “host” means
+
+A host is the Vue/Vuetrex lifecycle owner for a connector graph. It is comparable to a mount point or controller, not
+to a visible group in the diagram.
+
+```vue
+<vx-connectors
+  :graph="networkGraph"
+  @click="inspectConnection"
+/>
+```
+
+Here, `<vx-connectors>` is the host. It owns:
+
+- the reactive effect that compiles `networkGraph`;
+- the stage-controller registration and stable owner ID;
+- keyed route, bundle, stroke, particle, and picking allocations;
+- host-level interaction callbacks;
+- complete cleanup when Vue unmounts it.
+
+It does **not** own a position, size, transform, material, or visible Three.js container. Its place in the Vue template
+expresses ownership and lifetime, not spatial placement. Endpoints resolve through refs or stage lookup and may live
+in different layout containers.
+
+Internally, the host still appears in `Base.childList` because Vue's custom renderer needs ordinary parent, sibling,
+move, and unmount semantics. That renderer record must never appear in `Node.elements`, layout projections, focus
+traversal, or the Three.js scene graph.
+
+Multiple hosts are valid when an application wants separate ownership domains—for example infrastructure links, live
+query flows, and temporary analysis results. Edge keys are scoped by host ownership so independent graphs cannot
+accidentally dispose or overwrite each other.
+
+## Product roles and default visual language
+
+Connectors should serve four related purposes without forcing all of them into the same abstraction.
+
+### 1. Relationship model and graph algorithms
+
+The authored graph is the source of truth for connectivity. Its keyed nodes and edges should be inspectable as plain,
+serializable data with enough metadata for directed traversal, weights, capacities, categories, and application
+payloads.
+
+The initial fluent API does not need to ship a catalogue of graph algorithms. It should expose a clean topology
+boundary so applications or future modules can run shortest-path, reachability, centrality, cycle detection,
+clustering, or simplification without reading Three.js objects or sampled curve points.
+
+Algorithm results should return to the renderer as ordinary data:
+
+- a set of selected edge keys;
+- a filtered or simplified connector source;
+- weights used by a route or flow field;
+- annotations that choose a profile, style, visibility, or priority.
+
+Visual aggregation must retain provenance. If twenty semantic edges share one rendered highway, the resolved bundle
+still knows all member edge keys. Simplifying the picture must not destroy the underlying relationships.
+
+### 2. Ground, air, and user-defined profiles
+
+The fluent layer should provide two strong built-in visual profiles while leaving the underlying operators
+independently overridable:
+
+- **Ground** is the normal case: low to a routing surface, grid or orthogonal, obstacle-aware, bundle-friendly, and
+  visually restrained. It should read like PCB traces or roads between buildings.
+- **Air** is the exception case: elevated, usually direct, Bézier, or spline-based, less aggressively bundled, and
+  visually more prominent. It suits rare jumps, cross-links, alerts, or routes that cannot remain legible on the
+  ground plane.
+
+Profiles are convenience presets, not topology types:
+
+```ts
+const graph = connectors
+  .edges(connections, {
+    keyBy: edge => edge.id,
+    from: edge => edge.source,
+    to: edge => edge.target,
+  })
+  .profile(edge => edge.isExceptional ? 'air' : 'ground')
+  .flow({ speed: edge => edge.queriesPerSecond })
+```
+
+`profile('ground')` lowers into routing, bundling, stroke, and marker defaults, plus defaults for any flow layer the
+author adds. Explicit `.route()`, `.bundle()`, `.stroke()`, or `.flow()` operators override the corresponding part.
+Registered routing strategies, custom geometry, manual waypoints, and application-defined profiles preserve the
+builder's freedom.
+
+Changing an edge from ground to air normally invalidates its route and presentation, not its semantic identity.
+
+### 3. A legible “highway” default
+
+The collection default should optimize for a stable overview, not a mathematically perfect wiring diagram. A practical
+ground router can use a deterministic, bounded heuristic:
+
+1. Project endpoint ports and selected obstacle bounds onto a ground routing plane.
+2. Expand obstacles by a configurable clearance and rasterize them onto a coarse grid.
+3. Process edges in a stable order, optionally grouped by an explicit bundle key or nearby endpoint zones.
+4. Route each group with a Manhattan-style search whose cost penalizes distance, bends, crossings, and new corridor
+   creation while discounting reuse of a compatible existing corridor.
+5. Turn shared grid runs into bundle trunks and fan member routes into deterministic lanes near their endpoints.
+6. Promote explicit exceptions—and optionally routes with excessive detours or unresolved crossings—to the air
+   profile.
+7. Simplify collinear points and soften corners only after route topology is stable.
+
+The corridor-reuse discount is the simple mechanism that creates chokepoints and highways. It deliberately prefers a
+readable general outline over individually optimal paths. It is not a promise of globally optimal bundling or general
+3D obstacle avoidance.
+
+Good defaults also require stability:
+
+- stable edge and bundle keys determine routing and lane order;
+- small endpoint movements remain snapped within the same cells where possible;
+- cached trunks survive until topology or relevant obstacle bounds change;
+- deterministic tie-breaking prevents jumps between equivalent solutions;
+- a configurable air threshold prevents an unreadable ground detour from dominating the scene.
+
+A useful default rendering is a quiet, wider bundle under-stroke with thinner semantic lanes or particles above it.
+Normal flow uses the scene's secondary data colour; hover, selection, and anomaly state temporarily earn the accent
+colour.
+
+### 4. Selection and live inspection
+
+Every visible route, branch, marker, particle field, and shared trunk should remain pickable when interaction is
+enabled. Picking resolves to stable graph identity instead of exposing a `Node`, `Segment`, mesh, line, or mutable
+Three.js object.
+
+For an individual route, a hit identifies its edge key and original item. For a shared trunk, it identifies the bundle
+and all member edge keys so an application can show an aggregate card or ask the user to choose a member. A hit also
+carries a readonly world-space anchor and normalized path position so UI can place a card near the selected route.
+The discriminated public hit type is specified under “Stroke, markers, and interaction.”
+
+Selection state belongs to the application or host. A click can select the stable key, retrieve live metrics such as
+current queries per second, and display a card anchored at `point`. Feeding selected keys back into `.stroke()`,
+`.flow()`, or `.visible()` keeps interaction declarative and avoids putting connector records in the stage's spatial
+node registry.
 
 ---
 
@@ -331,6 +490,7 @@ Every operator returns `ConnectorSource`:
 
 | Operator | Responsibility |
 |---|---|
+| `profile()` | Expand a named authoring preset such as `ground` or `air`; explicit later operators override it |
 | `route()` | Strategy, ports, clearance, elevation, lanes, waypoints, route coordinate space |
 | `bundle()` | Group compatible edges into shared trunks using stable bundle keys |
 | `stroke()` | Optimized solid/dashed shaft styling and built-in markers |
@@ -377,20 +537,36 @@ Required behavior:
 ### Routing options
 
 ```ts
+export type ConnectorRoutingSurfaceName = 'ground' | 'air' | (string & {})
+
+export type ConnectorObstacleRef =
+  | string
+  | Readonly<{ node: string; clearance?: number }>
+  | Readonly<{ min: ConnectorVector3Like; max: ConnectorVector3Like }>
+
+export type ConnectorObstacleSource<Item = unknown> =
+  | 'none'
+  | 'stage-nodes'
+  | ConnectorField<readonly ConnectorObstacleRef[], Item>
+
 export interface ConnectorRoutingOptions<Item = unknown> {
   strategy?: ConnectorField<ConnectorStrategyName, Item>
+  surface?: ConnectorField<ConnectorRoutingSurfaceName, Item>
   fromPort?: ConnectorField<ConnectorPort, Item>
   toPort?: ConnectorField<ConnectorPort, Item>
   clearance?: ConnectorField<number, Item>
   elevation?: ConnectorField<number, Item>
   lane?: ConnectorField<number | 'auto', Item>
   waypoints?: ConnectorField<readonly ConnectorWaypoint[], Item>
+  obstacles?: ConnectorObstacleSource<Item>
 }
 ```
 
 `clearance` replaces the misleading authored meaning of `avoid`. Legacy `avoid=false|true|number` lowers to zero,
-stage-default, or numeric clearance. Actual obstacle avoidance should be introduced only with a strategy that accepts
-an explicit obstacle set and documents its complexity.
+stage-default, or numeric clearance. Obstacle avoidance is a separate, explicit routing input. The `ground` profile may
+default to projected stage-node bounds, excluding declarations and endpoint exit zones; applications can provide a
+filtered obstacle source or disable it. Each strategy must document which obstacle shapes it supports and its
+complexity.
 
 Built-in strategies remain `direct`, `orthogonal`, `bezier`, and `spline`. `straight` remains an input compatibility
 alias but is normalized to `direct` in compiled output. A `manual` strategy consumes waypoints without modifying them.
@@ -413,19 +589,38 @@ export interface ConnectorStrokeOptions<Item = unknown> {
 Built-in marker names should start with `arrow`, `dot`, `diamond`, and `none`. `marker()` accepts `GeometrySource` for
 custom shapes and adds size, color/material channel, tangent alignment, and inset fields.
 
-Connector picking, if enabled, returns owner-level typed hits:
+Connector picking, if enabled, returns owner-level typed hits. The union distinguishes one semantic edge from a shared
+presentation bundle:
 
 ```ts
-export interface ConnectorHit<Item = unknown> {
+export type ConnectorHit<Item = unknown> =
+  | ConnectorEdgeHit<Item>
+  | ConnectorBundleHit
+
+export interface ConnectorEdgeHit<Item = unknown> {
+  readonly kind: 'edge'
   readonly key: string
   readonly item: Item
-  readonly part: 'shaft' | 'marker-start' | 'marker-end' | 'junction' | 'flow'
+  readonly part: 'stroke' | 'marker-start' | 'marker-end' | 'junction' | 'particle'
+  readonly point: ConnectorVector3Tuple
+  readonly pathPosition?: number
+  readonly sourceName?: string
+}
+
+export interface ConnectorBundleHit {
+  readonly kind: 'bundle'
+  readonly key: string
+  readonly part: 'bundle'
+  readonly memberKeys: readonly string[]
+  readonly point: ConnectorVector3Tuple
+  readonly pathPosition?: number
   readonly sourceName?: string
 }
 ```
 
 Picking must not create one `Node` per edge. `<vx-connectors @click>` receives the hit from tagged backend objects;
-connectors do not enter normal `Node` event bubbling or stage focus identity.
+connectors do not enter normal `Node` event bubbling or stage focus identity. The host may also expose a helper that
+projects `point` to screen coordinates for route-anchored cards without making the connector a spatial node.
 
 ---
 
