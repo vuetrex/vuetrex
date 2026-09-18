@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url'
+
 /**
  * @type {import('vitepress').UserConfig}
  */
@@ -30,6 +32,17 @@ export default {
             }
         }
     },
+    vite: {
+        resolve: {
+            alias: {
+                // Interactive examples use the public package import while the
+                // documentation executes the freshly built local artifact.
+                '@exceeder/vuetrex': fileURLToPath(
+                    new URL('../../dist/vuetrex.es.js', import.meta.url)
+                )
+            }
+        }
+    },
     themeConfig: {
         logo: '/logo.png',
         socialLinks: [
@@ -43,6 +56,7 @@ export default {
 
         nav: [
             {text: 'Guide', link: '/guide/'},
+            {text: 'Scene notebook', link: '/examples/'},
             {text: 'Composition', link: '/guide/composability'},
             {text: 'API', link: '/api/'},
             {text: 'Release Notes', link: 'https://github.com/exceeder/vuetrex/releases'},
@@ -63,6 +77,13 @@ export default {
                     {text: 'Procedural geometry', link: '/guide/procedural-geometry'},
                     {text: 'Data-driven particles', link: '/guide/particles'},
                     {text: 'Recursive cubes tutorial', link: '/guide/recursive-cubes'}
+                ]
+            },
+            {
+                text: 'Scene notebook',
+                items: [
+                    {text: 'All experiments', link: '/examples/'},
+                    {text: '01 · A block in motion', link: '/examples/city-block'},
                 ]
             },
             {

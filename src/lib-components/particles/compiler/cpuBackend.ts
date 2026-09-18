@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { resolveParticleField } from '@/lib-components/particles/fields.js'
 import { resolveParticleValue } from '@/lib-components/particles/parameters.js'
+import { LinearParticlePath, type ParticleMotionPath } from '@/lib-components/particles/compiler/path.js'
 import type { ParticleBackend } from '@/lib-components/particles/backend.js'
 import type {
     CompiledCloudEmitter,
@@ -33,7 +34,7 @@ interface RuntimeParticle {
     readonly context: ParticleContext<any>
     readonly emitter: CompiledParticleEmitter
     readonly phase: number
-    readonly path?: THREE.CatmullRomCurve3
+    readonly path?: ParticleMotionPath
     readonly pathLength: number
     readonly cloudOffset?: THREE.Vector3
     readonly velocity: THREE.Vector3
@@ -151,8 +152,10 @@ export class CpuParticleBackend implements ParticleBackend {
 
             for (const emitter of plan.emitters) {
                 const count = resolveCount(emitter, this.backendContext)
+                // One immutable sampling path per emitter, shared by all its particles.
+                const path = emitter.kind === 'path' ? createMotionPath(emitter) : undefined
                 for (let localIndex = 0; localIndex < count; localIndex++) {
-                    this.particles.push(this.createParticle(emitter, localIndex, count, batch))
+                    this.particles.push(this.createParticle(emitter, localIndex, count, batch, path))
                 }
             }
             const geometry = batch.points.geometry
@@ -165,6 +168,7 @@ export class CpuParticleBackend implements ParticleBackend {
         localIndex: number,
         count: number,
         batch: RuntimeBatch,
+        path?: ParticleMotionPath,
     ): RuntimeParticle {
         const seed = resolveParticleValue(emitter.options.seed, this.backendContext.parameters) ?? emitter.key
         const random = randomAt(seed, localIndex, emitter.emitterIndex)
@@ -194,13 +198,6 @@ export class CpuParticleBackend implements ParticleBackend {
         const forces = (emitter.simulation.forces ?? []).map(force =>
             resolveForce(force, context, this.backendContext))
         const simulationActive = Object.keys(emitter.simulation).length > 0
-        const path = emitter.kind === 'path'
-            ? new THREE.CatmullRomCurve3(
-                emitter.path.points.map(vectorFrom),
-                emitter.path.closed ?? emitter.options.closed ?? false,
-                'centripetal',
-            )
-            : undefined
         const cloudOffset = emitter.kind === 'cloud'
             ? randomCloudOffset(emitter, localIndex, this.backendContext)
             : undefined
@@ -247,7 +244,8 @@ export class CpuParticleBackend implements ParticleBackend {
     }
 
     private pathPosition(particle: RuntimeParticle, time: number): THREE.Vector3 {
-        if (!particle.path || particle.pathLength <= 0) return new THREE.Vector3()
+        if (!particle.path) return new THREE.Vector3()
+        if (particle.pathLength <= 0) return particle.path.getPointAt(0)
         const progress = modulo(particle.phase + (time * particle.speed) / particle.pathLength, 1)
         const position = particle.path.getPointAt(progress)
         if (particle.spread !== 0) {
@@ -297,11 +295,24 @@ export class CpuParticleBackend implements ParticleBackend {
     }
 }
 
+function createMotionPath(emitter: CompiledPathEmitter): ParticleMotionPath {
+    const points = emitter.path.points.map(vectorFrom)
+    const closed = emitter.path.closed ?? emitter.options.closed ?? false
+    return emitter.options.interpolation === 'linear'
+        ? new LinearParticlePath(points, closed)
+        : new THREE.CatmullRomCurve3(points, closed, 'centripetal')
+}
+
 function resolveCount(emitter: CompiledParticleEmitter, context: ParticleBackendContext): number {
     const item = emitter.kind === 'path' ? emitter.path.item : emitter.cloud.item
     const source = emitter.options.count
     const value = typeof source === 'function'
-        ? resolveParticleValue(source(item, emitter.emitterIndex), context.parameters)
+        ? resolveParticleValue(source(Object.freeze({
+            item,
+            key: emitter.key,
+            index: emitter.emitterIndex,
+            emitterIndex: emitter.emitterIndex,
+        })), context.parameters)
         : resolveParticleValue(source, context.parameters)
     return Math.max(0, Math.floor(value ?? (emitter.kind === 'path' ? 80 : 160)))
 }
@@ -360,10 +371,17 @@ function particleMaterial(style: ResolvedStyle, pixelRatio: number): THREE.Shade
         blending: style.blending === 'additive' ? THREE.AdditiveBlending : THREE.NormalBlending,
         vertexColors: true,
         fog: true,
-        uniforms: {
-            pixelRatio: { value: pixelRatio },
-            attenuationScale: { value: style.sizeAttenuation ? 300 : 1 },
-        },
+        // `fog: true` makes Three.js refresh these uniforms before every
+        // render. Keep them on the material even though the shader chunks are
+        // compiled in as strings; otherwise a fogged scene fails at runtime
+        // when WebGLRenderer tries to update `fogColor`.
+        uniforms: THREE.UniformsUtils.merge([
+            THREE.UniformsLib.fog,
+            {
+                pixelRatio: { value: pixelRatio },
+                attenuationScale: { value: style.sizeAttenuation ? 300 : 1 },
+            },
+        ]),
         vertexShader: `
             attribute float particleSize;
             attribute float particleOpacity;

@@ -43,7 +43,8 @@ live in buffers; particles are not Vue nodes.
 
 ## Several data-bound paths
 
-Use `particles.paths()` when each route corresponds to a metric or domain item. `count` receives the route item, while
+Use `particles.paths()` when each route corresponds to a metric or domain item. `count` receives a context containing
+`item`, `key`, `index`, and `emitterIndex`, while
 appearance and motion fields receive a stable particle context containing `item`, `index`, `emitterIndex`, `random`,
 and `phase`.
 
@@ -55,7 +56,7 @@ const routes = services.map((service, index) => ({
 }))
 
 const traffic = particles.paths(routes, {
-  count: service => Math.round(service.requestsPerSecond / 5),
+  count: ({ item }) => Math.round(item.requestsPerSecond / 5),
   spread: ({ item }) => item.errorRate * 0.1,
 })
   .appearance({
@@ -68,8 +69,33 @@ const traffic = particles.paths(routes, {
   })
 ```
 
-Path motion uses world units per second. Paths use centripetal Catmull–Rom interpolation; set `closed: true` for loops.
+Path motion uses world units per second. Standalone paths default to `interpolation: 'catmull-rom'` for a smooth
+centripetal spline. Use `interpolation: 'linear'` on `particles.path()` or `particles.paths()` to follow the supplied
+segments exactly, including sharp corners. Motion advances by distance, so unequal segment lengths do not change
+particle speed. Set `closed: true` to include the closing segment back to the first point.
 `distribution: 'even'` spaces particles along a path, while `'random'` creates a seeded irregular flow.
+
+Connector `.flow()` defaults path emitters to linear interpolation because the connector router has already shaped
+the route. This preserves orthogonal corners and keeps particles on the same path as the stroke. An explicit
+`interpolation: 'catmull-rom'` opts back into smoothing. For a thin additive trace:
+
+```ts
+const flow = connectors.edge('source', 'target')
+  .route({ strategy: 'orthogonal', elevation: 0, lane: 0 })
+  .flow(route => particles.path(route.points, {
+    interpolation: 'linear',
+    count: Math.round(route.totalLength * 1000),
+    spread: 0.005,
+  })
+    .appearance({ size: 0.018, opacity: 0.28, color: 0xa8f5ff, blending: 'additive' })
+    .motion({ speed: 0.5 }))
+```
+
+Import `connectors` and `particles` from `@exceeder/vuetrex`. With zero spread the particle centers stay exactly on
+the route; a small nonzero spread adds sparkle around it. TabA uses this graph API, with density expressed as
+`count: Math.round(route.totalLength * 1000)` and spread configured on the particle source.
+For particle-only connections, set `.stroke({ opacity: 0, markerEnd: false })`; a fully transparent stroke allocates
+no mesh and cannot occlude particles.
 
 ## Clouds around scene objects
 

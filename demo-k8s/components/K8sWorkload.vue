@@ -1,6 +1,6 @@
 <template>
   <vx-panel
-    :name="id"
+    :name="id" :id="id"
     :size="width"
     :depth="depth"
     :height="0.22"

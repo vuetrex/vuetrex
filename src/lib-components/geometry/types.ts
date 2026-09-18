@@ -1,7 +1,8 @@
 import type * as THREE from 'three'
+import { GRAPH_PARAMETER, type GraphFieldContext, type GraphParameter, type GraphParameterValues } from '@/lib-components/graph/parameters.js'
 
 export const GEOMETRY_GRAPH_NODE = Symbol.for('@exceeder/vuetrex/geometry-node')
-export const GEOMETRY_PARAMETER = Symbol.for('@exceeder/vuetrex/geometry-parameter')
+export const GEOMETRY_PARAMETER = GRAPH_PARAMETER
 export const GEOMETRY_POINT_DOMAIN = Symbol.for('@exceeder/vuetrex/geometry-point-domain')
 
 export type Vector3Tuple = readonly [number, number, number]
@@ -12,14 +13,10 @@ export type EulerTuple = readonly [number, number, number]
 export type QuaternionTuple = readonly [number, number, number, number]
 export type RotationLike = EulerTuple | QuaternionTuple | THREE.Euler | THREE.Quaternion
 
-export interface GeometryParameter<Value = unknown> {
-    readonly [GEOMETRY_PARAMETER]: true
-    readonly name: string
-    readonly fallback?: Value
-}
+export type GeometryParameter<Value = unknown> = GraphParameter<Value>
 
 export type GeometryValue<Value> = Value | GeometryParameter<Value>
-export type GeometryParameterValues = Readonly<Record<string, unknown>>
+export type GeometryParameterValues = GraphParameterValues
 
 export type GeometryPipeOperator<Input = unknown, Output = Input> = (
     source: GeometrySource<Input>,
@@ -174,8 +171,9 @@ export interface ParameterMapOptions<Item = unknown> extends GeometryNodeOptions
     visible?: Field<boolean, Item>
 }
 
-export type GeometryItemKey<Item> = keyof Item | string | ((item: Item, index: number) => string | number)
-export type ItemValue<Item, Value> = GeometryValue<Value> | ((item: Item, index: number) => GeometryValue<Value>)
+export type GeometryItemContext<Item> = GraphFieldContext<Item>
+export type GeometryItemKey<Item> = keyof Item | string | ((context: GeometryItemContext<Item>) => string | number)
+export type ItemValue<Item, Value> = GeometryValue<Value> | ((context: GeometryItemContext<Item>) => GeometryValue<Value>)
 
 export interface GeometryPlacement<Item = unknown> {
     key?: string | number
@@ -278,9 +276,6 @@ export type DistributionOptions<Item = unknown> =
 export interface JoinOptions extends GeometryNodeOptions {
     operation?: 'combine'
 }
-
-/** @deprecated Use JoinOptions and geo.join(). */
-export type CombineOptions = JoinOptions
 
 export interface MaterialChannelOptions extends GeometryNodeOptions {
     material: GeometryValue<string>

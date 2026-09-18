@@ -5,11 +5,12 @@ import { shallowMount } from '@vue/test-utils'
 import { describe, it, expect, vi } from 'vitest'
 import Scene from '@/lib-components/three/scene.js'
 import { createRendererForStage } from '@/lib-components/renderer.js';
+import { GroundReflectorMaterial } from '@/lib-components/three/materials/GroundReflectorMaterial.js';
 import {
-    attachFloorOverlay,
+    attachFloorSurface,
     cameraFrameForBounds,
-    createBackgroundWallGeometry,
     createSceneFog,
+    STAGE_FLOOR_Y,
     VuetrexStage,
     worldBoundsOf,
 } from '@/lib-components/three/stage.js';
@@ -89,55 +90,121 @@ describe('The Vuetrex Stage object', () => {
         expect(new Set(fillColors)).toEqual(new Set(['#e8ecee']))
     })
 
-    it('keeps the floor overlay out of the reflector render pass', () => {
-        const scene = new THREE.Scene()
-        const reflector = new THREE.Mesh(new THREE.PlaneGeometry(100, 100))
-        reflector.rotation.x = -Math.PI / 2
-        reflector.position.y = -0.251
-        scene.add(reflector)
-
-        const material = new THREE.MeshBasicMaterial({ transparent: true })
-        const overlay = new THREE.Mesh(new THREE.PlaneGeometry(256, 256), material)
-        attachFloorOverlay(scene, overlay, reflector)
-        reflector.updateWorldMatrix(true, true)
-
-        expect(overlay.parent).toBe(reflector)
-        expect(overlay.getWorldPosition(new THREE.Vector3()).y).toBeCloseTo(-0.2495)
-        expect(material.depthWrite).toBe(false)
-        expect(material.polygonOffset).toBe(true)
-
-        reflector.visible = false
-        expect(overlay.getWorldPosition(new THREE.Vector3()).y).toBeCloseTo(-0.2495)
-        expect(overlay.parent?.visible).toBe(false)
-    })
-
     it('lets an unreflected floor own scene depth', () => {
         const scene = new THREE.Scene()
         const material = new THREE.MeshBasicMaterial({ transparent: true })
-        const overlay = new THREE.Mesh(new THREE.PlaneGeometry(256, 256), material)
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(256, 256), material)
 
-        attachFloorOverlay(scene, overlay)
+        attachFloorSurface(scene, floor)
 
-        expect(overlay.parent).toBe(scene)
-        expect(overlay.position.y).toBeCloseTo(-0.2495)
-        expect(overlay.rotation.x).toBeCloseTo(-Math.PI / 2)
+        expect(floor.parent).toBe(scene)
+        expect(floor.name).toBe('vx-floor-surface')
+        expect(floor.position.y).toBe(STAGE_FLOOR_Y)
+        expect(floor.rotation.x).toBeCloseTo(-Math.PI / 2)
+        expect(floor.renderOrder).toBe(-1)
         expect(material.depthWrite).toBe(true)
         expect(material.polygonOffset).toBe(false)
     })
 
-    it('creates flat and curved background wall geometries', () => {
-        const flat = createBackgroundWallGeometry({ shape: 'flat', width: 12, height: 5 })
-        flat.computeBoundingBox()
-        expect(flat.boundingBox!.getSize(new THREE.Vector3()).toArray()).toEqual([12, 5, 0])
+    it('composites the lit floor texture and reflection in one opaque material', () => {
+        const floorTexture = new THREE.Texture()
+        const reflectionTexture = new THREE.Texture()
+        const reflectionMatrix = new THREE.Matrix4()
+        const material = new GroundReflectorMaterial({
+            floorTexture,
+            reflectionTexture,
+            reflectionTextureMatrix: reflectionMatrix,
+            reflectionColor: 0x20282d,
+        })
+        const shader = {
+            uniforms: {},
+            vertexShader: THREE.ShaderLib.standard.vertexShader,
+            fragmentShader: THREE.ShaderLib.standard.fragmentShader,
+        }
 
-        const curved = createBackgroundWallGeometry({ shape: 'curved', radius: 7, height: 4, arc: 100 })
-        curved.computeBoundingBox()
-        const curvedSize = curved.boundingBox!.getSize(new THREE.Vector3())
-        expect(curved).toBeInstanceOf(THREE.CylinderGeometry)
-        expect(curved.parameters.radialSegments).toBe(128)
-        expect(curvedSize.y).toBeCloseTo(4)
-        expect(curvedSize.x).toBeGreaterThan(10)
-        expect(curvedSize.z).toBeGreaterThan(2)
+        material.onBeforeCompile(shader as any, {} as THREE.WebGLRenderer)
+
+        expect(material).toBeInstanceOf(THREE.MeshStandardMaterial)
+        expect(material.map).toBe(floorTexture)
+        expect(material.transparent).toBe(false)
+        expect(material.depthWrite).toBe(true)
+        expect(shader.uniforms).toMatchObject({
+            vxReflectionMap: { value: reflectionTexture },
+            vxReflectionTextureMatrix: { value: reflectionMatrix },
+        })
+        expect(shader.vertexShader).toContain('vxReflectionTextureMatrix * vec4(position, 1.0)')
+        const alphaCapture = shader.fragmentShader.indexOf('float vxFloorOpacity = diffuseColor.a')
+        const reflectionMix = shader.fragmentShader.indexOf('outgoingLight = mix(vxReflectedColor, outgoingLight, vxFloorOpacity)')
+        const opaqueOutput = shader.fragmentShader.indexOf('#include <opaque_fragment>')
+        const toneMapping = shader.fragmentShader.indexOf('#include <tonemapping_fragment>')
+        expect(alphaCapture).toBeGreaterThan(-1)
+        expect(reflectionMix).toBeGreaterThan(alphaCapture)
+        expect(opaqueOutput).toBeGreaterThan(reflectionMix)
+        expect(toneMapping).toBeGreaterThan(opaqueOutput)
+    })
+
+    it('uses one full-size reflected floor surface at Y=0', () => {
+        const scene = new THREE.Scene()
+        const floorTexture = new THREE.Texture()
+        const stage = Object.create(VuetrexStage.prototype) as VuetrexStage
+        Object.assign(stage as any, {
+            settings: { floorMirror: true, mirrorOpacity: 0.75, floorColor: 0x20282d },
+            width: 100,
+            height: 50,
+            renderer: {
+                getPixelRatio: () => 2,
+                capabilities: { maxTextureSize: 1024 },
+            },
+            caps: { planeSize: 256 },
+            groundMirror: undefined,
+        })
+
+        stage.createGroundMirror(scene, floorTexture)
+
+        const reflector = scene.getObjectByName('vx-ground-reflector') as Reflector
+        expect(reflector).toBeInstanceOf(Reflector)
+        expect(reflector.position.y).toBe(STAGE_FLOOR_Y)
+        expect(reflector.children).toHaveLength(0)
+        expect(reflector.material).toBeInstanceOf(THREE.MeshStandardMaterial)
+        expect((reflector.material as THREE.MeshStandardMaterial).map).toBe(floorTexture)
+        expect((reflector.material as THREE.Material).depthWrite).toBe(true)
+        expect((reflector.geometry as THREE.PlaneGeometry).parameters).toMatchObject({ width: 256, height: 256 })
+        expect(reflector.getRenderTarget()).toMatchObject({ width: 400, height: 200 })
+
+        reflector.geometry.dispose()
+        reflector.dispose()
+    })
+
+    it('keeps reflection enabled by default and skips its render target for an opaque floor', () => {
+        const makeStage = (settings: Record<string, unknown>) => {
+            const stage = Object.create(VuetrexStage.prototype) as VuetrexStage
+            Object.assign(stage as any, {
+                settings,
+                width: 100,
+                height: 50,
+                renderer: {
+                    getPixelRatio: () => 1,
+                    capabilities: { maxTextureSize: 1024 },
+                },
+                caps: { planeSize: 256 },
+                groundMirror: undefined,
+            })
+            return stage
+        }
+        const floorTexture = new THREE.Texture()
+        const defaultScene = new THREE.Scene()
+        const defaultStage = makeStage({ floorMirror: true })
+
+        const defaultReflector = defaultStage.createGroundMirror(defaultScene, floorTexture)
+
+        expect(defaultReflector).toBeInstanceOf(Reflector)
+        defaultReflector!.geometry.dispose()
+        defaultReflector!.dispose()
+
+        const opaqueScene = new THREE.Scene()
+        const opaqueStage = makeStage({ floorMirror: true, mirrorOpacity: 1 })
+        expect(opaqueStage.createGroundMirror(opaqueScene, floorTexture)).toBeUndefined()
+        expect(opaqueScene.children).toHaveLength(0)
     })
 
     it('creates optional distance fog using the background as its default colour', () => {
@@ -158,34 +225,6 @@ describe('The Vuetrex Stage object', () => {
         expect(boundedFog?.color.getHex()).toBe(0xaabbcc)
         expect(boundedFog?.near).toBe(0)
         expect(boundedFog?.far).toBeCloseTo(0.001)
-    })
-
-    it('paints a wall texture without depending on floor captions', () => {
-        const fills: string[] = []
-        const texts: string[] = []
-        const clears: string[] = []
-        const texture = {
-            fillStyle: '',
-            clear(fillStyle: string) { clears.push(fillStyle); this.fillStyle = fillStyle; return this },
-            setGlobalAlpha() {},
-            fillRect() { fills.push(this.fillStyle) },
-            drawText(text: string) { texts.push(text); return this },
-        }
-        const stage = Object.create(VuetrexStage.prototype) as VuetrexStage
-        Object.assign(stage as any, {
-            settings: { floorColor: 0x101820, captionColor: 0xffffff },
-        })
-
-        stage.paintBackgroundWallTexture(texture as any, {
-            color: 0x202a30,
-            gridColor: 0x7cb9c9,
-            title: 'LIVE TOPOLOGY',
-            subtitle: 'health / flow',
-        })
-
-        expect(new Set(fills)).toEqual(new Set(['#7cb9c9']))
-        expect(texts).toEqual(['LIVE TOPOLOGY', 'health / flow'])
-        expect(clears).toEqual(['#202a30ff'])
     })
 
     it('fits all world-space bounds inside the perspective viewport', () => {
@@ -266,6 +305,7 @@ describe('The Vuetrex Stage object', () => {
             cameraTarget: new THREE.Vector3(),
             cameraMotion: new THREE.Vector3(),
             activeCameraTarget: 'scene',
+            nodesById: new Map([['service', { element: { mesh: service } }]]),
             focusOptions: { padding: 0.45, duration: 0.6 },
             retargetCamera(target: THREE.Vector3, position: THREE.Vector3, duration: number) {
                 cameraMoves.push({ target: target.clone(), position: position.clone(), duration })
@@ -334,10 +374,10 @@ describe('The Vuetrex Stage object', () => {
         vi.unstubAllGlobals()
     })
 
-    it('disconnects resize observation and disposes renderer-owned GPU resources', () => {
+    it('scopes wheel input to the canvas and disposes renderer-owned resources', () => {
         const observer = {
-            observe: vi.fn(),
             disconnect: vi.fn(),
+            observe: vi.fn(),
         }
         vi.stubGlobal('ResizeObserver', class {
             constructor(_callback: ResizeObserverCallback) {}
@@ -357,6 +397,7 @@ describe('The Vuetrex Stage object', () => {
                 dispose: vi.fn(),
                 forceContextLoss: vi.fn(),
             }
+            const onMouseWheel = vi.fn()
             const scene = Object.create(Scene.prototype) as Scene
             Object.assign(scene as any, {
                 domParent,
@@ -369,17 +410,28 @@ describe('The Vuetrex Stage object', () => {
                 removeEventListeners: previousEventCleanup,
                 stopRenderLoop: vi.fn(),
                 onWindowResize: vi.fn(),
-                onMouseWheel: vi.fn(),
+                onMouseWheel,
                 onCanvasMouseMove: vi.fn(),
                 onCanvasClick: vi.fn(),
                 onCanvasDblClick: vi.fn(),
             })
 
             scene.bindEvents(domParent)
+
+            window.dispatchEvent(new WheelEvent('wheel', { deltaY: 120 }))
+            domParent.dispatchEvent(new WheelEvent('wheel', { deltaY: 120 }))
+            expect(onMouseWheel).not.toHaveBeenCalled()
+
+            canvas.dispatchEvent(new WheelEvent('wheel', { deltaY: 120 }))
+            expect(onMouseWheel).toHaveBeenCalledOnce()
+
             scene.destroy()
             scene.destroy()
 
+            canvas.dispatchEvent(new WheelEvent('wheel', { deltaY: 120 }))
+
             expect(previousEventCleanup).toHaveBeenCalledOnce()
+            expect(onMouseWheel).toHaveBeenCalledOnce()
             expect(observer.observe).toHaveBeenCalledWith(domParent)
             expect(observer.disconnect).toHaveBeenCalledOnce()
             expect(renderPass.dispose).toHaveBeenCalledOnce()
@@ -392,49 +444,35 @@ describe('The Vuetrex Stage object', () => {
         }
     })
 
-    it('disposes stage-owned floor, wall, and reflector resources', () => {
+    it('disposes stage-owned floor and reflector resources', () => {
         const scene = new THREE.Scene()
         const floorTexture = new THREE.Texture()
-        const wallTexture = new THREE.Texture()
         const floor = new THREE.Mesh(
             new THREE.PlaneGeometry(4, 4),
             new THREE.MeshStandardMaterial({ map: floorTexture }),
-        )
-        const wall = new THREE.Mesh(
-            new THREE.PlaneGeometry(4, 2),
-            new THREE.MeshBasicMaterial({ map: wallTexture }),
         )
         const mirror = new Reflector(new THREE.PlaneGeometry(4, 4), {
             textureWidth: 4,
             textureHeight: 4,
         })
-        mirror.add(floor)
-        scene.add(mirror, wall)
+        scene.add(floor, mirror)
 
         const floorGeometryDisposed = vi.fn()
         const floorMaterialDisposed = vi.fn()
         const floorTextureDisposed = vi.fn()
-        const wallGeometryDisposed = vi.fn()
-        const wallMaterialDisposed = vi.fn()
-        const wallTextureDisposed = vi.fn()
         const mirrorGeometryDisposed = vi.fn()
         const mirrorMaterialDisposed = vi.fn()
         const mirrorTargetDisposed = vi.fn()
         floor.geometry.addEventListener('dispose', floorGeometryDisposed)
         ;(floor.material as THREE.Material).addEventListener('dispose', floorMaterialDisposed)
         floorTexture.addEventListener('dispose', floorTextureDisposed)
-        wall.geometry.addEventListener('dispose', wallGeometryDisposed)
-        ;(wall.material as THREE.Material).addEventListener('dispose', wallMaterialDisposed)
-        wallTexture.addEventListener('dispose', wallTextureDisposed)
         mirror.geometry.addEventListener('dispose', mirrorGeometryDisposed)
         mirror.material.addEventListener('dispose', mirrorMaterialDisposed)
         mirror.getRenderTarget().addEventListener('dispose', mirrorTargetDisposed)
 
         const stage = Object.create(VuetrexStage.prototype) as VuetrexStage
         Object.assign(stage as any, {
-            floorOverlay: floor,
-            backgroundWall: wall,
-            backgroundWallTexture: { texture: wallTexture },
+            floorSurface: floor,
             groundMirror: mirror,
             caps: { texture: { texture: floorTexture }, updateFn: vi.fn() },
         })
@@ -444,14 +482,10 @@ describe('The Vuetrex Stage object', () => {
         expect(floorGeometryDisposed).toHaveBeenCalledOnce()
         expect(floorMaterialDisposed).toHaveBeenCalledOnce()
         expect(floorTextureDisposed).toHaveBeenCalledOnce()
-        expect(wallGeometryDisposed).toHaveBeenCalledOnce()
-        expect(wallMaterialDisposed).toHaveBeenCalledOnce()
-        expect(wallTextureDisposed).toHaveBeenCalledOnce()
         expect(mirrorGeometryDisposed).toHaveBeenCalledOnce()
         expect(mirrorMaterialDisposed).toHaveBeenCalledOnce()
         expect(mirrorTargetDisposed).toHaveBeenCalledOnce()
         expect(floor.parent).toBeNull()
-        expect(wall.parent).toBeNull()
         expect(mirror.parent).toBeNull()
         expect((stage as any).caps.texture).toBeNull()
         expect((stage as any).backgroundWallTexture).toBeUndefined()

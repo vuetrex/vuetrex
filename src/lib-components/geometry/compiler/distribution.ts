@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type {
     CustomDistribution,
     GeometryItemKey,
+    GeometryItemContext,
     GeometryPlacement,
     GeometryPointContext,
     GeometryPointDomain,
@@ -33,19 +34,18 @@ export interface EvaluatedPlacement<Item = unknown> {
 }
 
 function itemValue<Item, Value>(
-    value: GeometryValue<Value> | ((item: Item, index: number) => GeometryValue<Value>) | undefined,
-    item: Item,
-    index: number,
+    value: GeometryValue<Value> | ((context: GeometryItemContext<Item>) => GeometryValue<Value>) | undefined,
+    context: GeometryItemContext<Item>,
     parameters: GeometryParameterValues,
 ): Value | undefined {
     const evaluated = typeof value === 'function'
-        ? (value as (item: Item, index: number) => Value)(item, index)
+        ? (value as (context: GeometryItemContext<Item>) => Value)(context)
         : value
     return resolveGeometryValue(evaluated, parameters)
 }
 
 function semanticKey<Item>(item: Item, index: number, keyBy?: GeometryItemKey<Item>): string {
-    if (typeof keyBy === 'function') return String(keyBy(item, index))
+    if (typeof keyBy === 'function') return String(keyBy(Object.freeze({ item, key: String(index), index })))
     if (keyBy !== undefined && item && typeof item === 'object') {
         const value = (item as Record<PropertyKey, unknown>)[keyBy as PropertyKey]
         if (value !== undefined && value !== null && value !== '') return String(value)
@@ -99,15 +99,16 @@ function itemPlacements<Item>(
     const seen = new Set<string>()
     return options.items.map((item, index) => {
         const key = semanticKey(item, index, options.keyBy)
+        const context: GeometryItemContext<Item> = Object.freeze({ item, key, index })
         if (seen.has(key)) throw new Error(`Procedural distribution requires unique keys; duplicate key: ${key}`)
         seen.add(key)
-        const position = toVector3(itemValue(options.position, item, index, parameters))
-        const direction = itemValue(options.direction, item, index, parameters)
-        const normalValue = itemValue(options.normal, item, index, parameters)
+        const position = toVector3(itemValue(options.position, context, parameters))
+        const direction = itemValue(options.direction, context, parameters)
+        const normalValue = itemValue(options.normal, context, parameters)
         const normal = normalValue === undefined ? undefined : toVector3(normalValue).normalize()
         const tangent = direction === undefined ? undefined : toVector3(direction).normalize()
-        const rotation = itemValue(options.rotation, item, index, parameters)
-        const scale = itemValue(options.scale, item, index, parameters)
+        const rotation = itemValue(options.rotation, context, parameters)
+        const scale = itemValue(options.scale, context, parameters)
         return {
             key,
             index,

@@ -5,7 +5,6 @@ export type {
     VxDiagnosticsSettings,
     VxFitOptions,
     VxFogSettings,
-    VxWallSettings,
 } from '@/lib-components/three/stage.js';
 export { DisplayWall } from '@/lib-components/nodes/DisplayWall.js';
 export type {
@@ -47,6 +46,26 @@ export {
     resolveParticleField,
     resolveParticleValue,
 } from '@/lib-components/particles/index.js';
+export {
+    connectors,
+    compileConnectors,
+    connectorField,
+    connectorGraphSignature,
+    connectorGraphToDot,
+    connectorParameter,
+    connectorStrategy,
+    defineConnectorOutputs,
+    defineConnectors,
+    describeConnectorGraph,
+    inspectConnectors,
+    isConnectorParameter,
+    isConnectorSource,
+    registerConnectorAppearance,
+    registerConnectorStrategy,
+    resolveConnectorField,
+    resolveConnectorParameter,
+} from '@/lib-components/connectors/index.js';
+export type * from '@/lib-components/connectors/index.js';
 export type {
     CloudParticleOptions,
     CloudsParticleOptions,
@@ -97,7 +116,6 @@ export type {
 export type {
     BoxParameters,
     ColorRange,
-    CombineOptions,
     CustomDistribution,
     DistributionOptions,
     Field as GeometryField,
@@ -199,13 +217,7 @@ export { Node } from '@/lib-components/nodes/Node.js';
 export { Base } from '@/lib-components/nodes/Base.js';
 export { Panel } from '@/lib-components/nodes/Panel.js';
 export { Spacer } from '@/lib-components/nodes/Spacer.js';
-export { BusConnectorNode } from '@/lib-components/nodes/BusConnectorNode.js';
-export type {
-    BusRouteOptions,
-    ConnectorLane,
-    ConnectorPort,
-    ConnectorPortCoordinates,
-    ConnectorPortName,
-    ConnectorRouteOptions,
-} from '@/lib-components/three/connectors/types.js';
+export { ConnectorGraphHost } from '@/lib-components/nodes/ConnectorGraphHost.js';
+export type { ConnectorGraphHostEvents } from '@/lib-components/nodes/ConnectorGraphHost.js';
+export { StageDeclaration } from '@/lib-components/nodes/StageDeclaration.js';
 export type { VuetrexStage } from '@/lib-components/three/stage.js';

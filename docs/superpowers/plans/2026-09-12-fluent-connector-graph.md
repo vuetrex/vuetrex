@@ -4,9 +4,9 @@ description: Proposal for composable connector authoring, incremental route real
 outline: deep
 ---
 
-# Fluent Connector Graph Proposal
+# Fluent Connector Graph
 
-**Status:** Proposed. This document adds no runtime behavior.
+**Status:** Implemented, with the route-network refinements below as the normative public contract.
 
 **Goal:** Give connectors the same immutable, fluent, data-driven authoring model as procedural geometry and particles,
 while keeping route declarations out of layout, scene identity, focus, event bubbling, and the Three.js object tree.
@@ -107,8 +107,8 @@ realization.
    hits, diagnostics, and lifecycle.
 7. **Reactivity stays in Vue.** Applications construct graphs in `computed()`. The connector package does not add a
    second reactive system.
-8. **Resolved paths are a reusable boundary.** Line, geometry, particle, diagnostic, export, and future label backends
-   consume the same immutable path records.
+8. **Resolved route networks are a reusable boundary.** Line, geometry, particle, diagnostic, export, and future label
+   backends consume the same immutable keyed runs, junctions, and terminal traversals.
 9. **Reuse fluent geometry and particles.** Connector-specific code resolves relationships and paths; it should not
    maintain parallel geometry or particle authoring frameworks.
 10. **Unresolved endpoints are valid state.** Declarations survive endpoint timing changes and become active when both
@@ -140,6 +140,24 @@ This also separates two meanings of "shortest route":
   surfaces, obstacles, clearances, and bend costs.
 
 Those operations may inform each other, but neither should silently redefine the other.
+
+### Normative implementation refinements
+
+- Resolution returns a route network. Every run and junction has a stable key and semantic member keys; every terminal
+  owns an ordered traversal through those runs. An edge is the one-run case. Buses share split trunk runs, and bundles
+  combine real member networks rather than inventing an averaged highway path.
+- All graph fields and collection mappings receive one object context: `{ item, key, index, ...domainContext }`.
+  Geometry, particle, and connector helpers create the same parameter token, while retaining distinct source types.
+- `connectors.empty()` and empty joins are valid. Matching relationships auto-overlay presentation layers; independent
+  reusable module instances use an explicit `{ scope }` to namespace their semantic keys.
+- Routing properties merge from inner to outer, with later values winning. `{ replace: true }` is the explicit reset.
+  Presentation layers have stable keys (`shaft` by default), so later layers modify named presentation rather than
+  relying on array position.
+- Ground and air presets lower to ordinary public `route()` and `stroke()` operators. A highway router is a separate
+  routing feature with separate tests; bundle under-styling does not stand in for it. Adding markers or flow does not
+  remove the default shaft.
+- Public connector positions are frozen `[x, y, z]` tuples. Three.js vectors remain inside resolution and realization.
+  Picking forwards the actual raycast intersection and reports normalized traversal progress in `[0, 1]`.
 
 ### What “host” means
 

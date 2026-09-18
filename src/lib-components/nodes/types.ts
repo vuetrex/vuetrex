@@ -5,14 +5,13 @@ import {Layer} from '@/lib-components/nodes/Layer.js';
 import {Row} from '@/lib-components/nodes/Row.js';
 import {Stack} from '@/lib-components/nodes/Stack.js';
 import {Ring} from '@/lib-components/nodes/Ring.js';
-import {ConnectorNode} from '@/lib-components/nodes/ConnectorNode.js';
-import {BusConnectorNode} from '@/lib-components/nodes/BusConnectorNode.js';
 import {Panel} from '@/lib-components/nodes/Panel.js';
 import {InstanceNode} from '@/lib-components/nodes/InstanceNode.js';
 import {DisplayWall} from '@/lib-components/nodes/DisplayWall.js';
 import {Spacer} from '@/lib-components/nodes/Spacer.js';
 import {GeometryNode} from '@/lib-components/geometry/GeometryNode.js';
 import {ParticleNode} from '@/lib-components/particles/ParticleNode.js';
+import {ConnectorGraphHost} from '@/lib-components/nodes/ConnectorGraphHost.js';
 
 import {Box} from '@/lib-components/nodes/shapes/Box.js';
 import {Cylinder} from '@/lib-components/nodes/shapes/Cylinder.js';
@@ -39,9 +38,7 @@ const builtins: ElementRegistry = {
     'vx-row': Row,
     'vx-stack': Stack,
     'vx-ring': Ring,
-    'vx-connector': ConnectorNode,
-    'vx-bus-connector': BusConnectorNode,
-    'bus-connector': BusConnectorNode,
+    'vx-connectors': ConnectorGraphHost,
     'vx-panel': Panel,
     'vx-instances': InstanceNode,
     'vx-display-wall': DisplayWall,

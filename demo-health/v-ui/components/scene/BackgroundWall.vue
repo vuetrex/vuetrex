@@ -136,7 +136,7 @@ const chartData = computed<ChartData[]>(() => {
   return [
     { id: 'traffic', title: 'REQUEST RATE', value: `${Math.round(sum(traffic))}/s`, color: '#52b9d4', values: traffic },
     { id: 'latency', title: 'P95 LATENCY', value: `${Math.round(Math.max(0, ...latency))} ms`, color: '#e3a64f', values: latency },
-    { id: 'readiness', title: 'POD READINESS', value: `${Math.round(average(readiness) * 100)}%`, color: '#66c88c', values: readiness },
+    { id: 'readiness', title: 'POD READINESS', value: `${Math.round(average(readiness) * 100)}%`, color: '#58c6d5', values: readiness },
     { id: 'errors', title: 'ERROR RATE', value: `${(Math.max(0, ...errors) * 100).toFixed(1)}%`, color: '#dc6670', values: errors },
   ]
 })
@@ -245,8 +245,8 @@ function paintWorkloadPanel(
   )
   const metrics = [
     { label: 'DEPLOYMENTS', value: deployments.length, color: '#52b9d4' },
-    { label: 'PODS', value: pods, color: '#66c88c' },
-    { label: 'READY', value: ready, color: '#e3a64f' },
+    { label: 'PODS', value: pods, color: '#8aa0a8' },
+    { label: 'READY', value: ready, color: '#58c6d5' },
     { label: 'RESTARTS', value: restarts, color: '#dc6670' },
   ]
 
@@ -328,7 +328,7 @@ function paintTopologyPanel(
 }
 
 function statusColor(deployment: DeploymentViewModel): string {
-  if (deployment.status === 'healthy') return '#66c88c'
+  if (deployment.status === 'healthy') return '#58c6d5'
   if (deployment.status === 'degraded') return '#e3a64f'
   return '#dc6670'
 }
@@ -353,7 +353,7 @@ function paintDashboard(
   ctx.font = `500 ${Math.round(height * 0.022)}px Inter, sans-serif`
   ctx.fillText('checkout / health / capacity', margin, height * 0.115)
   ctx.textAlign = 'right'
-  ctx.fillStyle = '#66c88c'
+  ctx.fillStyle = '#58c6d5'
   ctx.fillText(`LIVE  t=${time.toFixed(1)}`, width - margin, height * 0.09)
   ctx.textAlign = 'left'
   ctx.strokeStyle = wallPalette.value.grid

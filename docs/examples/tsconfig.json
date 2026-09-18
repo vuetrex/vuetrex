@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "../..",
+    "paths": {
+      "@/*": ["../../src/*"],
+      "@exceeder/vuetrex": ["../../src/lib-components/index.ts"]
+    }
+  },
+  "include": ["src/CityBlockScene.vue", "src/cityBlock.ts", "../../src/**/*.d.ts"]
+}

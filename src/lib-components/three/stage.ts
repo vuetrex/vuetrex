@@ -6,8 +6,10 @@ import {Node} from '@/lib-components/nodes/Node.js';
 import type {InstanceHit} from '@/lib-components/nodes/InstanceNode.js';
 import type {GeometryHit} from '@/lib-components/geometry/types.js';
 import type {ParticleHit} from '@/lib-components/particles/types.js';
+import type {ConnectorHit} from '@/lib-components/connectors/types.js';
+import type {ConnectorRuntimeDiagnostics} from '@/lib-components/connectors/types.js';
 import {Connectors} from '@/lib-components/three/connectors/connectors.js';
-import type {BusRouteOptions, ConnectorRouteOptions} from '@/lib-components/three/connectors/types.js';
+import {GroundReflectorMaterial} from '@/lib-components/three/materials/GroundReflectorMaterial.js';
 import gsap from 'gsap';
 import {Text} from 'troika-three-text';
 
@@ -58,6 +60,8 @@ export interface VxStage {
     sendCameraTo(camera: string): void
     /** Enable, configure, or disable the scene diagnostics overlay. */
     setDiagnostics(diagnostics: boolean | VxDiagnosticsSettings): void
+    /** Inspect authored, resolved, and realized connector state without exposing mutable paths. */
+    connectorDiagnostics(): ConnectorRuntimeDiagnostics
 }
 
 export interface VxDiagnosticsSettings {
@@ -83,22 +87,15 @@ export interface VxSettings {
     floorColor?: number
     highlightColor?: number
     connectorColor?: number
-    particleColor?: number
     captionColor?: number
 
     lightColor1?: number
     lightColor2?: number
     lightColor3?: number
 
-    particleSpread?: number
-    particleVolume?: number
-    particleBlending?: THREE.Blending
-
     unit?: number
-    distance?: number
     gap?: number
     fog?: VxFogSettings
-    wall?: VxWallSettings
     diagnostics?: boolean | VxDiagnosticsSettings
     floorGrid?: boolean
     floorMirror?: boolean
@@ -106,86 +103,52 @@ export interface VxSettings {
     shadows?: boolean
 }
 
-export interface VxWallSettings {
-    shape?: 'flat' | 'curved'
-    color?: number
-    gridColor?: number
-    opacity?: number
-    width?: number
-    height?: number
-    radius?: number
-    arc?: number
-    y?: number
-    z?: number
-    title?: string
-    subtitle?: string
-}
-
 export interface VxMouseEvent extends MouseEvent {
     vxNode: Node;
     vxPosition: any;
     vxInstance?: InstanceHit<unknown> | GeometryHit<unknown> | ParticleHit<unknown>;
+    vxConnector?: ConnectorHit;
 }
 
 let BOX_RADIUS = 1.0;
 let BOX_DISTANCE = 1.0;
-const FLOOR_Y = -0.2495;
-const FLOOR_REFLECTOR_Y = 0.0;
+/** Authored scene content is base-anchored to this world-space plane. */
+export const STAGE_FLOOR_Y = 0;
+const GROUND_REFLECTOR_CLIP_BIAS = 0.0001;
 const DEVELOPMENT_CHECKS = (import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV ?? true;
 
 /**
- * Keep the floor decal inside the reflector subtree. Reflector hides itself
- * while rendering its texture, which must also hide the nearly coplanar decal
- * to avoid feeding the floor back into its own reflection.
+ * Attach the non-reflective floor as the scene's single Y=0 depth surface.
  */
-export function attachFloorOverlay(
+export function attachFloorSurface(
     scene: THREE.Scene,
-    overlay: THREE.Mesh,
-    reflector?: THREE.Object3D,
+    floor: THREE.Mesh,
 ): void {
-    const materials = Array.isArray(overlay.material) ? overlay.material : [overlay.material]
+    const materials = Array.isArray(floor.material) ? floor.material : [floor.material]
     for (const material of materials) {
-        material.depthWrite = reflector === undefined
-        material.polygonOffset = reflector !== undefined
-        material.polygonOffsetFactor = -1
-        material.polygonOffsetUnits = -1
+        material.depthWrite = true
+        material.polygonOffset = false
     }
 
-    overlay.name = 'vx-floor-overlay'
-    overlay.castShadow = false
-    overlay.receiveShadow = true
+    floor.name = 'vx-floor-surface'
+    floor.castShadow = false
+    floor.receiveShadow = true
+    // The floor is a transparent background surface. Render it before
+    // transparent effects such as connector particles instead of allowing
+    // camera-distance sorting to reverse their order while the camera orbits.
+    floor.renderOrder = -1
 
-    if (reflector) {
-        // Reflector's local +Z is world +Y after its -90 degree X rotation.
-        overlay.position.set(0, 0, FLOOR_REFLECTOR_Y)
-        overlay.rotation.set(0, 0, 0)
-        overlay.renderOrder = 1
-        reflector.add(overlay)
-        return
-    }
-
-    overlay.rotation.x = -Math.PI / 2
-    overlay.position.y = FLOOR_Y
-    scene.add(overlay)
+    floor.rotation.x = -Math.PI / 2
+    floor.position.y = STAGE_FLOOR_Y
+    scene.add(floor)
 }
 
-export function createBackgroundWallGeometry(settings: VxWallSettings): THREE.BufferGeometry {
-    const height = settings.height ?? 5
-    if (settings.shape === 'curved') {
-        const radius = settings.radius ?? 7
-        const arc = THREE.MathUtils.degToRad(settings.arc ?? 110)
-        return new THREE.CylinderGeometry(
-            radius,
-            radius,
-            height,
-            128,
-            1,
-            true,
-            Math.PI - arc / 2,
-            arc,
-        )
-    }
-    return new THREE.PlaneGeometry(settings.width ?? 11, height, 32, 1)
+function floorSurfaceOpacity(settings: VxSettings): number {
+    return THREE.MathUtils.clamp(settings.mirrorOpacity ?? 0.95, 0, 1)
+}
+
+function reflectionTextureExtent(cssPixels: number, pixelRatio: number, maxTextureSize: number): number {
+    return Math.min(maxTextureSize, Math.max(1, Math.round(cssPixels * pixelRatio * 2)))
 }
 
 export function createSceneFog(settings: VxSettings): THREE.Fog | null {
@@ -320,9 +283,7 @@ export class VuetrexStage extends Scene implements VxStage {
     }
     private captions: Array<{x:number, y:number, text:string, visible: boolean}> = []
     private groundMirror?: THREEx.Reflector
-    private floorOverlay?: THREE.Mesh
-    private backgroundWall?: THREE.Mesh
-    private backgroundWallTexture?: THREEx.DynamicTexture
+    private floorSurface?: THREE.Mesh
     private readonly nodesById = new Map<string, Node>()
     private readonly nodesByName = new Map<string, Node>()
     private diagnostics: boolean | VxDiagnosticsSettings = false
@@ -345,7 +306,7 @@ export class VuetrexStage extends Scene implements VxStage {
         this.diagnostics = settings.diagnostics ?? false
 
         this.boxRadius = settings.unit || BOX_RADIUS
-        this.boxDistance = settings.distance || BOX_DISTANCE
+        this.boxDistance = settings.gap ?? BOX_DISTANCE
         this.gap = settings.gap ?? this.boxDistance
         this.colorMain = new THREE.Color(settings.color || 0x555555);
         this.colorHighlight = new THREE.Color(settings.highlightColor || 0x4c7fb2);
@@ -367,9 +328,7 @@ export class VuetrexStage extends Scene implements VxStage {
     mount() {
         const scene = this.scene;
         scene.add(this.diagnosticsGroup)
-        this.createGroundMirror(scene);
         this.createFloor(scene);
-        this.createBackgroundWall(scene);
         this.createLights(scene);
 
         //particle system
@@ -382,10 +341,8 @@ export class VuetrexStage extends Scene implements VxStage {
         this.refreshDiagnostics()
     }
 
-    getById(id: string): Element3d {
-        const registered = this.nodesById?.get(id)?.element
-        if (registered) return registered
-        return (this.scene.getObjectByName('el-'+id) as THREE.Mesh)?.userData.el;
+    getById(id: string): Element3d | undefined {
+        return this.nodesById.get(id)?.element
     }
 
     registerNode(node: Node): void {
@@ -435,33 +392,46 @@ export class VuetrexStage extends Scene implements VxStage {
         this.subscribers.push(fn);
     }
 
-    createGroundMirror(scene: THREE.Scene) {
+    createGroundMirror(scene: THREE.Scene, floorTexture: THREE.Texture): THREEx.Reflector | undefined {
         this.groundMirror = undefined
-        if (this.settings.floorMirror === false) return
-        if (this.settings.mirrorOpacity === undefined) {
-            this.settings.mirrorOpacity = 0.95;
-        }
-        if (this.settings.mirrorOpacity < 0.999) {
-            const geometry = new THREE.PlaneGeometry(100, 100);
-            const groundMirror = new THREEx.Reflector(geometry, {
-                clipBias: 0.003,
-                textureWidth: this.width * window.devicePixelRatio * 2,
-                textureHeight: this.height * window.devicePixelRatio * 2,
-                color: new THREE.Color(this.settings.floorColor || 0x777777)
-            });
-            groundMirror.name = 'vx-ground-reflector';
-            groundMirror.rotateX(-Math.PI / 2);
-            groundMirror.position.y = FLOOR_REFLECTOR_Y;
-            groundMirror.receiveShadow = false;
-            scene.add(groundMirror);
-            this.groundMirror = groundMirror;
-        }
+        const floorOpacity = floorSurfaceOpacity(this.settings)
+        if (this.settings.floorMirror === false || floorOpacity >= 0.999) return
+
+        const pixelRatio = this.renderer.getPixelRatio()
+        const maxTextureSize = Math.max(1, this.renderer.capabilities.maxTextureSize)
+        const geometry = new THREE.PlaneGeometry(this.caps.planeSize, this.caps.planeSize)
+        const groundMirror = new THREEx.Reflector(geometry, {
+            // This bias belongs to the reflected camera's clipping calculation;
+            // unlike a second floor plane, it does not create competing depth.
+            clipBias: GROUND_REFLECTOR_CLIP_BIAS,
+            textureWidth: reflectionTextureExtent(this.width, pixelRatio, maxTextureSize),
+            textureHeight: reflectionTextureExtent(this.height, pixelRatio, maxTextureSize),
+            color: new THREE.Color(this.settings.floorColor ?? 0x777777),
+        })
+        const stockMaterial = groundMirror.material as THREE.ShaderMaterial
+        const reflectionTextureMatrix = stockMaterial.uniforms.textureMatrix.value as THREE.Matrix4
+        groundMirror.material = new GroundReflectorMaterial({
+            floorTexture,
+            reflectionTexture: groundMirror.getRenderTarget().texture,
+            reflectionTextureMatrix,
+            reflectionColor: this.settings.floorColor ?? 0x777777,
+        })
+        stockMaterial.dispose()
+        groundMirror.name = 'vx-ground-reflector'
+        groundMirror.rotateX(-Math.PI / 2)
+        groundMirror.position.y = STAGE_FLOOR_Y
+        groundMirror.castShadow = false
+        groundMirror.receiveShadow = this.shadowsEnabled()
+        groundMirror.renderOrder = -1
+        scene.add(groundMirror)
+        this.groundMirror = groundMirror
+        return groundMirror
     }
 
     createFloor(scene: THREE.Scene) {
         const caps = this.caps;
         const textureOffset = Math.floor(caps.repeats/2);
-        //overlay plane
+        // One canvas supplies the floor tint, grid, captions, and blend alpha.
         const texture = new THREEx.DynamicTexture(caps.size, caps.size)
         caps.texture = texture
         texture.texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy()
@@ -473,6 +443,10 @@ export class VuetrexStage extends Scene implements VxStage {
         this.repaintTitles(caps.planeSize)
         caps.updateFn = () => this.repaintTitles(caps.planeSize)
 
+        // Reflection and floor graphics share this one mesh/material so every
+        // floor pixel has exactly one depth value.
+        if (this.createGroundMirror(scene, texture.texture)) return
+
         const material = new THREE.MeshStandardMaterial({
             color: '#f0f0f0',
             roughness: 0.7,
@@ -483,70 +457,9 @@ export class VuetrexStage extends Scene implements VxStage {
         });
         material.toneMapped = false;
         const plane = new THREE.Mesh(new THREE.PlaneGeometry(caps.planeSize, caps.planeSize), material);
-        this.floorOverlay = plane
-        attachFloorOverlay(scene, plane, this.groundMirror)
+        this.floorSurface = plane
+        attachFloorSurface(scene, plane)
         plane.receiveShadow = this.shadowsEnabled()
-    }
-
-    createBackgroundWall(scene: THREE.Scene) {
-        const settings = this.settings.wall
-        if (!settings) return
-        const opacity = THREE.MathUtils.clamp(settings.opacity ?? 1, 0, 1)
-
-        const texture = new THREEx.DynamicTexture(1024, 512)
-        this.backgroundWallTexture = texture
-        this.paintBackgroundWallTexture(texture, settings)
-        texture.texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy()
-        texture.texture.minFilter = THREE.LinearMipmapLinearFilter
-        texture.texture.generateMipmaps = true
-        if (settings.shape === 'curved') {
-            // The stage is viewed from the cylinder's inner face.
-            texture.texture.wrapS = THREE.RepeatWrapping
-            texture.texture.repeat.x = -1
-            texture.texture.offset.x = 1
-        }
-
-        const material = new THREE.MeshBasicMaterial({
-            map: texture.texture,
-            transparent: opacity < 1,
-            side: THREE.DoubleSide,
-            depthWrite: opacity === 1,
-        })
-        const height = settings.height ?? 5
-        const wall = new THREE.Mesh(createBackgroundWallGeometry(settings), material)
-        this.backgroundWall = wall
-        wall.name = 'vx-background-wall'
-        wall.position.set(
-            0,
-            settings.y ?? height / 2 - 0.2,
-            settings.z ?? (settings.shape === 'curved' ? 1.5 : -4.5),
-        )
-        wall.renderOrder = -10
-        scene.add(wall)
-    }
-
-    paintBackgroundWallTexture(texture: THREEx.DynamicTexture, settings: VxWallSettings) {
-        const width = 1024
-        const height = 512
-        const color = settings.color ?? this.settings.floorColor ?? 0x20282d
-        const gridColor = settings.gridColor ?? this.settings.captionColor ?? 0xffffff
-
-        texture.clear(cssColorWithAlpha(color, settings.opacity ?? 1))
-        texture.fillStyle = cssColor(gridColor)
-        texture.setGlobalAlpha(0.055)
-        for (let x = 0; x <= width; x += 32) texture.fillRect(x, 0, 1, height)
-        for (let y = 0; y <= height; y += 32) texture.fillRect(0, y, width, 1)
-        texture.setGlobalAlpha(0.16)
-        for (let x = 0; x <= width; x += 128) texture.fillRect(x, 0, 2, height)
-        for (let y = 0; y <= height; y += 128) texture.fillRect(0, y, width, 2)
-
-        texture.setGlobalAlpha(1)
-        if (settings.title) {
-            texture.drawText(settings.title, 48, 176, cssColor(gridColor), 'bold 34px Helvetica')
-        }
-        if (settings.subtitle) {
-            texture.drawText(settings.subtitle, 48, 210, cssColor(gridColor), '18px Helvetica')
-        }
     }
 
     repaintTitles(mirrorSize: number) {
@@ -555,9 +468,10 @@ export class VuetrexStage extends Scene implements VxStage {
         const textureRepeats = caps.repeats;
         const texture = caps.texture!;
         texture.clear(undefined)
-        texture.clear('#' + ( this.settings.floorColor || 0x3f3f3f).toString(16) +
-            Math.floor((this.settings.mirrorOpacity || 0.90)*256).toString(16) //opacity
-        );
+        texture.clear(cssColorWithAlpha(
+            this.settings.floorColor ?? 0x3f3f3f,
+            floorSurfaceOpacity(this.settings),
+        ))
 
         texture.context.font = "bold "+Math.floor(textureSize/72)+"px Helvetica"
         const scale = textureSize / mirrorSize * textureRepeats;
@@ -716,20 +630,12 @@ export class VuetrexStage extends Scene implements VxStage {
         this.invalidateContentBounds()
     }
 
-    connect(el1: string, el2: string, layout?: string, type?: string, registrationId?: string, options?: ConnectorRouteOptions): string {
-        return this.connectors.register(el1, el2, layout, type, registrationId, options);
-    }
-
-    connectBus(from: string, to: readonly string[], type?: string, registrationId?: string, options?: BusRouteOptions): string {
-        return this.connectors.registerBus(from, to, type, registrationId, options);
-    }
-
-    unregisterConnection(registrationId: string) {
-        this.connectors.unregister(registrationId);
-    }
-
     public reconcileConnections() {
         this.connectors.reconcileConnections();
+    }
+
+    connectorDiagnostics(): ConnectorRuntimeDiagnostics {
+        return this.connectors.connectorDiagnostics()
     }
 
     updateNodeState(node: Node): void {
@@ -874,10 +780,6 @@ export class VuetrexStage extends Scene implements VxStage {
         }
     }
 
-    disconnect(el1: Element3d, el2: Element3d) {
-        if (el1 && el2) this.connectors.unregisterPair(el1, el2);
-    }
-
     animateTo(id: string, props: VxAnimProps, opts: VxAnimOptions = {}) {
         const mesh = this.getById(id)?.mesh;
         if (!mesh) return;
@@ -923,16 +825,12 @@ export class VuetrexStage extends Scene implements VxStage {
     }
 
     private disposeStageSurfaces() {
-        this.disposeOwnedMesh(this.floorOverlay)
-        this.floorOverlay = undefined
+        this.disposeOwnedMesh(this.floorSurface)
+        this.floorSurface = undefined
         this.caps.texture?.texture.dispose()
         this.caps.texture = null
         this.caps.updateFn = () => {}
 
-        this.disposeOwnedMesh(this.backgroundWall)
-        this.backgroundWall = undefined
-        this.backgroundWallTexture?.texture.dispose()
-        this.backgroundWallTexture = undefined
 
         if (this.groundMirror) {
             this.groundMirror.removeFromParent()
@@ -975,6 +873,11 @@ export class VuetrexStage extends Scene implements VxStage {
     onCanvasClick(event: MouseEvent) {
         event.preventDefault();
         if (this.selectedObject) {
+            const ownerId = this.selectedObject.userData.vxConnectorOwner as string | undefined
+            if (ownerId) {
+                this.connectors.dispatchOwnerEvent(ownerId, 'onClick', this.selectedObject, this.selectedInstanceId, event, this.selectedIntersection)
+                return
+            }
             const el3d = this.selectedObject.userData.el as Element3d;
             const ev = this.mouseEventFor(this.selectedObject, event);
             if (ev) el3d.mesh?.dispatchEvent({ type: 'click', originalEvent: ev });
@@ -984,6 +887,11 @@ export class VuetrexStage extends Scene implements VxStage {
     onCanvasDblClick(event: MouseEvent) {
         event.preventDefault();
         if (this.selectedObject) {
+            const ownerId = this.selectedObject.userData.vxConnectorOwner as string | undefined
+            if (ownerId) {
+                this.connectors.dispatchOwnerEvent(ownerId, 'onDblclick', this.selectedObject, this.selectedInstanceId, event, this.selectedIntersection)
+                return
+            }
             const el3d = this.selectedObject.userData.el as Element3d;
             const ev = this.mouseEventFor(this.selectedObject, event);
             if (ev) el3d.mesh?.dispatchEvent({ type: 'dblclick', originalEvent: ev });
@@ -991,12 +899,22 @@ export class VuetrexStage extends Scene implements VxStage {
     }
 
     protected onMouseOver(mesh: THREE.Mesh, event: MouseEvent) {
+        const ownerId = mesh.userData.vxConnectorOwner as string | undefined
+        if (ownerId) {
+            this.connectors.dispatchOwnerEvent(ownerId, 'onPointerenter', mesh, this.selectedInstanceId, event, this.selectedIntersection)
+            return
+        }
         const el3d = mesh.userData.el as Element3d | undefined;
         const ev = this.mouseEventFor(mesh, event);
         if (ev) el3d?.mesh?.dispatchEvent({ type: 'mouseOver', originalEvent: ev });
     }
 
     protected onMouseOut(mesh: THREE.Mesh, event: MouseEvent) {
+        const ownerId = mesh.userData.vxConnectorOwner as string | undefined
+        if (ownerId) {
+            this.connectors.dispatchOwnerEvent(ownerId, 'onPointerleave', mesh, this.selectedInstanceId, event, this.selectedIntersection)
+            return
+        }
         const el3d = mesh.userData.el as Element3d | undefined;
         const ev = this.mouseEventFor(mesh, event);
         if (ev) el3d?.mesh?.dispatchEvent({ type: 'mouseOut', originalEvent: ev });
@@ -1069,7 +987,7 @@ export class VuetrexStage extends Scene implements VxStage {
     }
 
     private focusObject(name: string, options: Required<VxFitOptions>, force: boolean): boolean {
-        const object = this.getById(name)?.mesh ?? this.scene.getObjectByName(`el-${name}`)
+        const object = this.getById(name)?.mesh
         if (!object) return false
 
         return this.frameBounds(worldBoundsOf(object), options, this.focusDirection(), force)

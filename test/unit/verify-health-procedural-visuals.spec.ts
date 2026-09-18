@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Vector3 } from 'three'
+import { compose } from '@/lib-components/composition/index.js'
 import { evaluateGeometry } from '@/lib-components/geometry/compiler/evaluator.js'
 import { GeometryPrototypeRegistry } from '@/lib-components/geometry/compiler/prototypes.js'
 import { geometrySetBounds } from '@/lib-components/geometry/compiler/bounds.js'
@@ -10,7 +11,8 @@ import {
   stableDeploymentVisualFor,
 } from '../../demo-health/v-ui/geometry/deploymentVisual.js'
 import { researchNodeIds } from '../../demo-health/v-ui/model/sceneModel.js'
-import type { DeploymentViewModel } from '../../demo-health/v-ui/types.js'
+import { deploymentRecipe } from '../../demo-health/v-ui/recipes/deploymentRecipe.js'
+import type { DeploymentViewModel, RelationViewModel } from '../../demo-health/v-ui/types.js'
 
 function deployment(id: string, overrides: Partial<DeploymentViewModel> = {}): DeploymentViewModel {
   return {
@@ -44,6 +46,51 @@ function deployment(id: string, overrides: Partial<DeploymentViewModel> = {}): D
 }
 
 describe('health deployment procedural visuals', () => {
+  it('keeps radial placements anchored on the gateway when visual selection changes', () => {
+    const deployments = researchNodeIds.map(id => deployment(id))
+    const relations: RelationViewModel[] = [
+      {
+        id: 'gateway:auth',
+        from: 'edge-gateway',
+        to: 'auth-api',
+        protocol: 'http',
+        kind: 'request',
+        renderer: 'particles',
+        layout: 'orthogonal',
+      },
+      {
+        id: 'orders:payments',
+        from: 'orders-api',
+        to: 'payments-api',
+        protocol: 'grpc',
+        kind: 'request',
+        renderer: 'particles',
+        layout: 'direct',
+      },
+    ]
+    const data = { deployments, relations }
+    const context = { parameters: { pattern: 'radial' } }
+    const before = compose(deploymentRecipe, data, {
+      ...context,
+      selectedId: 'edge-gateway',
+    }).fragment.nodes
+    const after = compose(deploymentRecipe, data, {
+      ...context,
+      selectedId: 'orders-api',
+    }).fragment.nodes
+
+    expect(after.map(node => ({
+      id: node.id,
+      position: node.placement.position.toArray(),
+      scale: node.placement.scale.toArray(),
+    }))).toEqual(before.map(node => ({
+      id: node.id,
+      position: node.placement.position.toArray(),
+      scale: node.placement.scale.toArray(),
+    })))
+    expect(after.find(node => node.id === 'edge-gateway')?.placement.position.toArray()).toEqual([0, 0, 0])
+  })
+
   it('assigns every displayed deployment a different procedural motif', () => {
     const kinds = researchNodeIds.map(deploymentVisualKind)
     expect(new Set(kinds).size).toBe(researchNodeIds.length)

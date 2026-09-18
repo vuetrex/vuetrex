@@ -23,6 +23,27 @@ it can serve as a starting point for contextual composition experiments. Each di
 deterministic procedural signature: its service identity selects the motif while live replica and metric values shape
 the generated detail, color, and variation.
 
+## Visual grammar
+
+The research client applies the hierarchy from [Designing legible data scenes](../docs/guide/visual-design.md): the
+platform, wall, grid, and ordinary materials stay neutral so live topology and health remain the strongest signals.
+Cyan means healthy or active, amber is reserved for degraded state, and coral is reserved for unavailable or critical
+state. Request rate changes particle velocity while status changes route role and color, so the same metric is not
+encoded twice without purpose.
+
+The connector graph demonstrates the public fluent API instead of maintaining a demo-only routing layer. Healthy
+gateway traffic is a keyed `bus` with shared ground-level structure. Other healthy relations are keyed `edges`, use
+explicit or automatic ports, follow the `ground` profile, and may share protocol bundles. Degraded and unavailable
+relations switch to the `air` profile with elevated Bézier or spline routes, making exceptional traffic visibly cross
+the normal orthogonal network. Every route uses stable `underlay` and `shaft` decoration keys, semantic names and
+metadata, an end marker, and an additive particle flow compiled from the resolved traversal.
+
+Connectors are interactive. Selecting a shaft, marker, bundle, or particle opens an inspector with its semantic route
+key, resolved source name, actual world-space hit point, normalized path progress, and bundle membership where
+applicable. This keeps the same resolved network useful for rendering, motion, and picking. Shadows are enabled by
+default in the demo; a cool directional key, warm opposing rim, restrained hemisphere fill, progressive lightmap, and
+wall contact shadow provide depth without making the environment compete with the data.
+
 ## Timeline control
 
 `PUT /state` patches the control state. Supported fields are:

@@ -54,7 +54,7 @@ const incidentLabel = computed(() =>
         <vx-panel
           v-for="service in services"
           :key="service.id"
-          :name="service.id"
+          :name="service.id" :id="service.id"
           :size="1.1"
           :depth="0.72"
           :height="0.16"

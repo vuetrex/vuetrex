@@ -1,7 +1,8 @@
 import type * as THREE from 'three'
+import { GRAPH_PARAMETER, type GraphParameter, type GraphParameterValues } from '@/lib-components/graph/parameters.js'
 
 export const PARTICLE_GRAPH_NODE = Symbol.for('@exceeder/vuetrex/particle-node')
-export const PARTICLE_PARAMETER = Symbol.for('@exceeder/vuetrex/particle-parameter')
+export const PARTICLE_PARAMETER = GRAPH_PARAMETER
 
 export type ParticleVector3Tuple = readonly [number, number, number]
 export type ParticleVector3Object = Readonly<{ x: number; y: number; z: number }>
@@ -10,14 +11,10 @@ export type ParticleColor = THREE.ColorRepresentation | THREE.Color
 export type ParticleTarget = string | ParticleVector3Like
 export type ParticleBackendName = 'auto' | 'cpu' | (string & {})
 
-export interface ParticleParameter<Value = unknown> {
-    readonly [PARTICLE_PARAMETER]: true
-    readonly name: string
-    readonly fallback?: Value
-}
+export type ParticleParameter<Value = unknown> = GraphParameter<Value>
 
 export type ParticleValue<Value> = Value | ParticleParameter<Value>
-export type ParticleParameterValues = Readonly<Record<string, unknown>>
+export type ParticleParameterValues = GraphParameterValues
 
 export interface ParticleContext<Item = unknown> {
     readonly key: string
@@ -36,7 +33,7 @@ export type ParticleField<Value, Item = unknown> =
 
 export type ParticleCount<Item = unknown> =
     | ParticleValue<number>
-    | ((item: Item, emitterIndex: number) => ParticleValue<number>)
+    | ((context: Pick<ParticleContext<Item>, 'item' | 'key' | 'index' | 'emitterIndex'>) => ParticleValue<number>)
 
 export interface ParticleNodeOptions {
     key?: string
@@ -100,6 +97,8 @@ export interface PathParticleOptions<Item = unknown> extends ParticleNodeOptions
     count?: ParticleCount<Item>
     item?: Item
     closed?: boolean
+    /** Straight segments or a smooth centripetal spline. Standalone default: catmull-rom; connector flow default: linear. */
+    interpolation?: 'linear' | 'catmull-rom'
     seed?: ParticleValue<string | number>
     distribution?: 'even' | 'random'
     spread?: ParticleField<number, Item>
@@ -108,6 +107,8 @@ export interface PathParticleOptions<Item = unknown> extends ParticleNodeOptions
 export interface PathsParticleOptions<Item = unknown> extends ParticleNodeOptions {
     count?: ParticleCount<Item>
     closed?: boolean
+    /** Straight segments or a smooth centripetal spline. Standalone default: catmull-rom; connector flow default: linear. */
+    interpolation?: 'linear' | 'catmull-rom'
     seed?: ParticleValue<string | number>
     distribution?: 'even' | 'random'
     spread?: ParticleField<number, Item>

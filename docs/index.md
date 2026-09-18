@@ -40,7 +40,7 @@ const services = [
       <vx-box
         v-for="service in services"
         :key="service.id"
-        :name="service.id"
+        :name="service.id" :id="service.id"
         :text="service.id"
         :material="{ color: service.healthy ? 0x2f91b8 : 0xc45d4a }"
       />
@@ -74,6 +74,7 @@ show and whether they belong in a row, ring, sphere, or timeline. Those responsi
 
 ## Choose a path
 
+- [Explore the Scene notebook](/examples/) through small interactive worlds, starting with a moving city block.
 - [Build your first scene](/guide/) from installation to a reactive diagram.
 - [Turn domain data into Vue components](/guide/live-data) without flattening everything into meshes.
 - [Understand nested layouts](/guide/layouts) and local coordinate spaces.

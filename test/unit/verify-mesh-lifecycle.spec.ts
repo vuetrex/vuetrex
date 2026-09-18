@@ -35,8 +35,6 @@ function makeStage() {
         getScene: () => scene,
         renderMesh,
         removeObject,
-        connect: vi.fn(),
-        unregisterConnection: vi.fn(),
         reconcileConnections: vi.fn(),
         invalidateContentBounds: vi.fn(),
         connectors: {

@@ -4,5 +4,5 @@ import { config } from '@vue/test-utils'
 // SFC compiler. This covers runtime-compiled templates (inline template strings
 // in test fixtures) which bypass the Vite plugin's SFC compiler pass.
 config.global.config.compilerOptions = {
-    isCustomElement: (tag: string) => /^vx-(group|layer|row|stack|ring|panel|instances|box|cylinder|wedge|connector)$/.test(tag)
+    isCustomElement: (tag: string) => /^vx-(group|layer|row|stack|ring|panel|instances|box|cylinder|wedge|connectors)$/.test(tag)
 }

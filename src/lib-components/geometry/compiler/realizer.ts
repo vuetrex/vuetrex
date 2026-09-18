@@ -38,6 +38,7 @@ export class GeometryRealizer {
     private readonly batches = new Map<string, MeshBatch>()
     private readonly batchByObject = new WeakMap<THREE.Object3D, MeshBatch>()
     private readonly lines = new Map<string, LineEntry>()
+    private readonly lineHitByObject = new WeakMap<THREE.Object3D, GeometryHit<unknown>>()
     private readonly channelMaterials = new Map<string, THREE.MeshStandardMaterial>()
     private materialChannels: Readonly<Record<string, VxMaterialProps>> = {}
 
@@ -109,6 +110,12 @@ export class GeometryRealizer {
         if (object) return this.batchByObject.get(object)?.hitBySlot[instanceIndex]
         if (this.batches.size === 1) return this.batches.values().next().value?.hitBySlot[instanceIndex]
         return undefined
+    }
+
+    geometryHitAt(object: THREE.Object3D, instanceIndex?: number): GeometryHit<unknown> | undefined {
+        return instanceIndex === undefined
+            ? this.lineHitByObject.get(object)
+            : this.instanceHitAt(instanceIndex, object)
     }
 
     dispose(): void {
@@ -224,6 +231,14 @@ export class GeometryRealizer {
             entry = { line, material, materialKey: record.materialKey, recordColor: record.color.clone() }
             this.lines.set(key, entry)
         }
+        this.lineHitByObject.set(entry.line, {
+            id: semanticId(record),
+            item: record.context.item,
+            instanceIndex: 0,
+            recordKey: record.key,
+            materialKey: record.materialKey,
+            groups: record.groups,
+        })
         entry.recordColor.copy(record.color)
         entry.materialKey = record.materialKey
         entry.line.matrix.copy(record.matrix)

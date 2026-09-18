@@ -55,11 +55,10 @@ export const deploymentRecipe: RepresentationRecipe<
         return placement
       })
     }
-    // The overview is a focused operational dashboard: keep the gateway as the
-    // visual hub until the user chooses another deployment.
-    const focusContext = context.selectedId
-      ? context
-      : { ...context, selectedId: 'edge-gateway' }
+    // Selection is an inspection/style concern in this demo. Keep the spatial
+    // topology anchored on the gateway so clicking a deployment never changes
+    // ring membership, scale, or connector endpoints.
+    const focusContext = { ...context, selectedId: 'edge-gateway' }
     return radialFocus(data.deployments, focusContext, {
       id: deployment => deployment.id,
       relations: data.relations,

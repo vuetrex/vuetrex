@@ -34,6 +34,22 @@ The row uses each child's measured width. No slot index or manual X coordinate i
 
 `<vx-group :layout="mode">` supports `grid`, `row`, `depth`, `stack`, and `ring` when layout is selected dynamically.
 
+## Start at the ground plane
+
+Vuetrex uses Three.js's Y-up coordinate system. The visible floor is exactly at world `Y = 0`, and the standard
+`base` anchor places an object's lowest point there. Height and stack layout then grow in the positive Y direction.
+This makes vertical scaling predictable: a box with `height="0.6"` spans Y `0..0.6` instead of growing equally above
+and below its position.
+
+Mesh nodes and the default `base` anchors for instances and procedural geometry follow this convention. Explicit
+recipe placements also treat `position.y = 0` as the floor. Use `anchor="center"` or `anchor="origin"` only when the
+authored coordinates intentionally need a different origin; a negative Y placement deliberately puts content below
+the floor.
+
+When floor reflection is enabled, the reflector is the floor: one material combines the reflected scene with the
+floor tint, grid, captions, lighting, and shadows on the same surface at world `Y = 0`. No internal floor clearance
+leaks into layout, so application placements never need to compensate for rendering details.
+
 ## Build depth by nesting
 
 ```vue
@@ -139,7 +155,7 @@ such as spheres, geographic projection, or temporal depth:
 <vx-group
   v-for="node in scene.fragment.nodes"
   :key="node.id"
-  :name="node.id"
+  :name="node.id" :id="node.id"
   :placement="node.placement"
 >
   <ServiceNode :service="node.data" />

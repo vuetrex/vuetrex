@@ -48,7 +48,9 @@ import type { CompositionPattern, RenderFeatures, ThemeMode } from '../types.js'
 
 const selectedId = ref('')
 const selectedPodId = ref('')
-const camera = ref('scene')
+// Lead with the data-bearing platform. The explicit Overview action still
+// reveals the larger architectural wall when that context is useful.
+const camera = ref('main-stage')
 const composition = ref<CompositionPattern>('radial')
 const diagnostics = ref(false)
 const theme = ref<ThemeMode>(initialTheme())
@@ -56,7 +58,7 @@ const renderFeatures = ref<RenderFeatures>({
   floorGrid: true,
   floorMirror: false,
   floorCaptions: false,
-  shadows: false,
+  shadows: true,
 })
 
 const {
@@ -98,17 +100,17 @@ function selectPod(deploymentId: string, podId: string) {
 function clearSelection() {
   selectedId.value = ''
   selectedPodId.value = ''
-  camera.value = 'scene'
 }
 
 function showOverview() {
   clearSelection()
+  camera.value = 'scene'
 }
 
 watch(composition, pattern => {
   camera.value = selectedId.value
     ? pattern === 'radial' ? 'main-stage' : selectedId.value
-    : 'scene'
+    : 'main-stage'
 })
 
 watch(theme, value => {

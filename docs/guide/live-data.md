@@ -40,7 +40,7 @@ defineProps<{ service: Service }>()
 
 <template>
   <vx-panel
-    :name="service.id"
+    :name="service.id" :id="service.id"
     :size="1.5"
     :depth="0.9"
     :lines="[service.id, service.status]"

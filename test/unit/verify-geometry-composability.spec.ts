@@ -159,7 +159,7 @@ describe('procedural geometry composability extensions', () => {
         const graph = geo.named(geo.distribute(geo.box(), {
             items,
             keyBy: 'id',
-            position: item => item.position,
+            position: ({ item }) => item.position,
         }), 'pods')
         const { parent, stage } = fixture()
         const node = geometryNode(parent, stage, graph)
@@ -170,16 +170,6 @@ describe('procedural geometry composability extensions', () => {
         expect(node.instanceWorldBounds('pod-b')).toBeDefined()
         const mesh = node.group.children[0] as THREE.InstancedMesh
         expect(node.instanceHitAt(0, mesh)).toMatchObject({ id: 'pod-a', item: items[0], groups: ['pods'] })
-    })
-
-    it('keeps geo.boolean as a compatible alias for the accurately named geo.join', () => {
-        const source = geo.box()
-        const joined = geo.join([source, source])
-        const legacy = geo.boolean([source, source])
-        expect(joined.kind).toBe('join')
-        expect(legacy.kind).toBe('join')
-        expect(evaluateGeometry(joined).records).toHaveLength(2)
-        expect(evaluateGeometry(legacy).records).toHaveLength(2)
     })
 
     it('describes DAGs and reports runtime inspection data', () => {

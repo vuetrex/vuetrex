@@ -60,6 +60,18 @@ Vue refs → computed ParticleSource → immutable particle DAG → CompiledPart
                                                         → one logical ParticleNode
 ```
 
+Connectors combine immutable relationship authoring with stage-resolved spatial paths:
+
+```
+data → immutable ConnectorSource DAG → AuthoredConnectorPlan
+                                    → keyed endpoint resolver → ResolvedConnectorNetwork
+                                    → stroke / GeometrySource / ParticleSource backends
+                                    → one host-only ConnectorGraphHost
+```
+
+The compiler never reads Three.js state. The resolver never allocates rendering resources, and appearance backends
+never look up endpoint IDs or calculate routes.
+
 ---
 
 ## Key abstractions
@@ -92,9 +104,9 @@ from `nodes/layouts.ts`. Containers (`Row`, `Ring`, `Stack`, `Layer`) extend thi
 
 ### `MeshNode` (`nodes/MeshNode.ts`)
 
-Extends `Node`. Base for all geometry nodes. Provides reactive `state` (`text`, `size`, `height`, `connection`,
-`material`, `hover`), shared idempotent `syncWithThree()` lifecycle (geometry/material/connection watchEffects →
-`stage.renderMesh()` / `stage.connect()` / `stage.reconcileConnections()`), and `onRemoved()` cleanup. Event wiring
+Extends `Node`. Base for all geometry nodes. Provides reactive `state` (`text`, `size`, `height`,
+`material`, `hover`), shared idempotent `syncWithThree()` lifecycle (geometry/material/caption watchEffects →
+`stage.renderMesh()` / `stage.reconcileConnections()`), and `onRemoved()` cleanup. Event wiring
 happens inside the geometry watchEffect after the mesh exists. **To add a new shape: extend `MeshNode`, implement
 `modelGen()`.**
 
@@ -155,13 +167,21 @@ Passing a `Placement` to a `GroupNode` opts that subtree out of its parent's aut
 to the group's local transform. This lets a recipe position an arbitrarily detailed Vue subtree without knowing how
 that subtree is rendered.
 
-### Connector records (`nodes/ConnectorNode.ts`, `nodes/BusConnectorNode.ts`)
+### Connector graphs (`connectors/`, `nodes/ConnectorGraphHost.ts`)
 
-`ConnectorNode` is a declarative point-to-point record. Reactive endpoints, ports, strategy, elevation, lane, and
-clearance update one stable keyed registration through `stage.connect()`. `BusConnectorNode` owns one source and a
-reactive target collection through `stage.connectBus()`, producing one trunk and terminal branches. Both synchronize
-with the renderer but return `participatesInLayout() === false`. Unmounting unregisters only that declaration, and
-parallel edges remain independent. `MeshNode.state.connection` remains the shorthand for a default route to one ID.
+Connector sources and operators are frozen values on a shared fluent prototype. The compiler evaluates item fields and
+parameters into authored records while preserving topology, route, decoration, and dynamic identities separately. The
+stage controller resolves IDs, built-in or custom ports, local/world points, obstacles, automatic lanes, buses, and
+bundles into immutable paths. Keyed stroke, geometry, and particle bridges realize those paths and own their cleanup.
+
+`ConnectorGraphHost` extends `StageDeclaration`, which extends `Base`, not `Node`. It remains in raw host order for Vue
+reconciliation but has no `Element3d`, spatial projection, stage identity, focus behavior, or authored Three.js object.
+Unmounting removes exactly its owner records. All relationships are authored as connector graphs and realized through
+`<vx-connectors>`; spatial meshes do not own connection declarations.
+
+Endpoint changes reroute only dependent records. Stable-key reorder preserves resolved path identity and backend
+objects. Static stroke graphs register no frame callback; the particle bridge subscribes only while flow output exists.
+Connector output is tagged for owner-level picking without creating one semantic `Node` per edge.
 
 ### Material & Interaction (`nodes/material.ts`)
 
@@ -184,8 +204,7 @@ parallel edges remain independent. `MeshNode.state.connection` remains the short
 | `Ring`          | Circular layout container             | `ringLayout`                         |
 | `Panel`         | Visual top-surface container          | Split label/content regions          |
 | `DisplayWall`   | Canvas/SVG-backed display surface      | Flat or curved wall geometry          |
-| `ConnectorNode` | Declarative link between nodes        | `syncWithThree()`                    |
-| `BusConnectorNode` | Shared one-to-many route          | `syncWithThree()`                    |
+| `ConnectorGraphHost` | Host-only keyed connector graph | Compiler effect, owner cleanup       |
 | `InstanceNode`  | Keyed GPU-instanced semantic repeater | `InstanceEncoding`, `instanceHitAt()`|
 | `GeometryNode`  | Procedural graph output and batching  | Reactive compiler, generated bounds  |
 | `ParticleNode`  | Particle graph and execution backend  | Time stepping, buffers, generated bounds |
@@ -198,7 +217,7 @@ Thin bridge: holds `mesh: THREE.Object3D` and `pos: Vector3`. `getPosition()` de
 
 ### `VuetrexStage` (`three/stage.ts`)
 
-Scene infrastructure. Manages floor, optional flat/curved textured background wall, mirror, lights, caption texture,
+Scene infrastructure. Manages floor, mirror, lights, caption texture,
 connectors, `renderMesh()`, `removeObject()`, camera, and raycasting. Exposes `boxRadius` / `boxDistance` (configurable
 via `VxSettings`).
 
@@ -208,25 +227,24 @@ options for later refits. Geometry, group placement, instance, panel, structural
 into one refit per animation frame. Named focus uses the same calculation on the target object's world bounds, so nested
 placement groups and scaled descendants are handled correctly.
 
-`renderMesh()` can parent meshes either under the scene root or under a container's `THREE.Group`. Connection
-declarations are registered first, then `reconcileConnections()` resolves them against live `Element3d` instances after
-sync.
+`renderMesh()` can parent meshes either under the scene root or under a container's `THREE.Group`. The connector
+controller retains unresolved authored records until endpoints appear, then resolves immutable full-XYZ paths against
+current world bounds and custom `Node.connectorPorts()` contributions.
 
-- **Connector renderers:** `particles` and `line`
-- **Connector strategies:** `orthogonal`, `direct`, `bezier`, and `spline` (`straight` aliases `direct`)
+The public ground coordinate is world `Y = 0`. Base-anchored meshes and generated geometry place their minimum Y on
+that plane and extend upward. The visible floor also occupies exactly that plane. When reflection is enabled, a
+single opaque, depth-writing reflector material combines the projected reflection with the floor texture's tint,
+grid, and captions, while retaining standard lighting and shadows. There is no coplanar overlay and no internal
+floor offset to leak into layout, connector, or particle code. The reflected camera still uses a small oblique clip
+bias; that affects only reflection-pass clipping, not the floor's world position or main-pass depth.
 
-Ports resolve against `Box3.setFromObject()` world bounds, either from named faces or normalized `{x,y,z}` coordinates.
-Connector segments carry full XYZ endpoints and the world scale of the closest Three.js parent shared by both endpoints.
-Particle spread, size, velocity, and the line renderer's world-space thickness follow that enclosing scale. Routes rebuild when either
-endpoint or an enclosing `GroupNode` changes, allowing diagrams to be scaled down while a closer camera preserves their
-apparent connector proportions. Orthogonal routes use endpoint leads and axis-aligned bends; direct routes use edge-to-edge
-spans; Bezier and spline strategies sample smooth curves into the same segment representation. Elevation raises route
-crests, lanes offset parallel paths, and `avoid` currently supplies endpoint clearance. Sampling is coordinate-independent,
-so line geometry and particle velocity use the same complete 3D route. Bus records add one shared trunk plus branches
-without duplicating the trunk for every target.
-
-Terminal `line` segments include a scale-aware cone marker pointing into their resolved target port. Bus branches each
-receive a terminal marker; the shared source lead and trunk do not.
+Built-in strategies are orthogonal, direct, Bezier, spline, and manual. Strategy inputs are
+pure endpoint, obstacle, waypoint, elevation, clearance, lane, and enclosing-scale values. Orthogonal ground routing
+uses deterministic bounded obstacle search. Buses resolve as route networks: semantic member keys own stable
+source/trunk/branch runs, junctions, and terminal traversals. Bundles combine their members' real networks; the
+separate highway router is not approximated by an averaged presentation path. Appearance factories opt into one
+traversal or the whole network, and public route positions are immutable tuples. `stage.connectorDiagnostics()` reports authored/resolved counts,
+unresolved keys, route builds, backend updates, batches, emitters, and owner names without exposing mutable internals.
 
 - **`VxAnimProps`:** target transform values for `animateTo()` (positionY, scale, etc.)
 - **`VxAnimOptions`:** animation timing and easing (duration, ease, delay, onComplete)

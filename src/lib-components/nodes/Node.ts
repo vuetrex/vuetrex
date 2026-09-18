@@ -3,6 +3,7 @@ import { Element3d, VxEventMap } from '@/lib-components/three/element3d.js';
 import { VuetrexStage } from '@/lib-components/three/stage.js';
 import { reactive, computed, ComputedRef } from 'vue';
 import * as THREE from 'three';
+import type { ConnectorPortDefinition } from '@/lib-components/connectors/types.js';
 
 declare type VxEventListener<T extends Event> = (event: T) => void;
 
@@ -77,7 +78,7 @@ export abstract class Node extends Base {
 
     /** Semantic identity used by focus, animation, diagnostics, and connections. */
     get id(): string {
-        return this.identity.explicitId ?? (this.identity.name || this.generatedKey);
+        return this.identity.explicitId ?? this.generatedKey;
     }
 
     set id(value: string) { this.setId(value); }
@@ -118,6 +119,11 @@ export abstract class Node extends Base {
             cur = cur.parent.value as Node | null
         }
         return this.stage.getScene()
+    }
+
+    /** Override to expose semantic connector ports beyond the built-in bounds ports. */
+    connectorPorts(): Readonly<Record<string, ConnectorPortDefinition>> {
+        return {};
     }
 
     getScale(): number {
@@ -178,7 +184,7 @@ export abstract class Node extends Base {
 
     setId(id: unknown): void {
         const explicitId = id === undefined || id === null || id === '' ? undefined : String(id);
-        const nextId = explicitId ?? (this.identity.name || this.generatedKey);
+        const nextId = explicitId ?? this.generatedKey;
         this.stage.updateNodeRegistration?.(this, nextId, this.identity.name);
         this.identity.explicitId = explicitId;
         this.refreshObjectIdentity();
@@ -186,7 +192,7 @@ export abstract class Node extends Base {
 
     setName(name: unknown): void {
         const nextName = name === undefined || name === null ? '' : String(name);
-        const nextId = this.identity.explicitId ?? (nextName || this.generatedKey);
+        const nextId = this.identity.explicitId ?? this.generatedKey;
         this.stage.updateNodeRegistration?.(this, nextId, nextName);
         this.identity.name = nextName;
         this.refreshObjectIdentity();

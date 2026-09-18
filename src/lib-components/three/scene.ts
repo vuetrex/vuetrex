@@ -37,6 +37,7 @@ export default class Scene extends LifeCycle {
     renderer: THREE.WebGLRenderer
     selectedObject: (THREE.Mesh | null) = null
     protected selectedInstanceId: number | undefined
+    protected selectedIntersection: THREE.Intersection | undefined
 
     private composer: THREEx.EffectComposer;
     private readonly renderPass: THREEx.RenderPass;
@@ -98,7 +99,7 @@ export default class Scene extends LifeCycle {
         });
         this.resizeObserver = resizeObserver;
         resizeObserver.observe(domParent);
-        window.addEventListener('wheel', wheeler, false)
+        this.renderer.domElement.addEventListener('wheel', wheeler, false)
         domParent.addEventListener("mousemove", mouseListener)
         domParent.addEventListener("mousedown", clickListener)
         domParent.addEventListener("dblclick", dblclickListener)
@@ -112,7 +113,7 @@ export default class Scene extends LifeCycle {
             if (this.resizeObserver === resizeObserver) {
                 this.resizeObserver = undefined;
             }
-            window.removeEventListener("wheel", wheeler)
+            this.renderer.domElement.removeEventListener("wheel", wheeler)
             domParent.removeEventListener("mousemove", mouseListener)
             domParent.removeEventListener("mousedown", clickListener)
             domParent.removeEventListener("dblclick", dblclickListener)
@@ -285,7 +286,7 @@ export default class Scene extends LifeCycle {
             if (intersects.length > 0) {
                 found = intersects.find(
                     x => x.object
-                        && x.object.name.startsWith("el-")
+                        && (x.object.name.startsWith("el-") || x.object.userData.vxConnectorOwner)
                         && !x.object.userData.el?.node?.disabled
                 );
                 const labelObject = <THREE.Mesh> (found && found.object);
@@ -299,13 +300,17 @@ export default class Scene extends LifeCycle {
                     }
                     this.selectedObject = labelObject;
                     this.selectedInstanceId = instanceId;
+                    this.selectedIntersection = found;
                     if (this.lastMouseEvent) this.onMouseOver(labelObject, this.lastMouseEvent);
+                } else if (labelObject) {
+                    this.selectedIntersection = found;
                 }
             }
             if (!found && this.selectedObject) {
                 if (this.lastMouseEvent) this.onMouseOut(this.selectedObject, this.lastMouseEvent);
                 this.selectedObject = null;
                 this.selectedInstanceId = undefined;
+                this.selectedIntersection = undefined;
             }
         };
     }

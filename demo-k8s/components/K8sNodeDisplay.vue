@@ -13,7 +13,7 @@
       :hover="hover"
     />
     <vx-box
-      :name="id"
+      :name="id" :id="id"
       :size="width"
       :depth="0.2"
       :height="0.92"

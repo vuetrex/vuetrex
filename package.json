@@ -15,7 +15,7 @@
     "health:server": "node demo-health/server.mjs",
     "preinstall": "npx only-allow pnpm",
     "clean": "rm -rf ./dist && rm -rf ./dist_types && rm -rf ./coverage",
-    "build": "vue-tsc --declaration --emitDeclarationOnly && vite build",
+    "build": "rm -rf ./dist_types && vue-tsc --declaration --emitDeclarationOnly && vite build",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest",
     "test:ui": "vitest --ui",

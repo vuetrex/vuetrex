@@ -1,7 +1,7 @@
 <template>
   <vx-stack :gap="0.02" @click="$emit('select', id)">
     <vx-box
-      :name="id"
+      :name="id" :id="id"
       :text="label"
       :size="size"
       :height="0.18"

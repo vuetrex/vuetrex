@@ -2,32 +2,34 @@
   <vuetrex :camera="camera" height="75vh">
     <vx-layer>
       <vx-row>
-        <vx-box v-for="(el,i) in items" :key="i" :name="'a'+i" :text="'dynamic '+el" connection="b2" @click="dBoxClick"/>
+        <vx-box v-for="(el,i) in items" :key="i" :name="'a'+i" :id="'a'+i" :text="'dynamic '+el" @click="dBoxClick"/>
       </vx-row>
       <vx-row>
-        <vx-box name="b1" text="I'm lost" @click="dBoxClick"/>
-        <vx-box name="b2" text="busy bee" @click="dBoxClick" connection="a0"/>
-        <vx-box name="b3" @click="dBoxClick"  connection="b2"/>
-        <vx-box name="b4" @click="dBoxClick" text="bot"/>
+        <vx-box name="b1" id="b1" text="I'm lost" @click="dBoxClick"/>
+        <vx-box name="b2" id="b2" text="busy bee" @click="dBoxClick"/>
+        <vx-box name="b3" id="b3" @click="dBoxClick" />
+        <vx-box name="b4" id="b4" @click="dBoxClick" text="bot"/>
       </vx-row>
       <vx-row>
-        <vx-box name="c1" />
-        <vx-cylinder name="c2" :text="'clicks: ' + counter" @click="cylinderClick" connection="b3"/>
-        <vx-cylinder name="c3" text="new" />
+        <vx-box name="c1" id="c1" />
+        <vx-cylinder name="c2" id="c2" :text="'clicks: ' + counter" @click="cylinderClick"/>
+        <vx-cylinder name="c3" id="c3" text="new" />
       </vx-row>
       <vx-row>
-        <vx-box name="d1" size="1.2" @click="dBoxClick" connection="c2" />
+        <vx-box name="d1" id="d1" size="1.2" @click="dBoxClick" />
       </vx-row>
       <vx-row v-if="extraRow">
-        <vx-box name="e1" size="1" connection="d1"/>
+        <vx-box name="e1" id="e1" size="1"/>
       </vx-row>
     </vx-layer>
+    <vx-connectors :graph="graph" />
   </vuetrex>
 </template>
 
 <script lang="ts">
-import {ref} from 'vue';
+import {computed, ref} from 'vue';
 import {Vuetrex} from '@/lib-components/index.js';
+import {tabAConnectors} from '../connectors/tabA.js';
 
 export default {
   components: {
@@ -46,19 +48,21 @@ export default {
   setup(props) {
     const counter = ref(0);
     const camera = ref("scene"); //initially point camera to the overview
+    const graph = computed(() => tabAConnectors(props.items.length, props.extraRow));
 
     function cylinderClick(ev:any) {
       counter.value++;
     }
 
     function dBoxClick(ev:any) {
-      console.log("Clicked: ",ev.vxNode.name)
-      camera.value === ev.vxNode.name ? camera.value = "scene" : camera.value = ev.vxNode.name;
+      console.log("Clicked: ",ev.vxNode.id)
+      camera.value === ev.vxNode.id ? camera.value = "scene" : camera.value = ev.vxNode.id;
     }
 
     return {
       camera,
       counter,
+      graph,
       cylinderClick,
       dBoxClick
     }

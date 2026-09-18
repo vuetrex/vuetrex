@@ -63,6 +63,13 @@ describe('ParticleNode', () => {
         const points = pointObject(node)
         expect(points.geometry.attributes.position.count).toBe(4)
         expect(points.material).toBeInstanceOf(THREE.ShaderMaterial)
+        expect(points.material.fog).toBe(true)
+        expect(points.material.uniforms).toMatchObject({
+            fogColor: { value: expect.any(THREE.Color) },
+            fogNear: { value: expect.any(Number) },
+            fogFar: { value: expect.any(Number) },
+            pixelRatio: { value: expect.any(Number) },
+        })
         expect(points.name.startsWith('el-')).toBe(false)
         node.setStateValue('interactive', true)
         await flush()

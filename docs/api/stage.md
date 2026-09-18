@@ -129,7 +129,6 @@ const settings: VxSettings = {
   highlightColor: 0x58b7c0,
   captionColor: 0xe7eef0,
   connectorColor: 0x34444c,
-  particleColor: 0x73cad1,
   floorGrid: false,
   floorMirror: false,
   floorCaptions: false,
@@ -144,7 +143,7 @@ const settings: VxSettings = {
 | `backgroundColor` | Renderer background |
 | `fog` | Optional linear distance fog; accepts `near`, `far`, and an optional `color` that defaults to `backgroundColor` |
 | `floorColor` | Floor and floor texture color |
-| `mirrorOpacity` | Floor reflection strength |
+| `mirrorOpacity` | Floor-graphics blend over the reflection; defaults to `0.95`, lower values reveal more reflection, and `1` skips the reflection pass |
 | `floorGrid` | Draw the floor grid; defaults to `true` |
 | `floorMirror` | Create the reflection pass; defaults to `true` |
 | `floorCaptions` | Draw mesh `text` on the floor texture; defaults to `true` |
@@ -152,18 +151,18 @@ const settings: VxSettings = {
 | `highlightColor` | Default interactive highlight |
 | `captionColor` | Shared caption color |
 | `connectorColor` | Solid connector and arrowhead color |
-| `particleColor` | Connector particle color |
 | `lightColor1..3` | Stage light colors |
-| `particleSpread` | Particle route spread |
-| `particleVolume` | Number/density of particles |
-| `particleBlending` | Three.js blending mode |
 | `unit` | Base geometry unit |
-| `distance` | Legacy stage spacing |
 | `gap` | Default container gap |
-| `wall` | Legacy generated background wall settings |
 | `diagnostics` | `true` or per-overlay `VxDiagnosticsSettings` |
 
-For live charts and text, prefer [`<vx-display-wall>`](/guide/display-walls) over `settings.wall`.
+Use [`<vx-display-wall>`](/guide/display-walls) for background walls, live charts, and text.
+Configure particle color, size, blending, and density on a `ParticleSource` inside connector `.flow()`.
+
+The stage floor is world `Y = 0`; base-anchored objects extend upward from that plane. With `floorMirror` enabled, the
+reflection, floor tint, grid, captions, lighting, and shadows are composed by one material on one surface at `Y = 0`.
+There is no second, nearly coplanar floor layer, so camera rotation cannot make the two layers compete for depth.
+See [Layout in 3D](/guide/layouts#start-at-the-ground-plane) for the coordinate convention.
 
 ## Lifecycle controls
 

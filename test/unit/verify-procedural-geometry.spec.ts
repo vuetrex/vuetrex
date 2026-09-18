@@ -99,7 +99,7 @@ describe('GeometryNode', () => {
         const { node } = fixture()
         const boxItem = { id: 'box' }
         const leafItem = { id: 'leaf' }
-        node.setStateValue('graph', geo.boolean([
+        node.setStateValue('graph', geo.join([
             geo.distribute(geo.box(), { items: [boxItem], keyBy: 'id', position: [0, 0, 0] }),
             geo.distribute(geo.icosphere(), { items: [leafItem], keyBy: 'id', position: [2, 0, 0] }),
         ]))

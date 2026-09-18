@@ -64,8 +64,8 @@ const LIGHTS_PER_STEP = 2
 const AMBIENT_INTERVAL = 9
 const AMBIENT_SLOTS = 2
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
-const KEY_LIGHT_STRENGTH = 1.2
-const SOFTBOX_ANGLE_DEGREES = 7
+const KEY_LIGHT_STRENGTH = 1.45
+const SOFTBOX_ANGLE_DEGREES = 5.5
 const BAKE_PROGRESS_SHARE = 0.8
 const STUDIO_LIGHT_FADE_MS = 1000
 
@@ -79,7 +79,10 @@ export function startProgressiveStudioLight(
   options: ProgressiveStudioLightOptions,
 ): ProgressiveStudioLight | undefined {
   const scene = stage.getScene()
-  const floor = scene.getObjectByName('vx-floor-overlay') as THREE.Mesh | undefined
+  const floor = (
+    scene.getObjectByName('vx-floor-surface')
+    ?? scene.getObjectByName('vx-ground-reflector')
+  ) as THREE.Mesh | undefined
   if (!floor || !isLightMapMesh(floor)) return undefined
 
   const casters = collectCasters(scene)
@@ -104,10 +107,10 @@ export function startProgressiveStudioLight(
     : undefined
   const sceneFog = scene.fog instanceof THREE.Fog ? scene.fog : undefined
   const originalFogColor = sceneFog?.color.clone()
-  const finalLiveLightScale = (options.theme === 'light' ? 0.32 : 0.22) * KEY_LIGHT_STRENGTH
-  const finalToneMappingExposure = options.theme === 'light' ? 1.15 : originalToneMappingExposure
+  const finalLiveLightScale = (options.theme === 'light' ? 0.36 : 0.28) * KEY_LIGHT_STRENGTH
+  const finalToneMappingExposure = options.theme === 'light' ? 1.06 : originalToneMappingExposure
   const finalBackgroundColor = options.theme === 'light'
-    ? new THREE.Color().setRGB(1.8, 1.78, 1.74)
+    ? new THREE.Color(0xf4f7f8)
     : undefined
   const finalFogColor = finalBackgroundColor?.clone()
 
@@ -242,7 +245,7 @@ export function startProgressiveStudioLight(
     restoreTemporaryCasterState(snapshots, receivers)
     renderer.shadowMap.type = originalShadowType
     renderer.shadowMap.enabled = originalShadowEnabled
-    const finalFillIntensity = options.theme === 'light' ? 0.58 : 0.32
+    const finalFillIntensity = options.theme === 'light' ? 0.48 : 0.22
     fillLight = new THREE.HemisphereLight(
       options.theme === 'light' ? 0xfffbf5 : 0xb9d7e6,
       options.theme === 'light' ? 0xcbd4dc : 0x121719,
@@ -438,7 +441,7 @@ function configureReceivers(
     ...(platform ? [platform] : []),
     ...panels,
   ])
-  const intensity = theme === 'light' ? 1.35 : 1.05
+  const intensity = theme === 'light' ? 0.9 : 1.05
 
   // The infinite grid floor would tint the whole backdrop with the lightmap.
   // Keep it live-lit and spend the atlas on the presentation platform instead.

@@ -5,6 +5,15 @@ description: Install Vuetrex and build a reactive 3D diagram in Vue.
 
 # Start with a scene
 
+<script setup>
+import BasicScene from '../examples/src/BasicScene.vue'
+import basicSceneSource from '../examples/src/BasicScene.vue?raw'
+import ReactiveLayoutScene from '../examples/src/ReactiveLayoutScene.vue'
+import reactiveLayoutSceneSource from '../examples/src/ReactiveLayoutScene.vue?raw'
+import ConnectorFlowScene from '../examples/src/ConnectorFlowScene.vue'
+import connectorFlowSceneSource from '../examples/src/ConnectorFlowScene.vue?raw'
+</script>
+
 ## The problem: a diagram is separate from the app
 
 Your Vue application already knows which services exist, which ones are unhealthy, and which item the user selected.
@@ -49,17 +58,14 @@ export default defineConfig({
 
 ## Render one object
 
-```vue
-<script setup lang="ts">
-import { Vuetrex } from '@exceeder/vuetrex'
-</script>
+This first example has one component, one scene element, and no application state. Switch to **Source** to see the
+exact `.vue` file rendering in **Result**.
 
-<template>
-  <Vuetrex height="420px">
-    <vx-box text="gateway" />
-  </Vuetrex>
-</template>
-```
+<ClientOnly>
+  <ExampleTabs title="1 · One scene object" :source="basicSceneSource">
+    <BasicScene />
+  </ExampleTabs>
+</ClientOnly>
 
 `<Vuetrex>` renders one normal DOM wrapper and canvas. Everything in its default slot is rendered by Vuetrex into a
 Three.js scene.
@@ -69,35 +75,14 @@ The `height` and `width` props are CSS dimensions for that wrapper. Give the sce
 
 ## Add data and layout
 
-```vue
-<script setup lang="ts">
-import { ref } from 'vue'
-import { Vuetrex } from '@exceeder/vuetrex'
+The second example adds a keyed collection, reactive layout, health state, hover styling, clicking, and camera focus.
+Use its controls and click an object before reading the source.
 
-const services = ref([
-  { id: 'gateway', status: 'healthy' },
-  { id: 'catalog', status: 'healthy' },
-  { id: 'orders', status: 'degraded' },
-])
-</script>
-
-<template>
-  <Vuetrex height="480px" :settings="{ gap: 0.4 }">
-    <vx-row>
-      <vx-box
-        v-for="service in services"
-        :key="service.id"
-        :name="service.id"
-        :text="service.id"
-        :material="{
-          color: service.status === 'healthy' ? 0x3c94ad : 0xc56550,
-          roughness: 0.45,
-        }"
-      />
-    </vx-row>
-  </Vuetrex>
-</template>
-```
+<ClientOnly>
+  <ExampleTabs title="2 · Reactive data, layout, and interaction" :source="reactiveLayoutSceneSource">
+    <ReactiveLayoutScene />
+  </ExampleTabs>
+</ClientOnly>
 
 The row measures each box and centers the result. Changing the array adds, removes, and repositions objects through the
 same Vue update that changed your UI.
@@ -108,7 +93,7 @@ same Vue update that changed your UI.
 <vx-box
   v-for="service in services"
   :key="service.id"
-  :name="service.id"
+  :name="service.id" :id="service.id"
   :text="service.id"
   :hover="{ emissive: 0x157c85, emissiveIntensity: 0.6, scale: 1.04 }"
   @click="selectedId = service.id"
@@ -117,6 +102,21 @@ same Vue update that changed your UI.
 
 Props and events are patched onto logical Vuetrex nodes. The library owns raycasting and translates pointer hits back
 into Vue event handlers.
+
+## Connect objects and add live flow
+
+The third example retains the same semantic IDs, then adds a keyed connector graph, data-driven styles, arrow markers,
+and particles travelling along the resolved routes. The source is still one normal Vue component.
+
+<ClientOnly>
+  <ExampleTabs title="3 · Fluent connectors and particles" :source="connectorFlowSceneSource">
+    <ConnectorFlowScene />
+  </ExampleTabs>
+</ClientOnly>
+
+The connector graph refers to object IDs rather than coordinates. Vuetrex resolves current positions after layout and
+feeds the resulting paths to both the stroke and particle backends. Continue with
+[Connections and focus](/guide/connections-and-focus) for buses, bundles, route profiles, and picking.
 
 ## What to learn next
 

@@ -20,9 +20,11 @@
         :composition="composition"
         :current-time="currentTime"
         :selected-id="selected?.id ?? ''"
+        :selected-connector-key="selectedConnector?.key ?? ''"
         :theme="theme"
-        @select-deployment="emit('selectDeployment', $event)"
-        @select-pod="(deploymentId, podId) => emit('selectPod', deploymentId, podId)"
+        @select-deployment="selectDeployment"
+        @select-pod="selectPod"
+        @select-connector="selectConnector"
       />
     </Vuetrex>
 
@@ -60,6 +62,22 @@
       </dl>
     </aside>
 
+    <aside v-else-if="selectedConnector" class="inspector connector-inspector">
+      <button class="close" type="button" aria-label="Close connector inspector" @click="selectedConnector = null">×</button>
+      <p>{{ selectedConnector.kind }} / {{ selectedConnector.part }}</p>
+      <h2>{{ selectedConnector.sourceName ?? selectedConnector.key }}</h2>
+      <dl>
+        <div><dt>Route key</dt><dd>{{ selectedConnector.key }}</dd></div>
+        <div v-if="selectedConnector.pathPosition !== undefined">
+          <dt>Picked at</dt><dd>{{ Math.round(selectedConnector.pathPosition * 100) }}%</dd>
+        </div>
+        <div><dt>World point</dt><dd>{{ connectorPoint }}</dd></div>
+        <div v-if="selectedConnector.kind === 'bundle'">
+          <dt>Members</dt><dd>{{ selectedConnector.memberKeys.length }}</dd>
+        </div>
+      </dl>
+    </aside>
+
     <ol v-if="recentEvents.length" class="events" aria-label="Recent lifecycle events">
       <li v-for="event in recentEvents.slice(0, 4)" :key="event.id" :class="event.severity">
         <time>t={{ event.t }}</time>
@@ -72,8 +90,13 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { AdditiveBlending, NormalBlending } from 'three'
-import { Vuetrex, type VuetrexStage, type VxSettings, type VxStage } from '@/lib-components/index.js'
+import {
+  Vuetrex,
+  type ConnectorHit,
+  type VuetrexStage,
+  type VxSettings,
+  type VxStage,
+} from '@/lib-components/index.js'
 import BackgroundWall from './scene/BackgroundWall.vue'
 import MainStage from './scene/MainStage.vue'
 import {
@@ -118,26 +141,21 @@ const emit = defineEmits<{
 
 const settings = computed<VxSettings>(() => ({
   unit: 1,
-  distance: 0.34,
   gap: 0.34,
-  color: props.theme === 'light' ? 0x737d85 : 0x38434a,
-  backgroundColor: props.theme === 'light' ? 0xffffff : 0x111719,
+  color: props.theme === 'light' ? 0x737d85 : 0x2f3b41,
+  backgroundColor: props.theme === 'light' ? 0xf4f7f8 : 0x0b1115,
   fog: {
-    color: props.theme === 'light' ? 0xffffff : 0x111719,
+    color: props.theme === 'light' ? 0xf4f7f8 : 0x0b1115,
     near: 18,
     far: 38,
   },
   highlightColor: props.theme === 'light' ? 0x2588df : 0x4e9cbe,
-  floorColor: props.theme === 'light' ? 0xf7f6f3 : 0x171b1d,
+  floorColor: props.theme === 'light' ? 0xe8edef : 0x111b1f,
   captionColor: props.theme === 'light' ? 0x273039 : 0xe8ecee,
-  connectorColor: props.theme === 'light' ? 0x26313a : 0xa0ffff,
-  particleColor: props.theme === 'light' ? 0x26313a : 0x72d6e8,
-  particleBlending: props.theme === 'light' ? NormalBlending : AdditiveBlending,
-  lightColor1: props.theme === 'light' ? 0xfffbf5 : 0x9ac7d6,
-  lightColor2: props.theme === 'light' ? 0xe2edff : 0xffffff,
+  connectorColor: props.theme === 'light' ? 0x167e97 : 0x58c6d5,
+  lightColor1: props.theme === 'light' ? 0xb9deef : 0x66d8ff,
+  lightColor2: props.theme === 'light' ? 0xffe0c7 : 0xffcfaa,
   mirrorOpacity: 0.76,
-  particleSpread: 0.016,
-  particleVolume: 36,
   floorGrid: props.renderFeatures.floorGrid,
   floorMirror: props.renderFeatures.floorMirror,
   floorCaptions: props.renderFeatures.floorCaptions,
@@ -159,6 +177,7 @@ let studioLight: ProgressiveStudioLight | undefined
 let podLight: SelectedPodLight | undefined
 let studioLightTimer: ReturnType<typeof setTimeout> | undefined
 const lightingProgress = ref(0)
+const selectedConnector = ref<ConnectorHit | null>(null)
 const visiblePodCount = computed(() =>
   props.deployments.reduce((count, item) => count + item.pods.length, 0),
 )
@@ -168,6 +187,9 @@ const visibleDeploymentCount = computed(() =>
 const readyPodCount = computed(() =>
   props.deployments.reduce((count, item) => count + item.readyReplicas, 0),
 )
+const connectorPoint = computed(() => selectedConnector.value?.point
+  .map(coordinate => coordinate.toFixed(2))
+  .join(', ') ?? '')
 
 function onReady(value: VxStage) {
   disposeStudioLight()
@@ -197,6 +219,21 @@ function syncSelectedPodLight() {
     props.selectedPod?.id,
     Boolean(props.selectedPod && props.camera !== 'scene'),
   )
+}
+
+function selectDeployment(id: string) {
+  selectedConnector.value = null
+  emit('selectDeployment', id)
+}
+
+function selectPod(deploymentId: string, podId: string) {
+  selectedConnector.value = null
+  emit('selectPod', deploymentId, podId)
+}
+
+function selectConnector(hit: ConnectorHit) {
+  selectedConnector.value = hit
+  emit('clearSelection')
 }
 
 function scheduleStudioLight() {
@@ -282,10 +319,19 @@ onBeforeUnmount(() => {
   font-size: 12px;
 }
 .inspector dt { color: var(--text-subtle); }
-.inspector dd { margin: 0; font-weight: 700; }
-.inspector dd.healthy { color: #6ed393; }
-.inspector dd.degraded { color: #e5ad4c; }
-.inspector dd.unavailable { color: #ee6670; }
+.inspector dd {
+  max-width: 155px;
+  margin: 0;
+  overflow: hidden;
+  font-weight: 700;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.connector-inspector p { color: #77d7e6; }
+.inspector dd.healthy { color: #58c6d5; }
+.inspector dd.degraded { color: #f2b55d; }
+.inspector dd.unavailable { color: #ff6b76; }
 .events {
   right: 20px;
   bottom: 20px;

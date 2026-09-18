@@ -1,6 +1,5 @@
 import { field } from '@/lib-components/geometry/fields.js'
 import { defineGeometry } from '@/lib-components/geometry/modules.js'
-import { combineBoolean } from '@/lib-components/geometry/operators/boolean.js'
 import { distribute } from '@/lib-components/geometry/operators/distribute.js'
 import { join } from '@/lib-components/geometry/operators/join.js'
 import { material } from '@/lib-components/geometry/operators/material.js'
@@ -26,7 +25,6 @@ export const geo = Object.freeze({
     parameterMap,
     material,
     named,
-    boolean: combineBoolean,
     randomize,
     field,
     param: parameter,
@@ -55,7 +53,6 @@ export type {
 export type {
     BoxParameters,
     ColorRange,
-    CombineOptions,
     CurvePointOptions,
     CustomDistribution,
     DistributionOptions,

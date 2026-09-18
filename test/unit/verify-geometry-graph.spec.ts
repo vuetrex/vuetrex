@@ -73,7 +73,7 @@ describe('procedural geometry graph', () => {
             .distribute({
                 items: pods,
                 keyBy: 'id',
-                position: pod => [pod.x, 0, 0],
+                position: ({ item: pod }) => [pod.x, 0, 0],
             })
             .parameterMap({
                 color: context => context.item.id === 'pod-a' ? 0x00ff00 : 0xff0000,

@@ -285,19 +285,14 @@ The original segment representation could only describe one X- or Z-aligned span
 between nodes on both axes rendered only its X projection and appeared truncated. Segments now retain explicit start/end
 coordinates, and both line and particle renderers follow the complete diagonal while orthogonal routes keep every bend.
 
-### Connector styling is global
+### Resolved: connector styling is per relationship
 
-The reference uses white arrows for dependencies, blue flow for requests, red dashed links for Redis, and green links
-for coordination. Current connectors provide only:
+The demo now declares a single immutable connector graph through `<vx-connectors>`. Each edge can
+choose direct, orthogonal, bezier, or spline routing; named or normalized ports; endpoint clearance;
+and independent stroke, marker, geometry, and particle-flow layers. Buses share route runs and junctions.
 
-- renderer: `particles` or `line`
-- route: `orthogonal`, `direct`, `bezier`, or `spline` (`straight` is retained as a compatibility alias)
-- bounds-aware named/normalized endpoint ports
-- elevation, endpoint clearance, and explicit/automatic lane offsets
-- one-to-many bus fan-out with a shared trunk
-
-Color, opacity, thickness, dash pattern, arrow direction, particle speed, and particle density cannot be set per edge.
-The demo uses particle versus line rendering as the only semantic distinction.
+Color, opacity, width, dash pattern, marker policy, particle speed, and particle density can be
+set per relationship. The demo currently distinguishes particle flows from solid lines.
 
 ### Resolved for node cards: top-surface panel regions
 
@@ -340,73 +335,47 @@ metric-driven database/tower visuals; infrastructure-specific silhouettes remain
 
 ### Connector routing still needs hardening
 
-- `avoid` reserves clearance outside endpoint bounds; it does not discover or route around unrelated objects.
-- Automatic lanes separate parallel records with the same directed endpoint pair, but do not allocate lanes globally
-  across crossing routes or buses.
-- Line routes receive terminal arrowheads, but marker shape, direction, color, and visibility are not configurable.
-- Bus fan-out shares a trunk, but trunk position is heuristic and does not participate in obstacle or global lane solving.
-- Bezier and spline lines are sampled into short box segments rather than rendered as a continuous tube or stroke.
+- `clearance` reserves space outside endpoint bounds; it is not a global obstacle-avoidance router.
+- Automatic lanes separate parallel records with the same directed endpoint pair, but do not allocate lanes globally.
+- Bus trunks are shared route structure, but their placement remains heuristic.
+- Curves are sampled into segments; smooth continuous stroke geometry remains a possible improvement.
 
 ## Connector status and remaining additions
 
-### 1. Directional connector styling
+### Per-edge styling and markers
 
-The first low-cost step is implemented: terminal `line` segments receive a scale-aware arrowhead immediately before
-the resolved `to` port for direct, orthogonal, curved, and bus routes.
-The remaining work is per-edge styling and explicit marker control:
+Use the same public graph operators as the demo:
 
-```vue
-<vx-connector
-    from="city-edge-lb"
-    to="public-api"
-    type="line"
-    color="0x44aaff"
-    width="0.025"
-    :opacity="0.9"
-    dash="0.12 0.08"
-    end-cap="arrow"
-/>
+```ts
+const links = connectors.edge('city-edge-lb', 'public-api')
+    .route({ strategy: 'orthogonal', clearance: 0.1 })
+    .stroke({
+        color: 0x44aaff,
+        width: 0.025,
+        opacity: 0.9,
+        dash: [0.12, 0.08],
+        markerEnd: 'arrow',
+    })
 ```
 
-It should support `start`, `end`, `both`, and `none` direction markers, dashed status lines, and reactive
-color/opacity/width. Marker selection and style are still renderer-global rather than declarative per edge.
+Render the result with `<vx-connectors :source="links" />`. Stable decoration keys allow callers
+to override a module's presentation without duplicating the relationship.
 
-### 2. `flow` renderer
+### Particle flows
 
-A semantic particle connector designed for metrics rather than a global particle effect:
+A `.flow()` factory receives a terminal traversal and returns a `ParticleSource`. Particle count,
+speed, color, spread, and rendering style belong to that source, not global stage settings.
+Metric labels and application-specific traffic semantics still need application code.
 
-- `rate` controls particle frequency.
-- `speed` controls travel time.
-- `color` and `pulseColor` reflect health.
-- `direction` supports bidirectional traffic.
-- `paused` freezes one edge independently.
-- `value`/`unit` optionally drive a label such as `1.2k rps`.
+### Ports and shared routes
 
-This maps directly to the planned cluster event emulator.
+Endpoint ports resolve against current world bounds, including nested transforms. Components can
+also expose named custom ports. A bus is authored with `connectors.bus('gateway', apiIds)`;
+its resolved network contains shared runs, junctions, and terminal traversals.
 
-### 3. Port-aware routes (implemented)
-
-`from-port="right"`, `to-port="left"`, and explicit normalized bounds coordinates are available. Ports resolve against
-world-space bounds, including nested transforms. The remaining work is oriented/local face semantics for rotated
-objects and reusable named custom ports owned by a component.
-
-### 4. Bus/fan-out connector (implemented first draft)
-
-One source can now address many targets through a shared trunk and short branches:
-
-```vue
-
-<bus-connector from="gateway" :to="apiIds" side="right"/>
-```
-
-`vx-bus-connector` is useful for gateways, queues, service discovery, and database client pools. Remaining work includes
-styled/labelled bundles, target grouping, trunk constraints, and obstacle-aware trunk placement.
-
-### 5. Curved and elevated routes (implemented first draft)
-
-`bezier`/`spline` strategies plus `elevation`, `lane`, and `avoid` props are available. Basic automatic lanes separate
-parallel endpoint pairs. `avoid` currently means endpoint clearance, not general scene collision solving; smooth line
-geometry and global lane allocation remain gaps.
+Direct, orthogonal, bezier, spline, and manual strategies are public routing choices.
+Elevation and lanes are available through `.route()`; unrelated-object avoidance and global
+lane allocation remain separate work.
 
 ## Proposed elements
 

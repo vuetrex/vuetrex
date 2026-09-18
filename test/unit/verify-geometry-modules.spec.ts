@@ -28,7 +28,7 @@ describe('procedural geometry modules', () => {
         branch = defineGeometry<Parameters>('branch', parameters => {
             const stem = geo.line({ length: parameters.length, thickness: 0.03 })
             if (parameters.depth <= 0) return stem
-            return geo.boolean([
+            return geo.join([
                 stem,
                 geo.transform(branch({
                     depth: parameters.depth - 1,
@@ -48,4 +48,3 @@ describe('procedural geometry modules', () => {
         expect(() => invalid({})).toThrow(/did not return a GeometrySource/)
     })
 })
-

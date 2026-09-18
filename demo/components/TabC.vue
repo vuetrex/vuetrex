@@ -1,22 +1,34 @@
 <template>
-   <div>
-     <input type="checkbox" id="stop" v-model="paused"> <label for="stop">paused</label>
+   <div class="tab-c-controls">
+     <div>
+       <input type="checkbox" id="stop" v-model="paused"> <label for="stop">paused</label>
+     </div>
+     <div class="camera-readout">
+       <div class="camera-readout__header">
+         <strong>Camera coordinates</strong>
+         <button type="button" :disabled="!cameraPosePayload" @click="copyCameraPose">
+           {{ cameraPoseCopied ? 'Copied' : 'Copy' }}
+         </button>
+       </div>
+       <pre>{{ cameraPoseDisplay }}</pre>
+     </div>
    </div>
 
    <vuetrex height="79vh" width="100%" :camera="camera" :stopped="paused" :settings="vsSettings" @ready="onStageReady">
      <vx-layer>
       <vx-row>
-        <vx-box name="xx" :text="'['+counter1+']'" @click="counter1++"/>
-        <vx-box name="yy" :text="'('+counter2+')'" @click="counter2++"/>
+        <vx-box name="xx" id="xx" :text="'['+counter1+']'" @click="counter1++"/>
+        <vx-box name="yy" id="yy" :text="'('+counter2+')'" @click="counter2++"/>
       </vx-row>
       <vx-row>
-          <vx-cylinder ref="centralC" name="cc" text="click me" connection="abc" @click="cylClick" size="0.1"/>
+          <vx-cylinder ref="centralC" name="cc" id="cc" text="click me" @click="cylClick" size="0.1"/>
       </vx-row>
       <vx-row>
-       <vx-box text="singleton" connection="abc" />
-       <vx-box name="abc" text="abc" size="0.5" />
+       <vx-box id="singleton" text="singleton" />
+       <vx-box name="abc" id="abc" text="abc" size="0.5" />
      </vx-row>
      </vx-layer>
+     <vx-connectors :graph="connections" />
    </vuetrex>
 </template>
 
@@ -25,8 +37,8 @@ let rs = {}
 
 import * as THREE from 'three';
 
-import {ref} from 'vue';
-import {Vuetrex, VxStage, VxSettings, VxMouseEvent} from '@/lib-components/index.js';
+import {onBeforeUnmount, ref} from 'vue';
+import {Vuetrex, connectors, particles, VxStage, VxSettings, VxMouseEvent} from '@/lib-components/index.js';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader';
 // noinspection TypeScriptCheckImport
 import {Text} from 'troika-three-text';
@@ -47,39 +59,48 @@ export default {
     }
   },
   setup() {
+    const connections = connectors.edges([
+      { from: 'cc', to: 'abc' }, { from: 'singleton', to: 'abc' },
+    ], {
+      keyBy: ({ item }) => item.from, from: ({ item }) => item.from, to: ({ item }) => item.to,
+    }).stroke({ opacity: 0, markerEnd: false })
+      .flow(route => particles.path(route.points, {
+        count: Math.max(1, Math.round(route.totalLength * 5)), spread: 0.02 * route.scale,
+      }).appearance({ color: 0x505050, size: 0.11 * route.scale, blending: 'normal', shape: 'disc' })
+        .motion({ speed: 0.5 * route.scale }))
     const centralC = ref(null)
     const counter1 = ref(0), counter2 = ref(0)
     const paused = ref(false)
     const camera = ref("scene")
+    const cameraPoseDisplay = ref('Waiting for stage…')
+    const cameraPosePayload = ref('')
+    const cameraPoseCopied = ref(false)
+    let stopCameraReadout: (() => void) | undefined
     let thing = null
     //light scheme example
     const vsSettings: VxSettings = {
       unit: 1.25,
-      distance: 1.5,
+      gap: 1.5,
       color: 0x334755,
       highlightColor: 0x3377bb,
       floorColor: 0xffffff,
       captionColor: 0x333333,
-      particleColor: 0x505050,
       lightColor1: 0x7070ff,
       lightColor2: 0xffffff,
       lightColor3: 0x0000ff,
       mirrorOpacity: 0.92,
-      particleSpread: 0.02,
-      particleVolume: 5,
-      particleBlending: 1
     };
 
     function cylClick(ev: VxMouseEvent) {
       console.log("cul click ",ev)
       const pos = ev.vxNode.element.mesh.position;
-      if (camera.value === ev.vxNode.name) {
+      if (camera.value === ev.vxNode.id) {
         camera.value = "scene"
         //jump the cylinder
         gsap.to(pos, {duration:0.1, x:0, y:-0.1});
         gsap.to(pos, {duration:0.1, x:0, y:0.2, delay: 0.1});
       } else {
-        camera.value = ev.vxNode.name;
+        camera.value = ev.vxNode.id;
         gsap.to(pos, {duration:0.1, x:0, y:-0.1});
         gsap.to(pos, {duration:0.1, x:0, y:0.3, delay: 0.1});
       }
@@ -186,7 +207,58 @@ export default {
       stage.getScene().add(tubeMesh);
     }
 
+    function updateCameraReadout(stage: VxStage) {
+      const debugStage = stage as VxStage & {
+        camera: THREE.PerspectiveCamera
+        cameraTarget: THREE.Vector3
+        renderer: THREE.WebGLRenderer
+        width: number
+        height: number
+      }
+      const position = debugStage.camera.position
+      const target = debugStage.cameraTarget
+      const offset = position.clone().sub(target)
+      const distance = offset.length()
+      const radiansToDegrees = THREE.MathUtils.radToDeg
+      const azimuthDeg = radiansToDegrees(Math.atan2(offset.x, offset.z))
+      const elevationDeg = distance > 0
+          ? radiansToDegrees(Math.asin(THREE.MathUtils.clamp(offset.y / distance, -1, 1)))
+          : 0
+      const polarDeg = 90 - elevationDeg
+      const round = (value: number) => Number(value.toFixed(6))
+      const payload = {
+        position: position.toArray().map(round),
+        target: target.toArray().map(round),
+        azimuthDeg: round(azimuthDeg),
+        elevationDeg: round(elevationDeg),
+        polarDeg: round(polarDeg),
+        distance: round(distance),
+        fovDeg: round(debugStage.camera.fov),
+        viewportCss: [debugStage.width, debugStage.height],
+        pixelRatio: round(debugStage.renderer.getPixelRatio()),
+      }
+      const serialized = JSON.stringify(payload)
+      if (serialized !== cameraPosePayload.value) cameraPoseCopied.value = false
+      cameraPosePayload.value = serialized
+      cameraPoseDisplay.value = [
+        `position  [${payload.position.join(', ')}]`,
+        `target    [${payload.target.join(', ')}]`,
+        `azimuth   ${payload.azimuthDeg}°    elevation ${payload.elevationDeg}°    polar ${payload.polarDeg}°`,
+        `distance  ${payload.distance}    fov ${payload.fovDeg}°`,
+        `viewport  ${payload.viewportCss.join(' × ')} CSS px    DPR ${payload.pixelRatio}`,
+      ].join('\n')
+    }
+
+    async function copyCameraPose() {
+      if (!cameraPosePayload.value) return
+      await navigator.clipboard.writeText(cameraPosePayload.value)
+      cameraPoseCopied.value = true
+    }
+
     function onStageReady(stage:VxStage) {
+      stopCameraReadout?.()
+      updateCameraReadout(stage)
+      stopCameraReadout = stage.onEachFrame(() => updateCameraReadout(stage))
       loadGLTFModel(stage);
       //12 pipe connectors on the sides of a cylinder
       const N = 5;
@@ -221,15 +293,55 @@ export default {
       // })
     }
 
+    onBeforeUnmount(() => stopCameraReadout?.())
+
     return {
-      centralC,
+      connections, centralC,
       paused,
       counter1, counter2,
       vsSettings,
       camera,
+      cameraPoseDisplay,
+      cameraPosePayload,
+      cameraPoseCopied,
+      copyCameraPose,
       onStageReady,
       cylClick
     }
   }
 }
 </script>
+
+<style scoped>
+.tab-c-controls {
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.camera-readout {
+  box-sizing: border-box;
+  width: min(46rem, calc(100% - 1rem));
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #9aa4aa;
+  border-radius: 0.35rem;
+  background: #f4f6f7;
+  color: #243039;
+  text-align: left;
+}
+
+.camera-readout__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.camera-readout pre {
+  margin: 0;
+  overflow-x: auto;
+  font: 0.75rem/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+}
+</style>

@@ -28,7 +28,7 @@
           <vx-row :gap="0.7">
             <vx-group layout="depth" :gap="0.62">
               <vx-box
-                name="city-edge-lb"
+                name="city-edge-lb" id="city-edge-lb"
                 text="city edge"
                 :size="0.26"
                 :depth="0.9"
@@ -113,14 +113,7 @@
 
         </vx-layer>
 
-        <vx-connector
-          v-for="edge in edges"
-          :key="`${edge.from}-${edge.to}`"
-          :from="edge.from"
-          :to="edge.to"
-          :layout="edge.layout"
-          :type="edge.type"
-        />
+        <vx-connectors :graph="connections" />
       </Vuetrex>
 
       <aside class="legend">
@@ -154,7 +147,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
-import { Vuetrex, type VuetrexStage, type VxSettings } from '@/lib-components/index.js'
+import { Vuetrex, connectors, particles, type VuetrexStage, type VxSettings } from '@/lib-components/index.js'
 import K8sCache from './components/K8sCache.vue'
 import K8sDatabase from './components/K8sDatabase.vue'
 import K8sDatabaseColumns from './components/K8sDatabaseColumns.vue'
@@ -189,20 +182,15 @@ type ResourceModel = WorkloadModel | DatabaseModel | CacheModel
 
 const settings: VxSettings = {
   unit: 1,
-  distance: 0.32,
   gap: 0.32,
   color: 0x174f88,
   highlightColor: 0x2c9df2,
   floorColor: 0x111923,
   captionColor: 0xd8e5f0,
-  particleColor: 0x5bc0ff,
   lightColor1: 0x79aee8,
   lightColor2: 0xffffff,
   lightColor3: 0x224466,
   mirrorOpacity: 0.8,
-  particleSpread: 0.018,
-  particleVolume: 50,
-  particleBlending: 2,
 }
 
 const makeWorkload = (
@@ -312,6 +300,16 @@ const edges: readonly ArchitectureEdge[] = [
   { from: 'tracing-agent', to: 'log-aggregator', type: 'particles', layout: 'direct' },
   { from: 'health-api', to: 'prometheus', type: 'line', layout: 'orthogonal' },
 ]
+
+const connections = connectors.join(edges.map(edge => {
+  const route = connectors.edge(edge.from, edge.to, { key: edge.from + ':' + edge.to })
+    .route({ strategy: edge.layout })
+  return edge.type === 'line' ? route.stroke() : route.stroke({ opacity: 0, markerEnd: false })
+    .flow(path => particles.path(path.points, {
+      count: Math.max(1, Math.round(path.totalLength * 50)), spread: 0.018 * path.scale,
+    }).appearance({ color: 0x5bc0ff, size: 0.11 * path.scale, blending: 'additive' })
+      .motion({ speed: 0.5 * path.scale }))
+}))
 
 const flowPaused = ref(false)
 const camera = ref('scene')

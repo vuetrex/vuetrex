@@ -175,10 +175,23 @@ export const serviceRecipe = {
 Execute it from a computed value:
 
 ```ts
+import { connectors, particles } from '@exceeder/vuetrex'
+
 const scene = computed(() => compose(serviceRecipe, snapshot.value, {
   time: timeline.value,
   selectedId: selectedId.value,
 }))
+
+const connectorGraph = computed(() => connectors
+  .edges(scene.value.fragment.connections, {
+    keyBy: ({ item: connection }) => connection.id,
+    from: ({ item }) => item.from,
+    to: ({ item }) => item.to,
+  })
+  .route({ strategy: 'direct' })
+  .flow(route => particles
+    .path(route.points, { key: route.key, item: route.item })
+    .motion({ speed: 0.6 })))
 ```
 
 `compose()` returns plain data. There are no meshes or component instances in the result, so it can be unit tested or
@@ -187,26 +200,22 @@ inspected without WebGL.
 ## Let Vue realize the plan
 
 ```vue
-<vx-group name="services">
+<vx-group name="services" id="services">
   <vx-group
     v-for="node in scene.fragment.nodes"
     :key="node.id"
-    :name="node.id"
+    :name="node.id" :id="node.id"
     :placement="node.placement"
   >
     <ServiceNode :service="node.data" />
   </vx-group>
 
-  <vx-connector
-    v-for="connection in scene.fragment.connections"
-    :key="connection.id"
-    :from="connection.from"
-    :to="connection.to"
-    type="particles"
-    layout="direct"
-  />
+  <vx-connectors :graph="connectorGraph" />
 </vx-group>
 ```
+
+One host reconciles the complete keyed connection collection; it does not create a layout child or semantic scene node
+per relation.
 
 This division is the important part:
 

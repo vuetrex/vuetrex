@@ -28,7 +28,7 @@ describe('procedural geometry operators', () => {
 
     it('combines complete streams while keeping their prototype identity', () => {
         const shared = geo.box()
-        const { result, dispose } = evaluate(geo.boolean([
+        const { result, dispose } = evaluate(geo.join([
             geo.transform(shared, { translate: [-1, 0, 0] }),
             geo.transform(shared, { translate: [1, 0, 0] }),
         ]))
@@ -39,7 +39,7 @@ describe('procedural geometry operators', () => {
     })
 
     it('distributes a multi-record subgraph and preserves stable item context', () => {
-        const sprout = geo.boolean([
+        const sprout = geo.join([
             geo.box({ key: 'stem' }),
             geo.icosphere({ key: 'leaf' }),
         ])
@@ -50,7 +50,7 @@ describe('procedural geometry operators', () => {
         const { result, dispose } = evaluate(geo.distribute(sprout, {
             items,
             keyBy: 'id',
-            position: item => item.position,
+            position: ({ item }) => item.position,
         }))
 
         expect(result.records).toHaveLength(4)
@@ -68,7 +68,7 @@ describe('procedural geometry operators', () => {
             geo.distribute(geo.box(), {
                 items,
                 keyBy: 'id',
-                position: (_item, index) => [index * 3, 0, 0],
+                position: ({ index }) => [index * 3, 0, 0],
             }),
             {
                 scale: ({ item }) => item.size,
@@ -86,7 +86,7 @@ describe('procedural geometry operators', () => {
     })
 
     it('maps and randomizes a distributed multi-record module as one coherent domain', () => {
-        const pair = geo.boolean([
+        const pair = geo.join([
             geo.box({ key: 'left' }),
             geo.transform(geo.box({ key: 'right' }), { translate: [2, 0, 0] }),
         ])

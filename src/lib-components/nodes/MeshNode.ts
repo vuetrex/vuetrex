@@ -6,8 +6,6 @@ import { Mesh, MeshStandardMaterial, Color, Vector3 } from 'three';
 import { Text } from 'troika-three-text';
 import gsap from 'gsap';
 
-let meshConnectionRegistrationSequence = 0
-
 export interface MeshState {
     text: string;
     size: number;
@@ -55,7 +53,6 @@ export interface MeshState {
      * the padded right edge, and a centered one stays at x=0.
      */
     labelAlign: 'left' | 'center' | 'right';
-    connection: string | null;
     material?: VxMaterialProps;
     hover?: VxHoverProps;
 }
@@ -92,7 +89,7 @@ function captureProps(mat: MeshStandardMaterial): VxMaterialProps {
 /**
  * Base class for all geometry nodes (Box, Cylinder, etc.).
  * Owns the js material and handles reactive material prop sync,
- * built-in hover animation, connection wiring, and cleanup.
+ * built-in hover animation and cleanup.
  * Subclasses only need to implement modelGen().
  */
 export abstract class MeshNode extends Node {
@@ -100,7 +97,7 @@ export abstract class MeshNode extends Node {
     protected state: MeshState;
     protected stopHandle?: WatchStopHandle;
     private materialStopHandle?: WatchStopHandle;
-    private connectionStopHandle?: WatchStopHandle;
+    private captionStopHandle?: WatchStopHandle;
     private labelStopHandle?: WatchStopHandle;
     // troika's `Text` extends THREE.Mesh at runtime but its .d.ts declares the
     // subset of visual props (anchorX/anchorY/fontSize/color/font/text) as
@@ -114,8 +111,6 @@ export abstract class MeshNode extends Node {
 
     private baseProps: VxMaterialProps = {};
     private isHovered = false;
-    private registeredConnection?: string;
-    private readonly connectionRegistrationId = `mesh:${++meshConnectionRegistrationSequence}`;
 
     protected layoutContext: ComputedRef<LayoutContext> = computed(() => ({
         myIdx: this.myIdx.value,
@@ -129,7 +124,7 @@ export abstract class MeshNode extends Node {
             lines: [], labelFace: 'front', labelColor: 0xffffff,
             labelPadding: 0.08, labelFontSize: 0, labelLineHeight: 1.15,
             labelAlign: 'center',
-            connection: null, material: undefined, hover: undefined,
+            material: undefined, hover: undefined,
             ...stateDefaults,
         });
         this.material = stage.createElementMaterial();
@@ -219,22 +214,11 @@ export abstract class MeshNode extends Node {
             }
         });
 
-        // Connection and Text watchEffect
-        this.connectionStopHandle = watchEffect(() => {
-            const { connection, text, height, size, depth } = this.state;
+        // Caption watchEffect
+        this.captionStopHandle = watchEffect(() => {
+            const { text, height, size, depth } = this.state;
             void text;
             void depth;
-            if (connection) {
-                const key = `${this.id}->${connection}`;
-                if (key !== this.registeredConnection) {
-                    this.stage.connect(this.id, connection, undefined, undefined, this.connectionRegistrationId);
-                    this.registeredConnection = key;
-                }
-            } else {
-                this.stage.unregisterConnection(this.connectionRegistrationId);
-                this.registeredConnection = undefined;
-            }
-
             if (this.element.mesh) {
                 this.stage.renderMesh(this.element, height, size, this.modelGen(), this.nearestAncestorObject());
             }
@@ -418,9 +402,9 @@ export abstract class MeshNode extends Node {
             this.materialStopHandle();
             this.materialStopHandle = undefined;
         }
-        if (this.connectionStopHandle) {
-            this.connectionStopHandle();
-            this.connectionStopHandle = undefined;
+        if (this.captionStopHandle) {
+            this.captionStopHandle();
+            this.captionStopHandle = undefined;
         }
         if (this.labelStopHandle) {
             this.labelStopHandle();
@@ -428,8 +412,5 @@ export abstract class MeshNode extends Node {
         }
         this.clearMesh();
         this.material.dispose();
-        this.stage.unregisterConnection(this.connectionRegistrationId);
-        this.registeredConnection = undefined;
-        this.state.connection = null;
     }
 }

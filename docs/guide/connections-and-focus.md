@@ -5,6 +5,17 @@ description: Keep links, interaction, and camera framing tied to semantic IDs.
 
 # Connections and focus
 
+<script setup>
+import ConnectorStrategiesScene from '../examples/src/ConnectorStrategiesScene.vue'
+import connectorStrategiesSource from '../examples/src/ConnectorStrategiesScene.vue?raw'
+import ConnectorPortsScene from '../examples/src/ConnectorPortsScene.vue'
+import connectorPortsSource from '../examples/src/ConnectorPortsScene.vue?raw'
+import ConnectorNetworksScene from '../examples/src/ConnectorNetworksScene.vue'
+import connectorNetworksSource from '../examples/src/ConnectorNetworksScene.vue?raw'
+import ConnectorFocusScene from '../examples/src/ConnectorFocusScene.vue'
+import connectorFocusSource from '../examples/src/ConnectorFocusScene.vue?raw'
+</script>
+
 ## The problem: geometry is visible but not explainable
 
 A useful operational view must answer two questions quickly: “what is this connected to?” and “can I inspect this
@@ -21,91 +32,202 @@ specific thing?” Vuetrex uses semantic node IDs as stable addresses for both.
 IDs and non-empty names must be unique inside one stage during development. Use `id` for routes and focus; keep `name`
 human-readable.
 
-## Declare a connector separately
+## Author one immutable connector graph
 
 ```vue
-<vx-connector from="gateway" to="orders" type="particles" layout="orthogonal" />
-<vx-connector from="orders" to="payments" type="line" layout="direct" />
+<script setup lang="ts">
+import { connectors } from '@exceeder/vuetrex'
+
+const dependencies = connectors
+  .edge('gateway', 'orders', { key: 'gateway-orders' })
+  .route({ strategy: 'orthogonal', fromPort: 'right', toPort: 'left', clearance: 0.2 })
+  .stroke({ color: 0x6fcbd1, width: 0.018, markerEnd: 'arrow' })
+</script>
+
+<template>
+  <vx-connectors :graph="dependencies" />
+</template>
 ```
 
-The connector does not consume a layout slot. It resolves its named endpoints after the scene synchronizes, so endpoint
-order in the template is not significant.
+`ConnectorSource` values are frozen descriptions, not scene objects. `<vx-connectors>` is one lifecycle host for any
+number of records. It has no `Element3d`, ID, layout size, focus target, camera bounds, or Three.js group of its own.
+Its position in the template has no spatial meaning, and endpoints may appear before or after it.
 
-Available visual types are `particles` and `line`. Route layouts are `orthogonal`, `direct`, `bezier`, and `spline`;
-`straight` remains a compatibility alias for `direct`.
+Functional and fluent forms are equivalent: `connectors.stroke(connectors.route(source, route), style)` builds the
+same graph as `source.route(route).stroke(style)`. The same source can be reused by several immutable parents.
 
-## Attach routes to ports
+### Compare route strategies
 
-Center-to-center links pass through geometry. Named ports attach to measured world-space bounds instead:
+These are four independent edges built from one keyed collection. Their route strategy is selected from each data
+item; the stroke colour comes from that same item.
+
+<ClientOnly>
+  <ExampleTabs title="Edges · direct, orthogonal, Bezier, and spline" :source="connectorStrategiesSource">
+    <ConnectorStrategiesScene />
+  </ExampleTabs>
+</ClientOnly>
+
+`direct` is the shortest route. `orthogonal` produces axis-aligned runs and can avoid stage-node obstacles. `bezier`
+uses endpoint normals as curve handles, while `spline` creates a smooth route through raised lead and midpoint
+controls. `manual` is available when the application supplies every intermediate waypoint explicitly.
+
+## Map a keyed data collection
+
+```ts
+const dependencyGraph = computed(() => connectors
+  .edges(dependencies.value, {
+    keyBy: ({ item: edge }) => edge.id,
+    from: ({ item: edge }) => edge.source,
+    to: ({ item: edge }) => edge.target,
+  })
+  .route({
+    strategy: ({ item: edge }) => edge.critical ? 'orthogonal' : 'bezier',
+    elevation: ({ item: edge }) => edge.critical ? 0.45 : 0.15,
+    lane: 'auto',
+  })
+  .stroke({
+    color: ({ item: edge }) => edge.critical ? 0xff8a65 : 0x73cad1,
+    width: ({ item: edge }) => 0.008 + edge.throughput * 0.0004,
+  })
+  .named(({ item: edge }) => `dependency:${edge.id}`))
+```
+
+Objects with an `id` can omit `keyBy`; other collections must supply it. Duplicate or empty keys fail immediately.
+Stable keys preserve paths, renderer identity, hit metadata, and compatible backend slots when data is reordered.
+
+## Route through ports and space
+
+Named bounds ports are `auto`, `center`, `left`, `right`, `front`, `back`, `top`, and `bottom`. Normalized
+`{ x, y, z }` coordinates select an exact point in current world bounds. A node can also override `connectorPorts()`
+and be addressed with `{ node: 'gateway', port: { name: 'metrics' } }`.
+
+Endpoints may be semantic IDs, `{ node, port }`, world points, or points local to a named node:
+
+```ts
+connectors.edge(
+  { node: 'orders', port: { x: 1, y: 0.7, z: 0.5 } },
+  { position: [0, 0.4, 1], space: { node: 'payments' } },
+)
+```
+
+### Try named and normalized ports
+
+The buttons below rebuild one immutable graph with different endpoint descriptions. Notice that the dot and arrow move
+to the selected surfaces; no coordinates need to be recalculated when the boxes move.
+
+<ClientOnly>
+  <ExampleTabs title="Ports · named surfaces and exact bounds positions" :source="connectorPortsSource">
+    <ConnectorPortsScene />
+  </ExampleTabs>
+</ClientOnly>
+
+Named ports choose the centre of a bounds face and provide its outward normal. Normalized ports use `0` for the
+minimum bound, `1` for the maximum, and `0.5` for the centre on each axis. For example,
+`{ x: 1, y: 1, z: 0.5 }` is the top-right edge of an object's measured world bounds. A component can expose domain
+ports such as `metrics` or `replication`; callers then use `{ node: 'database', port: { name: 'replication' } }`.
+
+Built-in strategies are `orthogonal`, `direct`, `bezier`, `spline`, and `manual`.
+`manual` consumes `waypoints`, which may also use world or node-local space. Ground routing uses stage-node obstacles
+by default. `clearance` controls their expanded footprint. `elevation` raises a route,
+and automatic lanes are centered by stable peer key.
+
+## Layer strokes, geometry, and particle flow
+
+Appearance operators have stable keys. A route can have a broad under-stroke, a dashed foreground, custom geometry, and
+particles without calculating its path again:
+
+```ts
+import { connectors, geo, particles } from '@exceeder/vuetrex'
+
+const diamond = geo.box({ width: 0.1, height: 0.1, depth: 0.1 })
+
+const traffic = connectors
+  .edge('orders', 'payments', { key: 'orders-payments', item: paymentLink })
+  .route({ strategy: 'bezier', elevation: 0.4 })
+  .stroke({ key: 'underlay', color: 0x18333a, width: 0.06, markerEnd: false })
+  .stroke({ key: 'shaft', color: 0x73cad1, width: 0.015, dash: [0.1, 0.05] })
+  .marker({ end: diamond, scale: 0.8, align: 'tangent' })
+  .flow(route => particles
+    .path(route.points, { key: route.key, item: route.item, count: 12 })
+    .appearance({ color: 0xa5f3fc, size: 0.035 })
+    .motion({ speed: 0.7 }))
+  .geometry(route => geo.line({ points: route.points, thickness: 0.006 }))
+```
+
+`flow()` returns a normal `ParticleSource` and uses the registered particle backend. `marker()` and `geometry()`
+consume normal `GeometrySource` values and share the stage geometry prototype pool. Adding a marker, geometry, or flow
+does not remove the default keyed `shaft`; customize that layer with `.stroke({ key: 'shaft', ... })`.
+
+## Fan out and bundle
+
+```ts
+const fanout = connectors
+  .bus('gateway', apiIds, { key: 'gateway-apis' })
+  .route({ fromPort: 'right', toPort: 'left', elevation: 0.2 })
+  .stroke()
+
+const bundled = connectors
+  .edges(links, { keyBy: 'id', from: ({ item: link }) => link.source, to: ({ item: link }) => link.target })
+  .bundle({ keyBy: ({ item: link }) => link.channel, width: 0.07 })
+  .stroke({ width: 0.014 })
+```
+
+A bus resolves into keyed source, trunk, and branch runs, junctions, and one ordered traversal per target. `bundle()`
+groups the members' actual route networks and preserves their member keys. It does not claim to be a highway router;
+a future highway strategy needs independent routing acceptance tests.
+
+### See shared route structure
+
+This scene combines a bus from the gateway to three APIs with a bundle from orders to two workers. The bus shares
+source and trunk runs before branching; the purple bundle groups related independent edges under one semantic key.
+
+<ClientOnly>
+  <ExampleTabs title="Networks · bus branches, bundle membership, and shared flow" :source="connectorNetworksSource">
+    <ConnectorNetworksScene />
+  </ExampleTabs>
+</ClientOnly>
+
+The particle factory runs once per terminal traversal here, so every bus destination receives a complete source-to-
+target flow. Use `{ scope: 'network' }` when a factory should instead see all runs and junctions at once.
+
+Traversal-based flow and geometry factories are deferred when a route has fewer than two points or zero length
+(for example, while endpoints are still being laid out). Their outputs return automatically once the route has a span.
+Whole-network factories still receive the complete network, including collapsed runs.
+
+Factories consume each terminal traversal by default. Whole-network factories are explicit:
+
+```ts
+fanout.flow(network => particles.path(network.runs[0].points), {
+  key: 'shared-flow',
+  scope: 'network',
+})
+```
+
+## Handle connector interaction
 
 ```vue
-<vx-connector
-  from="gateway"
-  to="orders"
-  from-port="right"
-  to-port="left"
-  layout="orthogonal"
-  :avoid="0.2"
+<vx-connectors
+  :graph="dependencyGraph"
+  @click="(hit, event) => selectDependency(hit.key)"
+  @pointerenter="hit => hovered = hit.key"
 />
 ```
 
-Named ports are `auto`, `center`, `left`, `right`, `front`, `back`, `top`, and `bottom`. `auto` chooses the X or Z face
-toward the other endpoint. Explicit normalized coordinates provide a precise point within the measured bounds:
+Picking is owner-level and opt-in; no edge becomes a `Node`. Hits distinguish edges and bundles, include the stable
+key and source item, identify stroke, marker, geometry, or particle output, report the actual raycast intersection as
+a frozen tuple, and include normalized `pathPosition` in `[0, 1]`. The original event also exposes the same value as
+`vxConnector`.
 
-```vue
-<vx-connector
-  from="orders"
-  to="payments"
-  :from-port="{ x: 1, y: 0.7, z: 0.5 }"
-  :to-port="{ x: 0, y: 0.7, z: 0.5 }"
-/>
-```
+### Pick a route and focus its endpoints
 
-Coordinates are clamped to `0..1`; `{ x: 1, y: 0.5, z: 0.5 }` is the centre of the right face. Bounds are measured in
-world space, so nested placement, rotation, and scale are already reflected in the resolved point.
+Click a broad connector to see its key and the clicked percentage along the route. Click a box to focus its measured
+world bounds, then use **Overview** to return to the whole scene.
 
-## Separate crowded routes
-
-```vue
-<vx-connector
-  from="orders"
-  to="payments"
-  layout="bezier"
-  :elevation="0.4"
-  :lane="1"
-  :avoid="true"
-/>
-```
-
-`elevation` raises the route crest in world units. `lane` is an integer-like lane index converted using stage spacing;
-parallel links use centred automatic lanes by default. `avoid="true"` adds default clearance outside endpoint bounds,
-while a number sets explicit world-space clearance. It does not yet solve collisions against unrelated scene objects.
-
-## Fan out through one bus
-
-```vue
-<vx-bus-connector
-  from="gateway"
-  :to="apiIds"
-  side="right"
-  to-port="left"
-  type="line"
-  :elevation="0.2"
-/>
-```
-
-The bus owns one source lead, one shared trunk, and short terminal branches. Use it for gateway fan-out, queues,
-service discovery, and shared data stores. `side` is a named-face shorthand for `from-port`; use `from-port` when the
-source needs normalized coordinates. `side="auto"` chooses the source face from the average target position.
-
-For a small one-way declaration, a mesh can use the `connection` shorthand:
-
-```vue
-<vx-cylinder id="worker" connection="queue" />
-```
-
-Use `<vx-connector>` when links come from data, when parallel links exist, or when connection ownership belongs to the
-parent scene rather than either endpoint.
+<ClientOnly>
+  <ExampleTabs title="Interaction · connector hits and camera focus" :source="connectorFocusSource">
+    <ConnectorFocusScene />
+  </ExampleTabs>
+</ClientOnly>
 
 ## Focus measured content, not guessed coordinates
 

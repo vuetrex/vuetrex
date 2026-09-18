@@ -3,7 +3,7 @@
     <vx-cylinder
       v-for="level in 3"
       :key="level"
-      :name="level === 1 ? id : `${id}-layer-${level}`"
+      :name="level === 1 ? id : `${id}-layer-${level}`" :id="level === 1 ? id : `${id}-layer-${level}`"
       :text="level === 1 ? label : ''"
       :size="size"
       :height="0.2"

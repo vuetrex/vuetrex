@@ -27,8 +27,6 @@ function makeStage(settings: Record<string, unknown> = {}): VuetrexStage {
         connectors: {
             update: vi.fn(),
             remove: vi.fn(),
-            register: vi.fn(),
-            unregister: vi.fn(),
             reconcileConnections: vi.fn(),
             getConnectionPorts: vi.fn(() => [{
                 id: 'test-route',
@@ -63,14 +61,16 @@ describe('node identity', () => {
         expect(stage.getById('orders')).toBe(node.element)
     })
 
-    it('keeps name-only scenes backwards compatible', () => {
+    it('does not use human-readable names as semantic IDs', () => {
         const stage = makeStage()
         const node = new Box(stage)
         const row = new Row(stage)
         row.appendChild(node)
+        const id = node.id
         node.setName('orders')
-        expect(node.id).toBe('orders')
-        expect(stage.getById('orders')).toBe(node.element)
+        expect(node.id).toBe(id)
+        expect(stage.getById('orders')).toBeUndefined()
+        expect(stage.getById(id)).toBe(node.element)
     })
 
     it('rejects duplicate ids and names during development', () => {

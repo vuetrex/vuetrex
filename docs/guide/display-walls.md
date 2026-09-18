@@ -41,7 +41,7 @@ const surface = computed<VxDisplaySurface>(() => ({
 
 <template>
   <vx-display-wall
-    name="operations-display"
+    name="operations-display" id="operations-display"
     shape="curved"
     :radius="7.2"
     :arc="110"

@@ -3,7 +3,7 @@
     <vx-box
       v-for="level in 2"
       :key="level"
-      :name="level === 1 ? id : `${id}-layer-${level}`"
+      :name="level === 1 ? id : `${id}-layer-${level}`" :id="level === 1 ? id : `${id}-layer-${level}`"
       :size="size"
       :depth="size * 0.78"
       :height="0.2"

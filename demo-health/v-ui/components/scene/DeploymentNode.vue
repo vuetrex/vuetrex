@@ -107,13 +107,13 @@ const summaryLine = computed(() =>
   `${props.deployment.readyReplicas}/${props.deployment.desiredReplicas} ready | ${Math.round(props.deployment.metrics.requestsPerSecond)}/s`,
 )
 const statusColor = computed(() => {
-  if (props.deployment.status === 'unavailable') return 0xa7333d
-  if (props.deployment.status === 'degraded') return 0xb57b24
-  return 0x2d7a55
+  if (props.deployment.status === 'unavailable') return props.theme === 'light' ? 0xc43e4e : 0xff6b76
+  if (props.deployment.status === 'degraded') return props.theme === 'light' ? 0xb16b18 : 0xf2b55d
+  return props.theme === 'light' ? 0x167e97 : 0x58c6d5
 })
 const panelMaterial = computed(() => ({
   color: props.theme === 'light'
-    ? props.selected ? 0xccebf8 : 0xf5f6f5
+    ? props.selected ? 0xbce2ef : 0xe1e7e8
     : props.selected ? 0x3c647a : 0x34464f,
   roughness: 0.55,
   metalness: 0.12,
@@ -121,7 +121,7 @@ const panelMaterial = computed(() => ({
   emissiveIntensity: props.selected ? 0.24 : props.deployment.status === 'healthy' ? 0.05 : 0.18,
 }))
 const hoverMaterial = computed(() => ({
-  color: props.theme === 'light' ? 0xe4f1f7 : 0x3e5968,
+  color: props.theme === 'light' ? 0xcfe8ee : 0x3e5968,
   emissive: statusColor.value,
   emissiveIntensity: 0.28,
   scale: 1.035,
@@ -132,18 +132,20 @@ const podBatchMaterial = computed(() => ({
   roughness: 0.34,
   metalness: 0.18,
 }))
-const trafficMaterial = {
-  color: 0x318fe4,
+const trafficMaterial = computed(() => ({
+  color: props.theme === 'light' ? 0x167e97 : 0x58c6d5,
   roughness: 0.42,
   metalness: 0.1,
-  emissive: 0x1d5978,
-  emissiveIntensity: 0.16,
-}
+  emissive: props.theme === 'light' ? 0x0d5364 : 0x1b6570,
+  emissiveIntensity: 0.2,
+}))
 const latencyMaterial = computed(() => ({
-  color: props.deployment.metrics.latencyP95Ms > 180 ? 0xef826e : 0x68a7d7,
+  color: props.deployment.metrics.latencyP95Ms > 180
+    ? props.theme === 'light' ? 0xb16b18 : 0xf2b55d
+    : props.theme === 'light' ? 0x167e97 : 0x58c6d5,
   roughness: 0.42,
   metalness: 0.1,
-  emissive: props.deployment.metrics.latencyP95Ms > 180 ? 0x6f341e : 0x294c5e,
+  emissive: props.deployment.metrics.latencyP95Ms > 180 ? 0x6f451c : 0x1b6570,
   emissiveIntensity: 0.18,
 }))
 const statusMaterial = computed(() => ({
@@ -187,7 +189,9 @@ const podEncoding = computed<InstanceEncoding<Pod>>(() => {
       )
     },
     color(pod) {
-      return !pod.ready ? 0xb13942 : pod.restarts > 0 ? 0xc58a2b : 0x3e91c7
+      if (!pod.ready) return props.theme === 'light' ? 0xc43e4e : 0xff6b76
+      if (pod.restarts > 0) return props.theme === 'light' ? 0xb16b18 : 0xf2b55d
+      return props.theme === 'light' ? 0x167e97 : 0x58c6d5
     },
   }
 })

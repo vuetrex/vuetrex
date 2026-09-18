@@ -67,7 +67,7 @@ Every scene node supports the following props:
 
 | Prop | Default | Purpose |
 |---|---|---|
-| `id` | Legacy `name` or generated ID | Stable semantic address for focus, animation, connections, and diagnostics |
+| `id` | Generated ID | Stable semantic address for focus, animation, connections, and diagnostics |
 | `name` | empty | Human-readable node name; duplicate non-empty names throw in development |
 | `text` | empty | Visible floor caption where the node type supports captions |
 | `visible` | `true` | Show the node; hidden nodes still reserve layout space |
@@ -75,8 +75,7 @@ Every scene node supports the following props:
 | `participates-in-layout` | `true` | Include the node in parent measurement and automatic placement |
 
 Use Vue's `:key` for virtual-tree identity and Vuetrex's `id` for scene identity. Use `name`, `text`, or shape labels for what people read.
-For backwards compatibility, `name` remains the semantic ID when no explicit `id` is supplied. Vue keys never become
-scene IDs implicitly.
+Names and Vue keys never become scene IDs implicitly. Supply an explicit `id` for every referenced endpoint.
 
 `visible` and `participates-in-layout` are deliberately independent. A hidden node reserves its slot unless layout
 participation is also disabled. A visible node with `participates-in-layout="false"` renders at its parent's local
@@ -116,7 +115,6 @@ Shared mesh props:
 | `size` | Width and default depth |
 | `height` | Vertical extent |
 | `depth` | Box Z extent; ignored by cylinder and wedge |
-| `connection` | Connect this node to a named target |
 | `material` | Reactive `VxMaterialProps` object |
 | `hover` | Temporary material and scale overrides |
 | `lines` | SDF text lines rendered on the mesh |
@@ -131,7 +129,7 @@ Shared mesh props:
 
 ```vue
 <vx-panel
-  name="api"
+  name="api" id="api"
   :size="1.6"
   :depth="0.9"
   :height="0.22"
@@ -148,41 +146,60 @@ Shared mesh props:
 `label-region` is `north` or `south`. `label-share` is clamped to `0.1..0.9`. The child `layout` accepts `grid`, `row`,
 `depth`, `stack`, or `ring`. Panels also support material, hover, events, and the shared label styling props.
 
-### Connector
+### Connector graph
 
-```vue
-<vx-connector
-  from="gateway"
-  to="orders"
-  type="particles"
-  layout="orthogonal"
-  from-port="right"
-  to-port="left"
-  :elevation="0.2"
-  lane="auto"
-  :avoid="true"
-/>
+```ts
+import { connectors } from '@exceeder/vuetrex'
+
+const graph = connectors
+  .edges(links, {
+    keyBy: ({ item: link }) => link.id,
+    from: ({ item: link }) => link.source,
+    to: ({ item: link }) => link.target,
+  })
+  .profile(({ item: link }) => link.critical ? 'ground' : 'air')
+  .route({ strategy: ({ item: link }) => link.critical ? 'orthogonal' : 'bezier', lane: 'auto' })
+  .bundle({ keyBy: ({ item: link }) => link.channel })
+  .stroke({ key: 'shaft', color: ({ item: link }) => link.color, width: 0.015 })
+  .named(({ item: link }) => `link:${link.id}`)
 ```
 
-`type` is `particles` or `line`. `layout` is `orthogonal`, `direct`, `bezier`, or `spline`; `straight` is a compatibility
-alias. Ports accept a named face or normalized `{ x, y, z }` bounds coordinates. `elevation` and numeric `avoid` are
-world units; `lane` is a lane index or `auto`. Connector nodes do not participate in layout.
-
-### Bus connector
-
 ```vue
-<vx-bus-connector
-  from="gateway"
-  :to="['auth', 'catalog', 'orders']"
-  side="right"
-  to-port="left"
-  type="line"
-/>
+<vx-connectors :graph="graph" :parameters="parameters" @click="onConnectorClick" />
 ```
 
-`<vx-bus-connector>` accepts the same port, elevation, lane, and avoid options. `side` is a concise named-face alias for
-its source `from-port`. It emits one shared trunk and one branch per resolved target. The unprefixed
-`<bus-connector>` tag is retained as an alias.
+Sources are `connectors.empty()`, `edge()`, `edges()`, `bus()`, and `buses()`. Every source supports immutable fluent
+`.profile()`, `.route()`, `.bundle()`, `.stroke()`, `.marker()`, `.flow()`, `.geometry()`, `.visible()`, `.named()`,
+`.join()`, `.overlay()`, and `.pipe()` operators; matching functional operators are available on `connectors`.
+
+`route()` accepts `strategy`, `surface`, `fromPort`, `toPort`, `clearance`, `elevation`, `lane`, `waypoints`, and
+`obstacles`. Endpoints accept node IDs, `{ node, port }`, world positions, and positions local to a named node. Built-in
+strategies are `orthogonal`, `direct`, `bezier`, `spline`, and `manual`. Register deterministic custom strategies with
+`registerConnectorStrategy()`. Custom strategy points, normals, bounds, waypoints, obstacles, and result points use
+frozen tuples rather than mutable Three.js values. Registrations are snapshotted when a stage controller is constructed.
+
+`stroke()` accepts a stable layer `key` plus `color`, `width`, `opacity`, `dash`, `offset`, `markerStart`, `markerEnd`, and `depthTest`. Built-in
+markers are `arrow`, `dot`, `diamond`, and `none`. `marker()` and `geometry()` use `GeometrySource`; `flow()` uses
+`ParticleSource`. Fields consistently receive `{ item, key, index, ...domainContext }`. Parameter tokens are shared
+across connector, geometry, and particle graphs and resolve through the host's `parameters`.
+
+Resolution produces a route network with keyed runs, junctions, member keys, and one terminal traversal per target.
+`flow()` and `geometry()` consume terminal traversals by default; pass `{ scope: 'network' }` to consume the whole
+network explicitly. All public positions in these contexts are frozen `[x, y, z]` tuples.
+
+Repeated `route()` calls merge properties with later values winning; `{ replace: true }` deliberately resets inherited
+routing. Decoration layers with the same key merge or replace predictably. `connectors.join([])` is valid, matching
+relationships auto-overlay their presentations, and independent reusable module instances accept `{ scope: 'name' }`.
+
+Use `defineConnectors()` and `defineConnectorOutputs()` for reusable graph modules. Pure inspection is available through
+`connectorGraphSignature()`, `describeConnectorGraph()`, `connectorGraphToDot()`, and `inspectConnectors()`; mounted
+runtime state is returned by `stage.connectorDiagnostics()`.
+
+`registerConnectorAppearance('stroke', factory)` can replace the stage-owned stroke realization contract for stages
+constructed after registration; its unregister function affects future stages without mutating already-mounted ones.
+
+The host is a non-spatial declaration: it never registers a node ID, participates in layout or camera bounds, or owns
+an `Element3d`. Pointer handlers receive `(ConnectorHit, MouseEvent)` and activate owner-level picking.
 
 ### Instance repeater
 
@@ -299,7 +316,7 @@ The package exports:
 
 - `Vuetrex`, `VxStage`, `VxSettings`, `VxFogSettings`, `VxDiagnosticsSettings`, `VxMouseEvent`, and camera/animation option types
 - Material and hover types
-- `DisplayWall`, `InstanceNode`, `Panel`, `Spacer`, `BusConnectorNode`, `Node`, and `Base`
+- `DisplayWall`, `InstanceNode`, `Panel`, `Spacer`, `Node`, and `Base`
 - Connector port, route, lane, and bus option types
 - `registerElement()` and custom element registry types
 - Instance geometry, encoding, key, anchor, item, and hit types

@@ -10,6 +10,7 @@ Procedural geometry describes a model as an immutable graph. Vue owns the parame
 and one `<vx-geometry>` node realizes its records as Three.js lines and instance batches.
 
 ::: tip Learn by building
+Try [A block in motion](/examples/city-block) for a small interactive city with procedural buildings and moving cars.
 For a beginner-friendly walkthrough of local coordinates, pipes, face directions, distribution, and finite recursion,
 follow [Build recursive cubes and pipes](/guide/recursive-cubes).
 :::
@@ -139,8 +140,8 @@ Use stable domain items when generated parts correspond to application data:
 const pods = geo.distribute(geo.box({ width: 0.2, height: 0.2, depth: 0.2 }), {
   items: services,
   keyBy: 'id',
-  position: service => service.position,
-  direction: service => service.direction,
+  position: ({ item: service }) => service.position,
+  direction: ({ item: service }) => service.direction,
 })
 ```
 
@@ -239,8 +240,8 @@ different instance batches while continuing to share their topology buffer.
 const assembly = geo.join([body, branches, leaves])
 ```
 
-Join combines record streams while retaining shared prototypes and instancing. `geo.boolean()` remains a deprecated
-compatibility alias for `geo.join()`. Join does not weld vertices, remove internal faces, or produce a watertight CSG
+Join combines record streams while retaining shared prototypes and instancing. It does not weld vertices, remove
+internal faces, or produce a watertight CSG
 union. Future `union`, `subtract`, and `intersect` operations require an explicit mesh-baking boundary.
 
 ### Randomize
