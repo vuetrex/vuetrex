@@ -123,7 +123,8 @@ feeds the resulting paths to both the stroke and particle backends. Continue wit
 1. [Live data and components](/guide/live-data) shows how to model a service as a reusable visual component.
 2. [Layout in 3D](/guide/layouts) explains nesting, measurement, rings, and explicit placements.
 3. [Connections and focus](/guide/connections-and-focus) adds semantic links and camera navigation.
-4. [Composition recipes](/guide/composability) separates reusable view policy from representation.
+4. [Stylesheet materials](/guide/stylesheet-materials) explains reusable styles, hover, alpha modes, and textures.
+5. [Composition recipes](/guide/composability) separates reusable view policy from representation.
 
 ::: warning Browser rendering
 Vuetrex requires WebGL and browser DOM APIs. Mount it on the client when using server-side rendering.

@@ -1,10 +1,14 @@
 <template>
   <div class="hello">
     <div>{{msg}}</div>
+    <VxStyleSheet :sheets="[sheet]">
     <Vuetrex>
+      <vx-environment preset="studio" />
+      <vx-camera :direction="[8, 6, 11]" fit="content" />
+      <vx-floor finish="mirror" :reflection="0.6" />
       <vx-layer>
         <vx-row>
-          <vx-box name="a1"/>
+          <vx-box name="a1" :material="{ color: 'royalblue', alphaMode: 'blend', opacity: 0.8 }" :hover="{ emissive: 'blue', transition: 0.1 }"/>
         </vx-row>
         <vx-row>
           <vx-box name="b1" size="2"/>
@@ -31,28 +35,31 @@
         <vx-particles name="consumer-flow" :graph="particleEffect" />
       </vx-layer>
     </Vuetrex>
+    </VxStyleSheet>
   </div>
 </template>
 
 <script>
-import { Vuetrex, defineGeometryOutputs, geo, inspectGeometry, particles } from '@exceeder/vuetrex';
+import { VxStyleSheet, defineVxStyleSheet, finishes, Vuetrex, defineGeometryOutputs, geo, inspectGeometry, particles, resolveMaterial } from '@exceeder/vuetrex';
 import { getCurrentInstance } from 'vue';
 export default {
   components: {
-    Vuetrex
+    Vuetrex, VxStyleSheet
   },
   name: 'HelloWorld',
   props: {
     msg: String
   },
   setup() {
+    const sheet = defineVxStyleSheet({ common: { materials: { metal: { base: finishes.satinMetal() } } } })
+    if (resolveMaterial({ opacity: 0.5 }).alphaMode !== 'blend') throw new Error('Material resolver export failed')
     const parts = defineGeometryOutputs('consumer.parts', () => {
       const core = geo.box()
       const satellites = geo.distribute(
         geo.icosphere({ radius: 0.2 }),
         geo.radialPoints({ count: 4, radius: 1 }),
       )
-      return { core, satellites, whole: geo.join([core, satellites]) }
+      return { sheet, core, satellites, whole: geo.join([core, satellites]) }
     })({})
     const proceduralGeometry = parts.whole
       .material('accent')

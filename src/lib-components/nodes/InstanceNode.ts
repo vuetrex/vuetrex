@@ -1,6 +1,7 @@
+import { MaterialController } from '../styling/MaterialController.js'
+import { resolveMaterialBinding, type VxMaterialBinding } from '../styling/stylesheets.js'
 import * as THREE from 'three'
 import { markRaw, shallowReactive, watchEffect, type WatchStopHandle } from 'vue'
-import { applyMaterialProps, type VxMaterialProps } from '@/lib-components/nodes/material.js'
 import { Node } from '@/lib-components/nodes/Node.js'
 import type { VuetrexStage } from '@/lib-components/three/stage.js'
 import type { VxEventMap } from '@/lib-components/three/element3d.js'
@@ -36,7 +37,7 @@ interface InstanceState<T> {
     keyBy: InstanceKey<T>
     encoding?: InstanceEncoding<T>
     geometry?: InstanceGeometry
-    material?: VxMaterialProps
+    material?: VxMaterialBinding
     anchor: InstanceAnchor
 }
 
@@ -70,6 +71,9 @@ export class InstanceNode<T = unknown> extends Node {
     readonly material: THREE.MeshStandardMaterial
 
     private stopHandle?: WatchStopHandle
+    private materialStopHandle?: WatchStopHandle
+    private readonly materialController: MaterialController
+    private removed = false
     private mesh?: THREE.InstancedMesh
     private capacity = 0
     private geometry?: THREE.BufferGeometry
@@ -93,6 +97,7 @@ export class InstanceNode<T = unknown> extends Node {
             anchor: 'base',
         })
         this.material = stage.createElementMaterial()
+        this.materialController = new MaterialController(this.material)
     }
 
     override setStateValue(key: string, value: unknown): void {
@@ -147,15 +152,18 @@ export class InstanceNode<T = unknown> extends Node {
     }
 
     syncWithThree(): void {
-        if (this.stopHandle) return
+        if (this.stopHandle || this.removed) return
 
+        this.materialStopHandle = watchEffect(() => {
+            const binding = resolveMaterialBinding(this.stage.materialStyles?.value, this.state.material)
+            this.materialController.update(binding.layers)
+        })
         this.stopHandle = watchEffect(() => {
             const records = this.encodeItems()
             const geometry = this.resolveGeometry()
             const highestSlot = records.reduce((highest, record) => Math.max(highest, record.slot), -1)
             this.ensureMesh(geometry, nextCapacity(highestSlot + 1))
 
-            if (this.state.material) applyMaterialProps(this.material, this.state.material)
             this.writeInstances(records, highestSlot + 1)
 
             const parent = this.nearestAncestorObject()
@@ -170,6 +178,9 @@ export class InstanceNode<T = unknown> extends Node {
     }
 
     onRemoved(): void {
+        if (this.removed) return
+        this.removed = true
+        this.materialStopHandle?.()
         if (this.stopHandle) {
             this.stopHandle()
             this.stopHandle = undefined
@@ -177,7 +188,7 @@ export class InstanceNode<T = unknown> extends Node {
         this.clearMesh()
         if (this.ownsGeometry) this.geometry?.dispose()
         this.geometry = undefined
-        this.material.dispose()
+        this.materialController.dispose()
         this.stage.invalidateContentBounds?.()
     }
 

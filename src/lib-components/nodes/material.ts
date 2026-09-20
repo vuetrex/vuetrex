@@ -1,38 +1,43 @@
-import {MeshStandardMaterial, type Texture} from 'three';
+import type { MeshStandardMaterial } from 'three'
+import { toRaw } from 'vue'
+import type { VxMaterialProps, VxResolvedMaterial } from '../styling/types.js'
 
-export interface VxMaterialProps {
-    color?: number
-    opacity?: number
-    transparent?: boolean
-    roughness?: number
-    metalness?: number
-    emissive?: number
-    emissiveIntensity?: number
-    wireframe?: boolean
-    map?: Texture | null
-}
+export const materialTextureFields = ['map', 'normalMap', 'bumpMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'alphaMap'] as const
+export const materialNumberFields = ['opacity', 'roughness', 'metalness', 'emissiveIntensity', 'envMapIntensity', 'bumpScale'] as const
+const flags = ['wireframe', 'side', 'depthWrite', 'depthTest', 'flatShading', 'toneMapped'] as const
 
-/**
- * Hover overrides applied when the pointer enters a node.
- * Any VxMaterialProps field overrides the base material for the duration of hover.
- * `scale` applies a uniform scale multiplier. `transition` controls the tween duration in seconds.
- */
-export interface VxHoverProps extends VxMaterialProps {
-    scale?: number
-    transition?: number
-}
-
-export function applyMaterialProps(mat: MeshStandardMaterial, props: VxMaterialProps): void {
-    if (props.color !== undefined) mat.color.setHex(props.color);
-    if (props.opacity !== undefined) mat.opacity = props.opacity;
-    if (props.transparent !== undefined) mat.transparent = props.transparent;
-    if (props.roughness !== undefined) mat.roughness = props.roughness;
-    if (props.metalness !== undefined) mat.metalness = props.metalness;
-    if (props.emissive !== undefined) mat.emissive.setHex(props.emissive);
-    if (props.emissiveIntensity !== undefined) mat.emissiveIntensity = props.emissiveIntensity;
-    if (props.wireframe !== undefined) mat.wireframe = props.wireframe;
-    if (props.map !== undefined && mat.map !== props.map) {
-        mat.map = props.map;
-        mat.needsUpdate = true;
+/** Snapshot construction defaults, copying colors but retaining borrowed texture references. */
+export function readMaterial(material: MeshStandardMaterial): VxMaterialProps {
+    const props: VxMaterialProps = {
+        color: material.color.clone(), emissive: material.emissive.clone(),
+        alphaMode: material.transparent ? 'blend' : material.alphaTest > 0 ? 'mask' : 'opaque',
+        alphaTest: material.alphaTest,
     }
+    for (const key of [...materialTextureFields, ...materialNumberFields, ...flags]) {
+        Object.assign(props, { [key]: material[key] })
+    }
+    return props
+}
+
+/** Apply every supported field. Increment the program version only for program-affecting changes. */
+export function applyResolvedMaterial(material: MeshStandardMaterial, next: VxResolvedMaterial): void {
+    const transparent = next.alphaMode === 'blend'
+    let programChanged = material.transparent !== transparent
+        || (material.alphaTest > 0) !== (next.alphaTest > 0)
+        || material.side !== next.side
+        || material.flatShading !== next.flatShading
+        || material.toneMapped !== next.toneMapped
+        || material.wireframe !== next.wireframe
+    material.color.setRGB(...next.color)
+    material.emissive.setRGB(...next.emissive)
+    material.transparent = transparent
+    material.alphaTest = next.alphaTest
+    for (const key of materialTextureFields) {
+        const texture = toRaw(next[key])
+        programChanged ||= material[key] !== texture
+        material[key] = texture
+    }
+    for (const key of materialNumberFields) material[key] = next[key]
+    for (const key of flags) Object.assign(material, { [key]: next[key] })
+    if (programChanged) material.needsUpdate = true
 }

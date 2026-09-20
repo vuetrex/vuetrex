@@ -79,20 +79,23 @@ float vxFloorOpacity = diffuseColor.a;`,
             )
             groundShader.fragmentShader = replaceShaderChunk(groundShader.fragmentShader,
                 '#include <opaque_fragment>', `
-// 1. Boost reflection intensity before blending to make it more prominent
-vec4 vxReflectionSample = texture2DProj(vxReflectionMap, vxReflectionUv);                
-vec3 strongReflection = min(vxReflectionSample.rgb * 1.5, vec3(1.0)); 
+// 1. Sample reflection directly
+vec4 vxReflectionSample = texture2DProj(vxReflectionMap, vxReflectionUv);
+vec3 reflectedRGB = vxReflectionSample.rgb;
 
-// 2. Blend using the stronger reflection
-vec3 vxReflectedColor = vxBlendOverlay(strongReflection, vxReflectionColor);
+// 2. Tint or desaturate the reflection to prevent harsh contrast/false colors
+// Desaturate slightly by blending with grayscale, then multiply by floor tint
+float luminance = dot(reflectedRGB, vec3(0.2126, 0.7152, 0.0722));
+vec3 tintedReflection = mix(vec3(luminance), reflectedRGB, 0.75) * vxReflectionColor;
 
-// 3. Compress highlights on the final blended result to reduce shininess
-vec3 tonedDownColor = min(vxReflectedColor, vec3(0.85)); 
+// 3. Smooth attenuation (dimming distant/bright reflections smoothly)
+vec3 softReflection = tintedReflection * 0.7;
 
-// 4. Mix using the toned-down color
-outgoingLight = mix(tonedDownColor, outgoingLight / 1.5, vxFloorOpacity);
-#include <opaque_fragment>`,
-            )
+// 4. Blend cleanly with the floor base color
+outgoingLight = mix(outgoingLight, softReflection, vxFloorOpacity);
+
+#include <opaque_fragment>`
+            );
         }
     }
 }

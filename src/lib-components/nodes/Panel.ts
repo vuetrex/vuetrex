@@ -1,6 +1,6 @@
+import { resolveMaterialBinding, type VxMaterialBinding } from '../styling/stylesheets.js'
 import { reactive, watchEffect, type WatchStopHandle } from 'vue'
-import gsap from 'gsap'
-import { Color, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three'
+import { Group, Mesh, MeshStandardMaterial, Vector3 } from 'three'
 import { Text } from 'troika-three-text'
 import * as THREEx from '@/lib-components/three/three.imports.js'
 import { Node } from '@/lib-components/nodes/Node.js'
@@ -12,7 +12,8 @@ import {
     ringLayout,
     stackLayout,
 } from '@/lib-components/nodes/layouts.js'
-import { applyMaterialProps, type VxHoverProps, type VxMaterialProps } from '@/lib-components/nodes/material.js'
+import type { VxHoverProps, VxMaterialProps } from '@/lib-components/styling/types.js'
+import { MaterialController } from '@/lib-components/styling/MaterialController.js'
 import type { VuetrexStage } from '@/lib-components/three/stage.js'
 
 type PanelLayout = 'grid' | 'row' | 'depth' | 'stack' | 'ring'
@@ -36,21 +37,8 @@ interface PanelState {
     gap?: number
     startAngle: number
     direction: 'normal' | 'reverse'
-    material?: VxMaterialProps
+    material?: VxMaterialBinding
     hover?: VxHoverProps
-}
-
-function captureProps(material: MeshStandardMaterial): VxMaterialProps {
-    return {
-        color: material.color.getHex(),
-        opacity: material.opacity,
-        transparent: material.transparent,
-        roughness: material.roughness,
-        metalness: material.metalness,
-        emissive: material.emissive.getHex(),
-        emissiveIntensity: material.emissiveIntensity,
-        wireframe: material.wireframe,
-    }
 }
 
 /**
@@ -72,8 +60,8 @@ export class Panel extends Node {
     private readonly backingMesh: Mesh
     private labelMesh?: any
     private stopHandles: WatchStopHandle[] = []
-    private baseProps: VxMaterialProps
-    private isHovered = false
+    private readonly materialController: MaterialController
+    private removed = false
 
     declare protected state: PanelState
 
@@ -102,7 +90,8 @@ export class Panel extends Node {
         }) as PanelState
 
         this.material = stage.createElementMaterial()
-        this.baseProps = captureProps(this.material)
+        this.materialController = new MaterialController(this.material)
+        this.materialController.setTarget(this.rootGroup)
         this.backingMesh = new Mesh(new THREEx.RoundedBoxGeometry(1, 1, 1, 5, 0.05), this.material)
         this.backingMesh.castShadow = stage.shadowsEnabled?.() ?? true
         this.backingMesh.receiveShadow = stage.shadowsEnabled?.() ?? true
@@ -208,7 +197,7 @@ export class Panel extends Node {
     }
 
     syncWithThree(): void {
-        if (this.stopHandles.length > 0) return
+        if (this.stopHandles.length > 0 || this.removed) return
 
         this.subscribeEvents()
 
@@ -245,10 +234,8 @@ export class Panel extends Node {
         }))
 
         this.stopHandles.push(watchEffect(() => {
-            if (this.state.material) {
-                applyMaterialProps(this.material, this.state.material)
-                this.baseProps = { ...this.baseProps, ...this.state.material }
-            }
+            const binding = resolveMaterialBinding(this.stage.materialStyles?.value, this.state.material, this.state.hover)
+            this.materialController.update(binding.layers, binding.hover)
         }))
 
         this.stopHandles.push(watchEffect(() => this.updateLabel()))
@@ -309,91 +296,24 @@ export class Panel extends Node {
     }
 
     override dispatchPointerenter(event: MouseEvent): void {
-        if (this.state.hover) this.applyHover(this.state.hover)
+        this.materialController.setHovered(true)
         super.dispatchPointerenter(event)
     }
 
     override dispatchPointerleave(event: MouseEvent): void {
-        if (this.state.hover && this.isHovered) this.restoreHover()
+        this.materialController.setHovered(false)
         super.dispatchPointerleave(event)
     }
 
-    private applyHover(hover: VxHoverProps): void {
-        const duration = hover.transition ?? 0.18
-        gsap.killTweensOf(this.material.color)
-        gsap.killTweensOf(this.material)
-        gsap.killTweensOf(this.rootGroup.scale)
-        this.isHovered = true
-
-        if (hover.color !== undefined) {
-            const color = new Color(hover.color)
-            gsap.to(this.material.color, { r: color.r, g: color.g, b: color.b, duration })
-        }
-        if (hover.opacity !== undefined) {
-            if (hover.opacity < 1 || hover.transparent) this.material.transparent = true
-            gsap.to(this.material, { opacity: hover.opacity, duration })
-        }
-        if (hover.roughness !== undefined) gsap.to(this.material, { roughness: hover.roughness, duration })
-        if (hover.metalness !== undefined) gsap.to(this.material, { metalness: hover.metalness, duration })
-        if (hover.emissive !== undefined) {
-            const color = new Color(hover.emissive)
-            gsap.to(this.material.emissive, { r: color.r, g: color.g, b: color.b, duration })
-        }
-        if (hover.emissiveIntensity !== undefined) {
-            gsap.to(this.material, { emissiveIntensity: hover.emissiveIntensity, duration })
-        }
-        if (hover.scale !== undefined) {
-            gsap.to(this.rootGroup.scale, {
-                x: hover.scale, y: hover.scale, z: hover.scale,
-                duration, ease: 'sine.out',
-            })
-        }
-    }
-
-    private restoreHover(): void {
-        const hover = this.state.hover!
-        const duration = hover.transition ?? 0.18
-        gsap.killTweensOf(this.material.color)
-        gsap.killTweensOf(this.material)
-        gsap.killTweensOf(this.rootGroup.scale)
-        this.isHovered = false
-
-        if (hover.color !== undefined && this.baseProps.color !== undefined) {
-            const color = new Color(this.baseProps.color)
-            gsap.to(this.material.color, { r: color.r, g: color.g, b: color.b, duration })
-        }
-        if (hover.opacity !== undefined && this.baseProps.opacity !== undefined) {
-            gsap.to(this.material, {
-                opacity: this.baseProps.opacity,
-                duration,
-                onComplete: () => { this.material.transparent = this.baseProps.transparent ?? false },
-            })
-        }
-        if (hover.roughness !== undefined && this.baseProps.roughness !== undefined) {
-            gsap.to(this.material, { roughness: this.baseProps.roughness, duration })
-        }
-        if (hover.metalness !== undefined && this.baseProps.metalness !== undefined) {
-            gsap.to(this.material, { metalness: this.baseProps.metalness, duration })
-        }
-        if (hover.emissive !== undefined && this.baseProps.emissive !== undefined) {
-            const color = new Color(this.baseProps.emissive)
-            gsap.to(this.material.emissive, { r: color.r, g: color.g, b: color.b, duration })
-        }
-        if (hover.emissiveIntensity !== undefined && this.baseProps.emissiveIntensity !== undefined) {
-            gsap.to(this.material, { emissiveIntensity: this.baseProps.emissiveIntensity, duration })
-        }
-        if (hover.scale !== undefined) {
-            gsap.to(this.rootGroup.scale, { x: 1, y: 1, z: 1, duration, ease: 'sine.inOut' })
-        }
-    }
-
     onRemoved(): void {
+        if (this.removed) return
+        this.removed = true
         this.stopHandles.forEach(stop => stop())
         this.stopHandles = []
         this.stage.connectors.remove(this.element)
         this.disposeLabel()
         this.backingMesh.geometry.dispose()
-        this.material.dispose()
+        this.materialController.dispose()
         this.rootGroup.removeFromParent()
         this.rootGroup.clear()
         this.stage.invalidateContentBounds?.()

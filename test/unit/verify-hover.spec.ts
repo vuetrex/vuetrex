@@ -1,182 +1,100 @@
-/**
- * Spec: MeshNode hover animation — correct restore targets.
- *
- * The bug: hoverSnapshot was taken from the live (GSAP-animated) material at
- * pointer-enter time.  Rapid in/out caused restoreHover to target a partially-
- * animated intermediate, not the design-time value.
- *
- * The fix: baseProps captures the intended material state from state.material,
- * not from the live Three.js material.  restoreHover reads from baseProps.
- * Both enter and leave also kill in-flight tweens before starting new ones.
- */
-
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+/** Hover restoration must use resolved design values, never an animated material snapshot. */
+import { afterEach, describe, it, expect, vi } from 'vitest'
 import * as THREE from 'three'
+import gsap from 'gsap'
+import { nextTick, shallowRef } from 'vue'
 import { Box } from '@/lib-components/nodes/shapes/Box.js'
 import type { VuetrexStage } from '@/lib-components/three/stage.js'
-import { flushPromises } from '@vue/test-utils'
+import type { VxHoverProps, VxMaterialProps } from '@/lib-components/styling/types.js'
 
-// ── GSAP mock ─────────────────────────────────────────────────────────────────
+const boxes: Box[] = []
+afterEach(() => boxes.splice(0).forEach(box => box.onRemoved()))
 
-type TweenCall = { target: object; vars: Record<string, unknown> }
-const tweenCalls: TweenCall[] = []
-const killCalls: object[] = []
-
-vi.mock('gsap', () => ({
-    default: {
-        to: (target: object, vars: Record<string, unknown>) => tweenCalls.push({ target, vars }),
-        killTweensOf: (target: object) => killCalls.push(target),
-    },
-}))
-
-// ── Mock stage ─────────────────────────────────────────────────────────────────
-
-function makeMockStage() {
+async function makeBox(material: VxMaterialProps | undefined, hover: VxHoverProps) {
     const mat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.3, metalness: 0.1 })
-    const mesh = new THREE.Mesh()
     const scene = new THREE.Scene()
-
     const stage = {
-        boxRadius: 1.3,
-        boxDistance: 1.5,
+        boxRadius: 1.3, boxDistance: 1.5,
         createElementMaterial: () => mat,
-        renderMesh: vi.fn(),
-        removeObject: vi.fn(),
-        getScene: vi.fn(() => scene),
-        getById: vi.fn(),
-        reconcileConnections: vi.fn(),
-        connectors: {
-            update: vi.fn(),
-            remove: vi.fn(() => []),
+        renderMesh: (element: any, height: number, size: number, generate: any) => {
+            if (!element.mesh) { element.mesh = generate(height, size); scene.add(element.mesh) }
         },
+        removeObject: (element: any) => { element.mesh?.removeFromParent(); element.mesh = null },
+        getScene: () => scene, reconcileConnections: vi.fn(),
+        connectors: { update: vi.fn(), remove: vi.fn() },
     } as unknown as VuetrexStage
-
-    return { stage, mat, mesh }
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/** Build a Box, inject a mock mesh so hover dispatch works without renderMesh. */
-function makeBox(stage: VuetrexStage, mesh: THREE.Mesh) {
     const box = new Box(stage)
-    ;(box as any).element.mesh = mesh
+    boxes.push(box)
+    box.parent.value = {
+        elements: shallowRef([box]), parent: shallowRef(null),
+        group: scene, isGroupNode: true, layoutPositionOf: () => new THREE.Vector3(),
+    } as any
+    box.setStateValue('material', material)
+    box.setStateValue('hover', hover)
     box.syncWithThree()
-    return box
+    await nextTick()
+    return { box, mat, mesh: box.element.mesh! }
 }
 
-/** Find the last gsap.to call whose target is `obj` and vars include `key`. */
-function lastTweenFor(obj: object, key: string): TweenCall | undefined {
-    return [...tweenCalls].reverse().find(c => c.target === obj && key in c.vars)
+function finish(mat: THREE.MeshStandardMaterial, mesh: THREE.Object3D) {
+    for (const target of [mat.color, mat.emissive, mat, mesh.scale]) {
+        gsap.getTweensOf(target).forEach(tween => tween.progress(1))
+    }
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
-describe('MeshNode hover: restoreHover targets design-time values', () => {
-
-    beforeEach(() => {
-        tweenCalls.length = 0
-        killCalls.length = 0
+describe('MeshNode hover restoration', () => {
+    it('restores the authored color even when the material is mid-animation', async () => {
+        const { box, mat, mesh } = await makeBox({ color: 0xff0000 }, { color: 0x0000ff, transition: 1 })
+        box.dispatchPointerenter(new MouseEvent('pointerenter'))
+        gsap.getTweensOf(mat.color)[0].progress(0.4)
+        expect(mat.color.getHex()).not.toBe(0xff0000)
+        box.dispatchPointerleave(new MouseEvent('pointerleave'))
+        finish(mat, mesh)
+        expect(mat.color.getHex()).toBe(0xff0000)
     })
 
-    it('restores to state.material color even when material is mid-animation', async () => {
-        const { stage, mat, mesh } = makeMockStage()
-        const box = makeBox(stage, mesh)
-
-        // Set design-time color to red via reactive prop
-        ;(box as any).state.material = { color: 0xff0000 }
-        await flushPromises()
-
-        // Simulate GSAP having partially animated the material (mid-tween state)
-        mat.color.setRGB(0.5, 0, 0.5);
-
-        // Hover in then immediately out
-        (box as any).state.hover = { color: 0x0000ff, transition: 0 }
-        box.dispatchPointerenter(new MouseEvent('mouseenter'))
-        box.dispatchPointerleave(new MouseEvent('mouseleave'))
-
-        // Restore tween must target original red (1, 0, 0), not the mid-animation (0.5, 0, 0.5)
-        const restore = lastTweenFor(mat.color, 'r')
-        expect(restore?.vars.r).toBeCloseTo(1, 5)
-        expect(restore?.vars.g).toBeCloseTo(0, 5)
-        expect(restore?.vars.b).toBeCloseTo(0, 5)
+    it('restores the latest material prop after an update while hovered', async () => {
+        const { box, mat, mesh } = await makeBox({ color: 0x00ff00 }, { color: 0xffffff, transition: 1 })
+        box.dispatchPointerenter(new MouseEvent('pointerenter'))
+        gsap.getTweensOf(mat.color)[0].progress(0.4)
+        box.setStateValue('material', { color: 0x0000ff })
+        await nextTick()
+        expect(mat.color.getHex()).toBe(0xffffff)
+        box.dispatchPointerleave(new MouseEvent('pointerleave'))
+        finish(mat, mesh)
+        expect(mat.color.getHex()).toBe(0x0000ff)
     })
 
-    it('restores to updated state.material when prop changes while hovering', async () => {
-        const { stage, mat, mesh } = makeMockStage()
-        const box = makeBox(stage, mesh)
-
-        // First design-time color: green
-        ;(box as any).state.material = { color: 0x00ff00 }
-        await flushPromises()
-
-        // Prop changes to blue before hovering
-        ;(box as any).state.material = { color: 0x0000ff }
-        await flushPromises()
-
-        // Simulate mid-animation on the live material
-        mat.color.setRGB(0, 0.5, 0)
-
-        ;(box as any).state.hover = { color: 0xffffff, transition: 0 }
-        box.dispatchPointerenter(new MouseEvent('mouseenter'))
-        box.dispatchPointerleave(new MouseEvent('mouseleave'))
-
-        // Should restore to blue (last design-time value), not mid-animation green
-        const restore = lastTweenFor(mat.color, 'r')
-        expect(restore?.vars.r).toBeCloseTo(0, 5)
-        expect(restore?.vars.g).toBeCloseTo(0, 5)
-        expect(restore?.vars.b).toBeCloseTo(1, 5)
+    it('restores the base scale after an interrupted hover scale tween', async () => {
+        const { box, mat, mesh } = await makeBox(undefined, { scale: 1.3, transition: 1 })
+        box.dispatchPointerenter(new MouseEvent('pointerenter'))
+        gsap.getTweensOf(mesh.scale)[0].progress(0.4)
+        expect(mesh.scale.x).toBeGreaterThan(1)
+        box.dispatchPointerleave(new MouseEvent('pointerleave'))
+        finish(mat, mesh)
+        expect(mesh.scale.toArray()).toEqual([1, 1, 1])
     })
 
-    it('restores scale to 1 regardless of mid-animation scale value', () => {
-        const { stage, mat, mesh } = makeMockStage()
-        const box = makeBox(stage, mesh)
-
-        // Simulate mid-animation scale
-        mesh.scale.set(1.1, 1.1, 1.1)
-
-        ;(box as any).state.hover = { scale: 1.3, transition: 0 }
-        box.dispatchPointerenter(new MouseEvent('mouseenter'))
-        box.dispatchPointerleave(new MouseEvent('mouseleave'))
-
-        const restore = lastTweenFor(mesh.scale, 'x')
-        expect(restore?.vars.x).toBe(1)
-        expect(restore?.vars.y).toBe(1)
-        expect(restore?.vars.z).toBe(1)
+    it('cancels owned in-flight tweens on leave and re-entry, including emissive', async () => {
+        const { box, mat, mesh } = await makeBox(undefined, { color: 0x0000ff, emissive: 0xff0000, scale: 1.2, transition: 1 })
+        const currentTweens = () => [mat, mat.color, mat.emissive, mesh.scale].flatMap(target => gsap.getTweensOf(target))
+        box.dispatchPointerenter(new MouseEvent('pointerenter'))
+        const entering = currentTweens()
+        expect(entering).toHaveLength(4)
+        box.dispatchPointerleave(new MouseEvent('pointerleave'))
+        expect(entering.every(tween => tween.parent === null)).toBe(true)
+        const leaving = currentTweens()
+        box.dispatchPointerenter(new MouseEvent('pointerenter'))
+        expect(leaving.every(tween => tween.parent === null)).toBe(true)
     })
 
-    it('kills in-flight tweens on both hover enter and hover leave', () => {
-        const { stage, mat, mesh } = makeMockStage()
-        const box = makeBox(stage, mesh)
-
-        ;(box as any).state.hover = { color: 0x0000ff, scale: 1.2, transition: 0 }
-
-        box.dispatchPointerenter(new MouseEvent('mouseenter'))
-        expect(killCalls).toContain(mat.color)
-        expect(killCalls).toContain(mat)
-        expect(killCalls).toContain(mesh.scale)
-
-        killCalls.length = 0
-
-        box.dispatchPointerleave(new MouseEvent('mouseleave'))
-        expect(killCalls).toContain(mat.color)
-        expect(killCalls).toContain(mat)
-        expect(killCalls).toContain(mesh.scale)
-    })
-
-    it('baseProps seeds from material creation defaults when no state.material is set', () => {
-        const { stage, mat, mesh } = makeMockStage()
-        // mat has roughness 0.3, metalness 0.1 from makeMockStage()
-        const box = makeBox(stage, mesh)
-
-        // Simulate GSAP having tweened roughness mid-animation
-        mat.roughness = 0.7
-
-        ;(box as any).state.hover = { roughness: 0.9, transition: 0 }
-        box.dispatchPointerenter(new MouseEvent('mouseenter'))
-        box.dispatchPointerleave(new MouseEvent('mouseleave'))
-
-        // Should restore to creation-default roughness (0.3), not mid-animation (0.7)
-        const restore = lastTweenFor(mat, 'roughness')
-        expect(restore?.vars.roughness).toBeCloseTo(0.3, 5)
+    it('restores creation defaults when no material prop was supplied', async () => {
+        const { box, mat, mesh } = await makeBox(undefined, { roughness: 0.9, transition: 1 })
+        box.dispatchPointerenter(new MouseEvent('pointerenter'))
+        gsap.getTweensOf(mat)[0].progress(0.4)
+        expect(mat.roughness).toBeGreaterThan(0.3)
+        box.dispatchPointerleave(new MouseEvent('pointerleave'))
+        finish(mat, mesh)
+        expect(mat.roughness).toBeCloseTo(0.3)
     })
 })

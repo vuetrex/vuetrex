@@ -1,3 +1,5 @@
+import { MaterialController } from '../styling/MaterialController.js'
+import { resolveMaterialBinding, type VxMaterialBinding } from '../styling/stylesheets.js'
 import * as THREE from 'three'
 import { markRaw, shallowReactive, shallowRef, watchEffect, type WatchStopHandle } from 'vue'
 import { GeometryEvaluator } from '@/lib-components/geometry/compiler/evaluator.js'
@@ -24,16 +26,15 @@ import type {
 } from '@/lib-components/geometry/types.js'
 import { isGeometrySource } from '@/lib-components/geometry/graph.js'
 import { Node } from '@/lib-components/nodes/Node.js'
-import { applyMaterialProps, type VxMaterialProps } from '@/lib-components/nodes/material.js'
 import type { VuetrexStage } from '@/lib-components/three/stage.js'
 
 export type GeometryAnchor = 'base' | 'center' | 'origin'
-export type GeometryMaterialChannels = Readonly<Record<string, VxMaterialProps>>
+export type GeometryMaterialChannels = Readonly<Record<string, VxMaterialBinding>>
 
 interface ProceduralGeometryState {
     graph?: GeometrySource
     parameters: GeometryParameterValues
-    material?: VxMaterialProps
+    material?: VxMaterialBinding
     materials: GeometryMaterialChannels
     anchor: GeometryAnchor
     text: string
@@ -44,6 +45,8 @@ export class GeometryNode extends Node {
 
     readonly group = new THREE.Group()
     readonly material: THREE.MeshStandardMaterial
+    private readonly materialController: MaterialController
+    private removed = false
 
     private readonly prototypes: GeometryPrototypeRegistry
     private readonly realizer: GeometryRealizer
@@ -73,6 +76,7 @@ export class GeometryNode extends Node {
         })
         this.prototypes = new GeometryPrototypeRegistry(geometryPrototypePoolFor(stage))
         this.material = stage.createElementMaterial()
+        this.materialController = new MaterialController(this.material)
         this.realizer = new GeometryRealizer(
             this.group,
             this.material,
@@ -152,7 +156,7 @@ export class GeometryNode extends Node {
     }
 
     syncWithThree(): void {
-        if (this.compileStopHandle) return
+        if (this.compileStopHandle || this.removed) return
 
         this.compileStopHandle = watchEffect(() => {
             if (this.parent.value === null) return
@@ -186,9 +190,10 @@ export class GeometryNode extends Node {
         }, { flush: 'post' })
 
         this.materialStopHandle = watchEffect(() => {
-            const material = this.state.material
-            if (material) applyMaterialProps(this.material, material)
-            this.realizer.updateMaterials(this.state.materials)
+            const styles = this.stage.materialStyles?.value
+            const binding = resolveMaterialBinding(styles, this.state.material)
+            this.materialController.update(binding.layers)
+            this.realizer.updateMaterials(this.state.materials, binding.layers, styles)
         }, { flush: 'post' })
 
         this.placementStopHandle = watchEffect(() => {
@@ -207,6 +212,8 @@ export class GeometryNode extends Node {
     }
 
     onRemoved(): void {
+        if (this.removed) return
+        this.removed = true
         this.compileStopHandle?.()
         this.placementStopHandle?.()
         this.materialStopHandle?.()
@@ -226,7 +233,7 @@ export class GeometryNode extends Node {
         this.compiledSet.value = { records: [] }
         this.compiledBounds.value = new THREE.Box3()
         this.group.removeFromParent()
-        this.material.dispose()
+        this.materialController.dispose()
         this.element.mesh = null
         this.stage.invalidateContentBounds?.()
     }

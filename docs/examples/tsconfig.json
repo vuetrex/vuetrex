@@ -8,5 +8,13 @@
       "@exceeder/vuetrex": ["../../src/lib-components/index.ts"]
     }
   },
-  "include": ["src/CityBlockScene.vue", "src/cityBlock.ts", "../../src/**/*.d.ts"]
+  "include": [
+    "src/CityBlockScene.vue",
+    "src/cityBlock.ts",
+    "src/MaterialStylesScene.vue",
+    "src/MaterialCyberpunkScene.vue",
+    "src/MaterialAlphaScene.vue",
+    "src/MaterialHoverScene.vue",
+    "../../src/**/*.d.ts"
+  ]
 }

@@ -8,7 +8,7 @@
       :label-share="0.2"
       :label-font-size="0.23"
       :label-color="0xffffff"
-      :material="{ color: 0x172330, roughness: 0.56, metalness: 0.28, transparent: true, opacity: 0.82 }"
+      :material="{ color: 0x172330, roughness: 0.56, metalness: 0.28, alphaMode: 'blend', opacity: 0.82 }"
   >
   <vx-stack :gap="0.08">
 <!--    <box-->
@@ -19,7 +19,7 @@
 <!--      label-face="top"-->
 <!--      :label-font-size="0.23"-->
 <!--      :label-color="0xf5f8fb"-->
-<!--      :material="{ color: 0x172330, roughness: 0.56, metalness: 0.28, transparent: true, opacity: 0.82 }"-->
+<!--      :material="{ color: 0x172330, roughness: 0.56, metalness: 0.28, alphaMode: 'blend', opacity: 0.82 }"-->
 <!--    />-->
     <vx-group layout="depth" :gap="0.35">
       <slot />

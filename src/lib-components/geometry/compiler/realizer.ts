@@ -1,3 +1,5 @@
+import { MaterialController } from '../../styling/MaterialController.js'
+import { resolveMaterialBinding, type VxMaterialBinding, type MaterialStyles } from '../../styling/stylesheets.js'
 import * as THREE from 'three'
 import type { Element3d } from '@/lib-components/three/element3d.js'
 import type {
@@ -6,7 +8,9 @@ import type {
     GeometryRecord,
     GeometrySet,
 } from '@/lib-components/geometry/types.js'
-import { applyMaterialProps, type VxMaterialProps } from '@/lib-components/nodes/material.js'
+import { applyResolvedMaterial, readMaterial } from '@/lib-components/nodes/material.js'
+import type { VxMaterialProps } from '@/lib-components/styling/types.js'
+import { resolveMaterial } from '@/lib-components/styling/resolveMaterial.js'
 
 const hiddenMatrix = new THREE.Matrix4().makeScale(0, 0, 0)
 
@@ -39,14 +43,17 @@ export class GeometryRealizer {
     private readonly batchByObject = new WeakMap<THREE.Object3D, MeshBatch>()
     private readonly lines = new Map<string, LineEntry>()
     private readonly lineHitByObject = new WeakMap<THREE.Object3D, GeometryHit<unknown>>()
-    private readonly channelMaterials = new Map<string, THREE.MeshStandardMaterial>()
-    private materialChannels: Readonly<Record<string, VxMaterialProps>> = {}
+    private readonly channelMaterials = new Map<string, MaterialController>()
+    private materialChannels: Readonly<Record<string, VxMaterialBinding>> = {}
+    private readonly defaults: VxMaterialProps
+    private baseLayers: readonly VxMaterialProps[] = []
+    private styles: MaterialStyles = {}
 
     constructor(
         readonly group: THREE.Group,
         readonly material: THREE.MeshStandardMaterial,
         private readonly shadowsEnabled: () => boolean,
-    ) {}
+    ) { this.defaults = readMaterial(material) }
 
     realize(set: GeometrySet): void {
         const meshRecords = new Map<string, GeometryRecord[]>()
@@ -97,13 +104,7 @@ export class GeometryRealizer {
     }
 
     updateLineMaterials(): void {
-        for (const entry of this.lines.values()) {
-            const channel = this.materialFor(entry.materialKey)
-            entry.material.color.copy(channel.color).multiply(entry.recordColor)
-            entry.material.opacity = channel.opacity
-            entry.material.transparent = channel.transparent
-            entry.material.needsUpdate = true
-        }
+        for (const entry of this.lines.values()) this.updateLineMaterial(entry)
     }
 
     instanceHitAt(instanceIndex: number, object?: THREE.Object3D): GeometryHit<unknown> | undefined {
@@ -130,15 +131,18 @@ export class GeometryRealizer {
         this.channelMaterials.clear()
     }
 
-    updateMaterials(channels: Readonly<Record<string, VxMaterialProps>> = {}): void {
+    updateMaterials(channels: Readonly<Record<string, VxMaterialBinding>> = {}, baseLayers: readonly VxMaterialProps[] = [], styles: MaterialStyles = {}): void {
         this.materialChannels = channels
-        for (const [key, material] of this.channelMaterials) {
-            material.copy(this.material)
-            const props = channels[key]
-            if (props) applyMaterialProps(material, props)
-        }
+        this.baseLayers = baseLayers
+        this.styles = styles
+        for (const [key, controller] of this.channelMaterials) this.updateChannel(key, controller)
         for (const batch of this.batches.values()) batch.mesh.material = this.materialFor(batch.materialKey)
         this.updateLineMaterials()
+    }
+
+    private updateChannel(key: string, controller: MaterialController): void {
+        const binding = this.materialChannels[key] ?? (Object.hasOwn(this.styles, key) ? key : undefined)
+        controller.update([...this.baseLayers, ...resolveMaterialBinding(this.styles, binding).layers])
     }
 
     get batchCount(): number {
@@ -249,9 +253,18 @@ export class GeometryRealizer {
 
     private updateLineMaterial(entry: LineEntry): void {
         const channel = this.materialFor(entry.materialKey)
-        entry.material.color.copy(channel.color).multiply(entry.recordColor)
-        entry.material.opacity = channel.opacity
-        entry.material.transparent = channel.transparent
+        const mat = entry.material
+        const programChanged = mat.transparent !== channel.transparent || (mat.alphaTest > 0) !== (channel.alphaTest > 0)
+            || mat.map !== channel.map || mat.toneMapped !== channel.toneMapped
+        mat.color.copy(channel.color).multiply(entry.recordColor)
+        mat.opacity = channel.opacity
+        mat.transparent = channel.transparent
+        mat.alphaTest = channel.alphaTest
+        mat.map = channel.map
+        mat.depthTest = channel.depthTest
+        mat.depthWrite = channel.depthWrite
+        mat.toneMapped = channel.toneMapped
+        if (programChanged) mat.needsUpdate = true
     }
 
     private removeBatch(batch: MeshBatch): void {
@@ -261,15 +274,15 @@ export class GeometryRealizer {
 
     private materialFor(key: string): THREE.MeshStandardMaterial {
         if (key === 'default') return this.material
-        let material = this.channelMaterials.get(key)
-        if (!material) {
-            material = this.material.clone()
-            const props = this.materialChannels[key]
-            if (props) applyMaterialProps(material, props)
-            this.channelMaterials.set(key, material)
+        let controller = this.channelMaterials.get(key)
+        if (!controller) {
+            controller = new MaterialController(this.material.clone(), this.defaults)
+            this.channelMaterials.set(key, controller)
+            this.updateChannel(key, controller)
         }
-        return material
+        return controller.material
     }
+
 }
 
 function semanticId(record: GeometryRecord): string {

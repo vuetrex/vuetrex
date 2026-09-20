@@ -67,7 +67,7 @@ export default defineConfig({
         template: {
             compilerOptions: {
                 isCustomElement: (tag:string) =>
-                    /^vx-(group|layer|row|stack|ring|panel|instances|geometry|particles|display-wall|spacer|box|cylinder|wedge|connectors)$/.test(tag)
+                    /^vx-(group|layer|row|stack|ring|panel|instances|geometry|particles|display-wall|spacer|box|cylinder|wedge|connectors|environment|camera|floor)$/.test(tag)
             }
         }}),
         glsl()

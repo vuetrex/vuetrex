@@ -114,7 +114,7 @@ const platformMaterial = computed(() => ({
   color: props.theme === 'light' ? 0xc8d0d3 : 0x2b3a40,
   roughness: props.theme === 'light' ? 0.82 : 0.72,
   metalness: props.theme === 'light' ? 0.03 : 0.08,
-  transparent: props.theme !== 'light',
+  alphaMode: props.theme === 'light' ? 'opaque' as const : 'blend' as const,
   opacity: props.theme === 'light' ? 1 : 0.42,
   map: platformTexture.value,
 }))

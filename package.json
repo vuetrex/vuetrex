@@ -3,9 +3,8 @@
   "type": "module",
   "version": "0.7.0",
   "description": "WebGL animated diagram visualizations in 3D for Vue 3",
-  "main": "dist/vuetrex.umd.cjs",
-  "module": "dist/vuetrex.js",
-  "unpkg": "dist/vuetrex.min.js",
+  "main": "./dist/vuetrex.es.js",
+  "module": "./dist/vuetrex.es.js",
   "sideEffects": false,
   "packageManager": "pnpm@12.4.1",
   "scripts": {
@@ -15,7 +14,7 @@
     "health:server": "node demo-health/server.mjs",
     "preinstall": "npx only-allow pnpm",
     "clean": "rm -rf ./dist && rm -rf ./dist_types && rm -rf ./coverage",
-    "build": "rm -rf ./dist_types && vue-tsc --declaration --emitDeclarationOnly && vite build",
+    "build": "rm -rf ./dist_types && vue-tsc --declaration --emitDeclarationOnly && node scripts/fix-declaration-imports.mjs && vite build",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -34,8 +33,8 @@
   ],
   "exports": {
     ".": {
-      "import": "./dist/vuetrex.es.js",
-      "types": "./dist_types/vuetrex.d.ts"
+      "types": "./dist_types/src/lib-components/index.d.ts",
+      "import": "./dist/vuetrex.es.js"
     }
   },
   "repository": {
@@ -98,5 +97,6 @@
     "rules": {
       "no-unused-vars": "off"
     }
-  }
+  },
+  "types": "./dist_types/src/lib-components/index.d.ts"
 }

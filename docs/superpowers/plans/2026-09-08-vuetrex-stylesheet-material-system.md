@@ -6,7 +6,7 @@ outline: deep
 
 # Vuetrex Stylesheet and Material System Implementation Plan
 
-**Status:** Proposed on 2026-09-08.
+**Status:** First material milestone implemented on 2026-09-18. The explicitly requested foundry API milestone was completed on 2026-09-19; broader scene theming, interaction states, and remaining phases stay deferred.
 
 **Goal:** Separate visual design from scene and geometry logic by introducing a Vue-native `VxStyleSheet`. Applications
 and reusable geometry libraries name semantic material roles; a reactive stylesheet decides how those roles look in
@@ -19,6 +19,115 @@ Geometry continues to emit semantic names such as `plant.bark`; it never imports
 
 **Tech stack:** TypeScript, Vue 3 provide/inject and reactivity, Vuetrex's custom renderer, Three.js materials and
 textures, GSAP transitions, Vitest, and VitePress.
+
+---
+
+## Foundry API milestone — 2026-09-19
+
+Implemented after the user's explicit request to turn the foundry's infrastructure into reusable library APIs.
+
+- `vx-environment`, `vx-camera`, and `vx-floor` are lifecycle-only `StageDeclaration` hosts. Each kind has one
+  owner per scene; duplicates error rather than depend on traversal order. Props update reactively, removed fields
+  restore declaration defaults, and unmount restores captured stage configuration. Camera heading retains automatic
+  bounds fitting; floor replacement disposes the old resources. Hidden caption records remain available for re-enabling.
+- Studio generation lives in `scene/studio.ts`; its texture is owned, retained while disabled, disposed on replacement
+  by borrowed input or unmount. Borrowed textures are never disposed. Rotation/intensity are independent of background.
+- `finishes` provides independent plain descriptors for satin/polished metal, matte/glazed ceramic, and tinted glass.
+  `useCanvasTexture` owns creation, correct color space, in-place reactive repaint, and teardown. Artwork stays in apps.
+- `defineVxStyleSheet` and `VxStyleSheet` implement common/light/dark material layers, system scheme selection, named
+  inheritance, inline preset overrides, and named hover for fixed shapes/panels. Unknown names and cycles are errors.
+  No scene-style provider fields, selected/disabled states, selectors, caches, or shader families were introduced.
+- MeshNode/Panel resolve named layers before their existing controllers. InstanceNode and procedural base/channel
+  materials now use construction-default controllers; texture removal compares previous shader state before updating.
+  Channels retain independent materials, keyed geometry, and record-color multiplication. Thin-line capability limits
+  are documented explicitly; batch/per-record hover is not added.
+- The foundry now uses declarations, finish helpers, and a named sheet. Its scene component is 84 lines, with geometry
+  and texture artwork in two small modules exposed alongside the live example. Shapes and placements are preserved;
+  old color-specific channel keys became `ceramic` and `trim`.
+- Public package paths now match emitted ESM/declaration files. The build copies authored declaration files and rewrites
+  repo aliases to relative imports. The consumer check packs a real tarball, extracts it outside the repository, runs
+  strict TypeScript with library checks, and builds the Vue consumer. Dependency installation remains out of that test.
+- Preserved concurrent studio, stage-lighting, lockfile, and reflector edits. No reflector shader changes were made by
+  this milestone.
+
+Verification: **17 focused regressions passed**; library and example typechecks, library build, packed TypeScript/ESM
+consumer, and VitePress build passed. Full suite: **268 passed, 1 failed**. The remaining reflector shader assertion
+(`verify-stage.spec.ts:141`) was already failing at baseline. Baseline was 253 passed/3 failed in the sandbox; the two
+HTTP tests passed in the final run with local listeners enabled. Existing bundle-size warnings remain.
+
+Next handoff: consider provider-owned scene/light defaults separately from material lookup, and define selected/disabled
+and per-record interaction semantics before extending those APIs. Do not silently broaden thin-line material support.
+Studio presets can evolve without changing material descriptors; add further presets only for concrete examples.
+The remainder of the original proposal below is a roadmap, not a claim that all its types are implemented.
+
+---
+
+## Milestone 1: complete descriptors and shared material ownership
+
+**Scope completed:** `styling/types.ts`, `styling/resolveMaterial.ts`, `styling/MaterialController.ts`, the real
+low-level applier in `nodes/material.ts`, MeshNode and Panel integration, direct import/API consumer migration,
+regressions, API/architecture documentation, the [stylesheet materials guide](/guide/stylesheet-materials), and
+package-consumer coverage. No compatibility exports or shims.
+
+### Findings against current code
+
+The old ownership allegations below were stale: Box, Cylinder, and Wedge already allocate one material in MeshNode;
+MeshNode already disposes replaced geometry and its final material. Their existing lifecycle tests passed before
+implementation. No shape generators, scene/stage code, or reflector experiments needed modification. Property removal,
+undefined bindings, duplicated/incomplete hover support, uncancelled emissive/scale transitions, and repeated cleanup
+still needed coverage or fixes. The working tree was clean at the initial inspection.
+
+### Contract decisions
+
+- Public inline descriptors include every standard-material field listed below. `resolveMaterial(...layers)` merges
+  low-to-high priority descriptors and returns a complete frozen value with frozen linear RGB color tuples.
+  Undefined falls through and null clears a texture. There is no preset lookup in this milestone.
+- MeshNode/Panel capture stage-created defaults once; each binding update resolves afresh against those defaults.
+  The public resolver alone uses Three.js defaults. Stage defaults currently set main color, roughness 0.3, metalness 0.1.
+- `alphaMode` replaces `transparent` outright. Explicit opaque/blend/mask wins; otherwise positive alphaTest infers mask,
+  opacity below 1 infers blend, and the rest is opaque. Mask cutoff defaults to 0.5; other modes use zero. Blending
+  preserves depthWrite=true by default, matching the demos' existing depth behavior. Both affected demos were migrated.
+- The internal controller takes exclusive ownership of a freshly created material and accepts ordered descriptor
+  layers plus hover. Every node retains its material identity across geometry and appearance changes. No cache/cloning
+  scheme or material-family switching is needed for the single supported standard-material family.
+- Hover numeric fields/colors interpolate; flags/textures change immediately. A fade back to opaque keeps blending
+  until completion. Pointer interruptions cancel all owned tweens; prop edits/removal settle the latest resolved
+  appearance immediately. Hover scale multiplies the captured base transform. Geometry replacement cancels detached
+  transform tweens and applies current hover to the replacement. Repeated disposal is a no-op.
+- Texture references stay borrowed, including hover textures. Vue proxies are unwrapped at application; no texture
+  is frozen, cloned, or disposed. Independent nodes own independent mutable material/transition state.
+- Instance/procedural callers were migrated only to the new types and complete low-level applier. Their existing
+  layer/lifecycle semantics remain for the later controller integration; no channel rebatching or graph work was added.
+
+### Verification
+
+- Focused material, node, hover, mesh-lifecycle, and panel regressions: **28 passed**. Legacy hover tests now exercise
+  real GSAP transitions and observable restoration/cancellation, replacing a mock that asserted implementation calls.
+- Typecheck, package build, ESM consumer build, and VitePress docs build pass. The ESM fixture imports the public
+  resolver and exercises migrated inline alpha/color/hover props. Build output retains the existing chunk-size warning.
+- Final full suite: **255 passed, 1 failed**. The remaining failure is the pre-existing reflector shader-composition
+  assertion in `verify-stage.spec.ts:141`. The untouched sandbox baseline was 237 passed and three failures: the same
+  reflector assertion plus two health-server local-port restrictions. Both health-server tests pass when the final
+  suite runs with local HTTP listeners allowed. No material regressions remain.
+- Visually inspected the component demo, Kubernetes panels/translucent platform, and health demo's light/dark textured
+  platforms in the browser. No browser console errors were reported; hover interruption is covered by deterministic
+  real-tween regression tests. Restored the health demo's original light theme after inspection.
+- Used Node 26.7.0 and installed pnpm 11.9.0 with `--pm-on-fail=ignore --config.verifyDepsBeforeRun=false`; fetching the
+  pinned pnpm 12.4.1 was unavailable. Ran package build and `pnpm ... exec vitepress build docs` separately because
+  nested pnpm invocation in `docs:build` otherwise attempted the unavailable package-manager download.
+- Packaging limitation verified as pre-existing: `package.json` points its type export at `dist_types/vuetrex.d.ts`,
+  while the build emits `dist_types/src/lib-components/index.d.ts` with repository aliases. Runtime ESM consumption
+  passes, but standalone package declaration consumption needs a separate packaging fix. No package metadata or
+  unrelated declaration pipeline changes were included here.
+
+### Next-milestone handoff
+
+Start with provider/registry semantics and named inheritance, feeding ordered descriptor layers into the pure resolver.
+Keep stage-default revisions separate from graph/topology work. Then integrate InstanceNode and GeometryRealizer with
+controller ownership and complete reset baselines, preserving per-record color multiplication and keyed batches.
+Define thin-line supported properties explicitly, and repair the existing package declaration entry before publishing.
+Selected/disabled precedence, shader families, caching, scopes,
+and selectors are not implemented here. Do not automatically continue the remaining tasks after this milestone.
 
 ---
 
@@ -36,7 +145,7 @@ Vuetrex currently exposes a useful but small `VxMaterialProps` object. It is app
 The procedural channel model is already the correct separation point: `geo.material(source, 'plant.foliage')` assigns
 meaning, and the output node assigns appearance. The stylesheet extends that separation across the complete scene.
 
-Before adding a public stylesheet, the implementation must fix several correctness problems:
+Historical findings from the original proposal (see the verified milestone findings above):
 
 1. Material props are currently incremental. Removing a field does not restore its default value.
 2. Traditional shapes create more than one material during construction and do not dispose the surviving material on
@@ -219,8 +328,8 @@ interface VxStyleSheetDefinition {
 }
 ```
 
-The current numeric colors, `transparent`, and direct `VxMaterialProps` objects remain accepted. `transparent` becomes
-a deprecated compatibility spelling that normalizes into `alphaMode`.
+Numeric colors and direct `VxMaterialProps` objects remain supported. `transparent` is removed; use `alphaMode`.
+The provider and named-style types above describe deferred phases and are not exported by milestone 1.
 
 ### Cascade order
 
@@ -364,12 +473,12 @@ a documented `VxLineStyle` subset or emit a development warning while applying t
 - Modify `src/lib-components/nodes/Panel.ts`
 - Add or update focused tests under `test/unit/`
 
-- [ ] Test property removal and restoration to stage defaults.
-- [ ] Test setting `material` back to `undefined`.
-- [ ] Ensure each node creates exactly one material.
-- [ ] Dispose node-owned materials and generated geometries exactly once.
-- [ ] Preserve caller ownership of textures.
-- [ ] Cover removal during an active hover transition.
+- [x] Test property removal and restoration to stage defaults.
+- [x] Test setting `material` back to `undefined`.
+- [x] Ensure each node creates exactly one material.
+- [x] Dispose node-owned materials and generated geometries exactly once.
+- [x] Preserve caller ownership of textures.
+- [x] Cover removal during an active hover transition.
 
 ### Task 2: Add complete descriptors and resolution
 
@@ -378,15 +487,16 @@ a documented `VxLineStyle` subset or emit a development warning while applying t
 - Add `src/lib-components/styling/types.ts`
 - Add `src/lib-components/styling/resolveMaterial.ts`
 - Add `src/lib-components/styling/MaterialController.ts`
-- Update `src/lib-components/nodes/material.ts` as a compatibility export
+- Update `src/lib-components/nodes/material.ts` as the low-level descriptor applier (no compatibility export)
 - Update `src/lib-components/index.ts`
 
-- [ ] Define public stylesheet, scheme, material-style, material-binding, and resolved-material types.
-- [ ] Normalize old `transparent` props into explicit alpha behavior.
-- [ ] Implement complete default restoration.
+- [x] Define complete inline material, hover, and resolved-material types.
+- [ ] Define stylesheet, scheme, material-style, and named-material binding types with their provider implementation.
+- [x] Replace `transparent` with explicit `alphaMode` and migrate in-repo consumers directly.
+- [x] Implement complete default restoration.
 - [ ] Detect missing presets and `extends` cycles.
-- [ ] Classify material changes that require `needsUpdate`.
-- [ ] Keep existing inline material objects source-compatible.
+- [x] Classify material changes that require `needsUpdate`.
+- [x] Preserve inline material/hover behavior, with the intentional `transparent` → `alphaMode` API change.
 
 ### Task 3: Implement the Vue stylesheet provider
 
@@ -430,7 +540,7 @@ a documented `VxLineStyle` subset or emit a development warning while applying t
 - Modify `src/lib-components/geometry/compiler/realizer.ts`
 
 - [ ] Resolve string material names and inline descriptors consistently.
-- [ ] Remove duplicated hover code from MeshNode and Panel.
+- [x] Remove duplicated hover code from MeshNode and Panel.
 - [ ] Keep instance colors and procedural record colors multiplicative.
 - [ ] Update existing procedural channel materials without recompiling geometry.
 - [ ] Dispose inactive channel materials and release cached bindings.
@@ -504,7 +614,7 @@ a documented `VxLineStyle` subset or emit a development warning while applying t
 
 ## Compatibility and migration
 
-The feature is additive. Existing code remains valid:
+Existing inline descriptors remain valid except for the explicit `transparent` → `alphaMode` change:
 
 ```vue
 <vx-box :material="{ color: 0x336699, roughness: 0.5 }" />
@@ -517,7 +627,7 @@ Applications may migrate one semantic role at a time:
 ```
 
 Current `:materials` channel objects remain valid. Values are widened to accept names as well as descriptors. The
-`transparent` property remains functional during a deprecation period. Texture disposal remains the caller's
+`transparent` property is removed in favor of `alphaMode`, without a deprecation shim. Texture disposal remains the caller's
 responsibility and must not change silently.
 
 ---

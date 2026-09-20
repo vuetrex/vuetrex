@@ -39,6 +39,21 @@ The `ready` event receives the [`VxStage`](/api/stage) interface.
 
 ## Built-in scene elements
 
+### Scene declarations
+
+These hosts extend `StageDeclaration`, take no layout space, and support reactive prop changes. One of each kind is
+allowed per scene. Removing the declaration restores the previous stage configuration.
+
+| Element | Props and defaults |
+| --- | --- |
+| `vx-environment` | `preset="studio"`, optional caller-owned `texture`, `enabled=true`, `intensity=0.55`, Y `rotation=0` in radians |
+| `vx-camera` | `fit="content"`, `direction=[0, 0.65, 1]`, `padding=0.75`, `duration=0.6` seconds |
+| `vx-floor` | `finish="matte"` or `"mirror"`, `color=0x3f3f3f`, `reflection=0.6`, `grid=false`, `captions=false` |
+
+Environment texture input takes precedence over the studio preset. Disabling preserves the generated texture for
+reuse; replacing it with a borrowed texture disposes the generated resource. Camera direction sets the view heading,
+while fitting determines distance. Floor reflection is 0–1; increasing it reduces the opaque floor contribution.
+
 ### Containers
 
 | Element | Purpose | Important props |
@@ -274,17 +289,33 @@ See [Display walls](/guide/display-walls) for canvas, SVG, and image-backed surf
 
 ## Materials and hover
 
+Start with the [stylesheet materials guide](/guide/stylesheet-materials) for reusable style objects and complete examples.
+
 ```ts
 interface VxMaterialProps {
-  color?: number
+  color?: THREE.ColorRepresentation
   opacity?: number
-  transparent?: boolean
+  alphaMode?: 'opaque' | 'blend' | 'mask'
+  alphaTest?: number
   roughness?: number
   metalness?: number
-  emissive?: number
+  emissive?: THREE.ColorRepresentation
   emissiveIntensity?: number
   wireframe?: boolean
+  side?: THREE.Side
+  depthWrite?: boolean
+  depthTest?: boolean
+  flatShading?: boolean
+  toneMapped?: boolean
   map?: THREE.Texture | null
+  normalMap?: THREE.Texture | null
+  bumpMap?: THREE.Texture | null
+  bumpScale?: number
+  roughnessMap?: THREE.Texture | null
+  metalnessMap?: THREE.Texture | null
+  emissiveMap?: THREE.Texture | null
+  alphaMap?: THREE.Texture | null
+  envMapIntensity?: number
 }
 
 interface VxHoverProps extends VxMaterialProps {
@@ -293,8 +324,48 @@ interface VxHoverProps extends VxMaterialProps {
 }
 ```
 
-Use RGB hex numbers such as `0x3e91c7`. Set `transparent: true` when using opacity below `1`.
+Colors accept RGB hex numbers, CSS color strings, or Three.js colors. On fixed shapes, panels, instances, and procedural materials, omitted fields
+restore the stage's construction defaults; setting `material` to `undefined` restores the whole default appearance.
+The stage supplies its main color, roughness `0.3`, and metalness `0.1`; other values use Three.js standard-material
+defaults. A texture value of `null` clears that slot, while `undefined` falls back to the lower-priority layer.
 Texture ownership remains with the caller, including disposal when a texture is replaced or its component unmounts.
+
+`bumpMap` is a linear grayscale height texture (default `null`). `bumpScale` defaults to `1`; zero flattens
+the effect and negative values invert it. A non-null `normalMap` takes precedence over `bumpMap`. These maps
+change surface lighting, not silhouettes or geometric shadows. Start with a small scale for subtle relief.
+
+When `alphaMode` is omitted, a positive `alphaTest` selects `mask`, otherwise opacity below `1` selects `blend`,
+otherwise the material is `opaque`. An explicit mode wins. Mask mode defaults to a cutoff of `0.5`; the other modes
+use a cutoff of `0`. Blending keeps depth writing enabled unless `depthWrite: false` is supplied. The old
+`transparent` prop has been removed; use `alphaMode: 'blend'` or `alphaMode: 'opaque'` for an explicit policy.
+
+Hover supports all material fields. `scale` multiplies the object's base scale, and `transition` is a duration in
+seconds (default `0.18`; `0` applies immediately). Numeric fields and colors interpolate; textures and flags switch
+immediately. Leaving a blended hover keeps blending enabled until its opacity transition completes. Pointer changes
+cancel previous transitions. Editing or removing material/hover props during a transition cancels it and immediately
+applies the newly resolved appearance, including while the pointer remains over the node.
+
+`resolveMaterial(...layers)` is a pure public resolver. Pass inline descriptors in increasing priority order; it
+returns a complete, frozen `VxResolvedMaterial`, with colors as frozen linear RGB tuples and borrowed texture
+references. It allocates no materials and does not mutate inputs. With no layers it uses Three.js defaults, not
+stage-specific defaults. The resolved value is intended for material realization; it is not an inline prop object.
+
+`VxMaterialBinding` accepts an inline descriptor, a style name, or `{ preset: name, ...inlineOverrides }`.
+`defineVxStyleSheet()` freezes the structure of `common`/`light`/`dark` material definitions without freezing textures.
+`VxStyleSheet` takes `sheets` and `scheme` (`light`, `dark`, `system`). Styles support `extends`, `base`, and `hover`.
+Unknown names and inheritance cycles are errors. Later sheets override fields; undefined fields fall through.
+The nearest provider supplies scene styles. Named hover is used by fixed shapes and panels only.
+
+`finishes.satinMetal()`, `polishedMetal()`, `matteCeramic()`, `glazedCeramic()`, and `tintedGlass()` return plain
+`VxMaterialProps` values and accept overrides. They allocate no GPU resources.
+
+`useCanvasTexture(paint, { purpose, width?, height? })` returns a readonly texture ref. The initial value is null;
+creation occurs after mount, reactive paint dependencies trigger redraw, and disposal occurs on unmount. Dimensions
+default to 256 and must be integers from 1 to 8192. Purpose is `color`, `emissive`, `roughness`, `metalness`, `normal`, `bump`, or
+`alpha`; only color/emissive use sRGB. The owning component must outlive every consumer of that texture.
+
+Thin procedural lines apply color, opacity, alpha cutoff, color map, depth test/write, and tone mapping. Lit material
+fields and alpha maps are not supported on thin lines. Selected/disabled variants and material caching are deferred.
 
 ## Events
 

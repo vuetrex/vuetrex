@@ -12,7 +12,8 @@ export type {
     VxDisplaySurface,
     VxDisplayWallShape,
 } from '@/lib-components/nodes/DisplayWall.js';
-export type { VxMaterialProps, VxHoverProps } from '@/lib-components/nodes/material.js';
+export type { VxMaterialProps, VxHoverProps, VxResolvedMaterial } from '@/lib-components/styling/types.js';
+export { resolveMaterial } from '@/lib-components/styling/resolveMaterial.js';
 export {
     defineGeometry,
     defineGeometryOutputs,
@@ -221,3 +222,10 @@ export { ConnectorGraphHost } from '@/lib-components/nodes/ConnectorGraphHost.js
 export type { ConnectorGraphHostEvents } from '@/lib-components/nodes/ConnectorGraphHost.js';
 export { StageDeclaration } from '@/lib-components/nodes/StageDeclaration.js';
 export type { VuetrexStage } from '@/lib-components/three/stage.js';
+
+export { VxStyleSheet, defineVxStyleSheet } from './styling/stylesheets.js';
+export type { VxMaterialBinding, VxMaterialStyle, VxStyleSheetDefinition, VxStyleScheme, VxColorScheme } from './styling/stylesheets.js';
+export { finishes } from './styling/finishes.js';
+export { useCanvasTexture } from './styling/textures.js';
+export type { VxTexturePurpose, VxCanvasTextureOptions } from './styling/textures.js';
+export type { VxEnvironmentProps, VxCameraProps, VxFloorProps } from './scene/declarations.js';

@@ -183,12 +183,33 @@ Endpoint changes reroute only dependent records. Stable-key reorder preserves re
 objects. Static stroke graphs register no frame callback; the particle bridge subscribes only while flow output exists.
 Connector output is tagged for owner-level picking without creating one semantic `Node` per edge.
 
-### Material & Interaction (`nodes/material.ts`)
+### Material & Interaction (`styling/`, `nodes/material.ts`)
 
-- **`VxMaterialProps`:** reactive material state (color, opacity, roughness, metalness, emissive, etc.)
-- **`VxHoverProps`:** hover overrides (`VxMaterialProps` + `scale`, `transition`)
-- **`MeshNode` hover:** manages snapshots of base material, applies overrides on `onMouseOver` using `gsap` for smooth
-  transitions, and restores from snapshot on `onMouseOut`.
+- `VxMaterialProps` and `VxHoverProps` describe borrowed textures and standard-material appearance.
+- `resolveMaterial(...layers)` produces complete immutable values with linear RGB color tuples. It has no Vue,
+  stage, or GPU lifecycle dependency. Undefined fields fall through; null clears a texture slot.
+- `nodes/material.ts` snapshots construction defaults and applies complete descriptors, including program-change
+  invalidation and unwrapping Vue texture proxies at the Three.js boundary.
+- `MaterialController` exclusively owns one material and its transition handles. MeshNode and Panel each give it one
+  stage-created material; geometry replacement retains that material. Binding changes resolve afresh, and disposal
+  cancels every owned tween before disposing the material exactly once. Textures remain caller-owned.
+- Instance and procedural base/channel materials use the same controller with immutable construction defaults.
+  Channel program changes are compared before application; no live-material copy erases the previous shader state.
+  Per-record color multiplication and keyed batches remain independent of material updates.
+- `VxStyleSheet` provides a computed named-material registry to descendant scenes. Styles merge common/scheme layers,
+  resolve inheritance before inline values, and supply hover to fixed shapes/panels. Geometry channels can use names
+  directly or explicit local mappings. Lookup is separate from the pure value resolver; there is no material cache.
+- `useCanvasTexture` creates one component-owned texture on mount, redraws in place from reactive paint dependencies,
+  and stops its watcher/disposes on unmount. Supplied material and environment textures remain borrowed.
+
+### Scene declarations (`scene/`)
+
+`EnvironmentDeclaration`, `CameraDeclaration`, and `FloorDeclaration` extend `StageDeclaration`. They own stage-wide
+configuration, not spatial objects, and never participate in layout or authored content bounds. Each kind has one
+exclusive owner per stage; duplicate declarations report errors. Prop removal restores declaration defaults; unmount
+restores the captured stage state. The environment declaration owns its generated studio texture and reuses it while
+disabled, but disposes it when replaced by a borrowed texture or unmounted. Stage floor methods own floor resources
+and dispose them on replacement. Camera methods preserve bounds-driven fitting. The reflector shader is unchanged.
 
 ### Concrete nodes
 

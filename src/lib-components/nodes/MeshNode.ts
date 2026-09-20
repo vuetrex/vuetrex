@@ -1,10 +1,11 @@
+import { resolveMaterialBinding, type VxMaterialBinding } from '../styling/stylesheets.js'
 import {reactive, watchEffect, WatchStopHandle, computed, ComputedRef} from 'vue';
 import { Node } from '@/lib-components/nodes/Node.js';
 import { VuetrexStage } from '@/lib-components/three/stage.js';
-import { VxMaterialProps, VxHoverProps, applyMaterialProps } from '@/lib-components/nodes/material.js';
-import { Mesh, MeshStandardMaterial, Color, Vector3 } from 'three';
+import type { VxMaterialProps, VxHoverProps } from '@/lib-components/styling/types.js';
+import { MaterialController } from '@/lib-components/styling/MaterialController.js';
+import { Mesh, MeshStandardMaterial, Vector3 } from 'three';
 import { Text } from 'troika-three-text';
-import gsap from 'gsap';
 
 export interface MeshState {
     text: string;
@@ -53,7 +54,7 @@ export interface MeshState {
      * the padded right edge, and a centered one stays at x=0.
      */
     labelAlign: 'left' | 'center' | 'right';
-    material?: VxMaterialProps;
+    material?: VxMaterialBinding;
     hover?: VxHoverProps;
 }
 
@@ -70,20 +71,6 @@ export interface MeshState {
 export interface LayoutContext {
     myIdx: number;
     siblingCount: number;
-}
-
-function captureProps(mat: MeshStandardMaterial): VxMaterialProps {
-    return {
-        color: mat.color.getHex(),
-        opacity: mat.opacity,
-        transparent: mat.transparent,
-        roughness: mat.roughness,
-        metalness: mat.metalness,
-        emissive: mat.emissive.getHex(),
-        emissiveIntensity: mat.emissiveIntensity,
-        wireframe: mat.wireframe,
-        map: mat.map,
-    };
 }
 
 /**
@@ -109,8 +96,8 @@ export abstract class MeshNode extends Node {
     readonly material: MeshStandardMaterial;
     protected readonly supportsDepth: boolean = false;
 
-    private baseProps: VxMaterialProps = {};
-    private isHovered = false;
+    private readonly materialController: MaterialController;
+    private removed = false;
 
     protected layoutContext: ComputedRef<LayoutContext> = computed(() => ({
         myIdx: this.myIdx.value,
@@ -128,6 +115,7 @@ export abstract class MeshNode extends Node {
             ...stateDefaults,
         });
         this.material = stage.createElementMaterial();
+        this.materialController = new MaterialController(this.material);
     }
 
     protected override intrinsicSize(): Vector3 {
@@ -160,7 +148,7 @@ export abstract class MeshNode extends Node {
             mesh.removeEventListener(Node.MOUSE_OUT, this.mouseOutListener);
             this.subscribed = false;
         }
-        this.isHovered = false;
+        this.materialController.setTarget();
         // Label mesh is parented to element.mesh; drop it here so a fresh geometry
         // rebuild does not leak the old Text instance. The label watchEffect will
         // recreate it when reactive deps re-fire.
@@ -186,10 +174,7 @@ export abstract class MeshNode extends Node {
      * Effects do not mutate the same Vue state they depend on.
      */
     syncWithThree() {
-        if (this.stopHandle) return;
-
-        // Capture creation-time material defaults as the initial restore target.
-        this.baseProps = captureProps(this.material);
+        if (this.stopHandle || this.removed) return;
 
         // Geometry watchEffect — rebuilds mesh when layout or geometry params change.
         this.stopHandle = watchEffect(() => {
@@ -201,17 +186,15 @@ export abstract class MeshNode extends Node {
                 this.clearMesh();
                 const parentObj = this.nearestAncestorObject()
                 this.stage.renderMesh(this.element, height, size, this.modelGen(), parentObj);
+                this.materialController.setTarget(this.element.mesh ?? undefined);
                 this.subscribeEvents();
             }
         }, { flush: this.flushMode });
 
-        // Material watchEffect — applies material prop changes without rebuilding geometry
-        // and keeps baseProps in sync so restoreHover always targets the design-time state.
+        // Material-only updates never rebuild geometry; undefined restores construction defaults.
         this.materialStopHandle = watchEffect(() => {
-            if (this.state.material) {
-                applyMaterialProps(this.material, this.state.material);
-                this.baseProps = { ...this.baseProps, ...this.state.material };
-            }
+            const binding = resolveMaterialBinding(this.stage.materialStyles?.value, this.state.material, this.state.hover)
+            this.materialController.update(binding.layers, binding.hover);
         });
 
         // Caption watchEffect
@@ -301,99 +284,18 @@ export abstract class MeshNode extends Node {
     }
 
     override dispatchPointerenter(e: MouseEvent) {
-        if (this.state.hover) this.applyHover(this.state.hover);
+        this.materialController.setHovered(true);
         super.dispatchPointerenter(e);
     }
 
     override dispatchPointerleave(e: MouseEvent) {
-        if (this.state.hover && this.isHovered) this.restoreHover();
+        this.materialController.setHovered(false);
         super.dispatchPointerleave(e);
     }
 
-    private applyHover(hover: VxHoverProps) {
-        const mesh = this.element.mesh as Mesh | null;
-        if (!mesh) return;
-
-        const t = hover.transition ?? 0.18;
-        const mat = this.material as MeshStandardMaterial;
-
-        gsap.killTweensOf(mat.color);
-        gsap.killTweensOf(mat);
-        gsap.killTweensOf(mesh.scale);
-
-        this.isHovered = true;
-
-        if (hover.color !== undefined) {
-            const c = new Color(hover.color);
-            gsap.to(mat.color, { r: c.r, g: c.g, b: c.b, duration: t });
-        }
-        if (hover.opacity !== undefined) {
-            if (hover.opacity < 1 || hover.transparent) mat.transparent = true;
-            gsap.to(mat, { opacity: hover.opacity, duration: t });
-        }
-        if (hover.roughness !== undefined) gsap.to(mat, { roughness: hover.roughness, duration: t });
-        if (hover.metalness !== undefined) gsap.to(mat, { metalness: hover.metalness, duration: t });
-        if (hover.emissive !== undefined) {
-            const c = new Color(hover.emissive);
-            gsap.to(mat.emissive, { r: c.r, g: c.g, b: c.b, duration: t });
-        }
-        if (hover.emissiveIntensity !== undefined) gsap.to(mat, { emissiveIntensity: hover.emissiveIntensity, duration: t });
-        if (hover.map !== undefined && mat.map !== hover.map) {
-            mat.map = hover.map;
-            mat.needsUpdate = true;
-        }
-        if (hover.scale !== undefined) {
-            gsap.to(mesh.scale, { x: hover.scale, y: hover.scale, z: hover.scale, duration: t, ease: 'sine.out' });
-        }
-    }
-
-    private restoreHover() {
-        const mesh = this.element.mesh as Mesh | null;
-        if (!mesh) return;
-
-        const t = this.state.hover!.transition ?? 0.18;
-        const mat = this.material as MeshStandardMaterial;
-        const hover = this.state.hover!;
-        const base = this.baseProps;
-
-        gsap.killTweensOf(mat.color);
-        gsap.killTweensOf(mat);
-        gsap.killTweensOf(mesh.scale);
-
-        this.isHovered = false;
-
-        if (hover.color !== undefined && base.color !== undefined) {
-            const c = new Color(base.color);
-            gsap.to(mat.color, { r: c.r, g: c.g, b: c.b, duration: t });
-        }
-        if (hover.opacity !== undefined && base.opacity !== undefined) {
-            gsap.to(mat, { opacity: base.opacity, duration: t,
-                onComplete: () => { mat.transparent = base.transparent ?? false; }
-            });
-        }
-        if (hover.roughness !== undefined && base.roughness !== undefined) {
-            gsap.to(mat, { roughness: base.roughness, duration: t });
-        }
-        if (hover.metalness !== undefined && base.metalness !== undefined) {
-            gsap.to(mat, { metalness: base.metalness, duration: t });
-        }
-        if (hover.emissive !== undefined && base.emissive !== undefined) {
-            const c = new Color(base.emissive);
-            gsap.to(mat.emissive, { r: c.r, g: c.g, b: c.b, duration: t });
-        }
-        if (hover.emissiveIntensity !== undefined && base.emissiveIntensity !== undefined) {
-            gsap.to(mat, { emissiveIntensity: base.emissiveIntensity, duration: t });
-        }
-        if (hover.map !== undefined && base.map !== undefined && mat.map !== base.map) {
-            mat.map = base.map;
-            mat.needsUpdate = true;
-        }
-        if (hover.scale !== undefined) {
-            gsap.to(mesh.scale, { x: 1, y: 1, z: 1, duration: t, ease: 'sine.inOut' });
-        }
-    }
-
     onRemoved() {
+        if (this.removed) return;
+        this.removed = true;
         if (this.stopHandle) {
             this.stopHandle();
             this.stopHandle = undefined;
@@ -411,6 +313,6 @@ export abstract class MeshNode extends Node {
             this.labelStopHandle = undefined;
         }
         this.clearMesh();
-        this.material.dispose();
+        this.materialController.dispose();
     }
 }

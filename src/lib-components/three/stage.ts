@@ -1,3 +1,6 @@
+import type { VxCameraProps, VxFloorProps } from '../scene/declarations.js';
+import type { ComputedRef } from 'vue';
+import type { MaterialStyles } from '../styling/stylesheets.js';
 import * as THREE from 'three';
 import * as THREEx from '@/lib-components/three/three.imports.js';
 import Scene from '@/lib-components/three/scene.js';
@@ -114,7 +117,7 @@ let BOX_RADIUS = 1.0;
 let BOX_DISTANCE = 1.0;
 /** Authored scene content is base-anchored to this world-space plane. */
 export const STAGE_FLOOR_Y = 0;
-const GROUND_REFLECTOR_CLIP_BIAS = 0.0001;
+const GROUND_REFLECTOR_CLIP_BIAS = 0.0003;
 const DEVELOPMENT_CHECKS = (import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV ?? true;
 
 /**
@@ -144,7 +147,7 @@ export function attachFloorSurface(
 }
 
 function floorSurfaceOpacity(settings: VxSettings): number {
-    return THREE.MathUtils.clamp(settings.mirrorOpacity ?? 0.95, 0, 1)
+    return THREE.MathUtils.clamp(settings.mirrorOpacity ?? 0.55, 0, 1)
 }
 
 function reflectionTextureExtent(cssPixels: number, pixelRatio: number, maxTextureSize: number): number {
@@ -273,6 +276,7 @@ export function cameraFrameForBounds(
 export class VuetrexStage extends Scene implements VxStage {
     private subscribers: Function[] = [];
     public connectors: Connectors;
+    materialStyles?: ComputedRef<MaterialStyles>
     settings: VxSettings
     private caps: { repeats: number; size: number; planeSize: number; updateFn: () => void; texture: THREEx.DynamicTexture | null } = {
         planeSize: 256,
@@ -319,6 +323,39 @@ export class VuetrexStage extends Scene implements VxStage {
 
     getScene(): THREE.Scene {
         return this.scene;
+    }
+
+    captureFloorStyle(): Required<VxFloorProps> {
+        return { finish: this.settings.floorMirror === false ? 'matte' : 'mirror',
+            color: this.settings.floorColor ?? 0x3f3f3f, reflection: 1 - floorSurfaceOpacity(this.settings),
+            grid: this.settings.floorGrid !== false, captions: this.settings.floorCaptions !== false }
+    }
+
+    applyFloorStyle(style: VxFloorProps): void {
+        if (this.destroyed) return
+        const before = this.captureFloorStyle()
+        const next = { ...before, ...style }
+        if (Object.keys(before).every(key => before[key as keyof typeof before] === next[key as keyof typeof next])) return
+        Object.assign(this.settings, { floorMirror: next.finish === 'mirror', floorColor: next.color,
+            mirrorOpacity: 1 - next.reflection, floorGrid: next.grid, floorCaptions: next.captions })
+        this.disposeStageSurfaces()
+        this.createFloor(this.scene)
+    }
+
+    captureCameraView() {
+        return { direction: this.overviewDirection().toArray() as [number, number, number],
+            ...this.fitOptions, target: this.activeCameraTarget }
+    }
+
+    setCameraView(view: VxCameraProps): void {
+        if (this.destroyed) return
+        if (view.direction) this.cameraBase.copy(this.cameraTarget).add(new THREE.Vector3(...view.direction))
+        this.fitToContent({ padding: view.padding, duration: view.duration })
+    }
+
+    restoreCameraView(view: ReturnType<VuetrexStage['captureCameraView']>): void {
+        this.setCameraView(view)
+        if (!this.destroyed && view.target !== 'scene') this.sendCameraTo(view.target)
     }
 
     onEachFrame(fn: (time: number, tick:number) => void): () => void {
@@ -542,10 +579,10 @@ export class VuetrexStage extends Scene implements VxStage {
 
         // let light3 = new THREE.PointLight(this.settings.lightColor1 || 0xbbbbff, 0.3);
         // light3.position.set(10, -10, 5);
-        //const light3 = new THREE.HemisphereLight(0xffffff, 0x000000, 1.0);
-        //light3.castShadow = true;
-        //scene.add(light3);
-        //
+        // const light3 = new THREE.HemisphereLight(0xffffff, 0x000000, 1.0);
+        // light3.castShadow = true;
+        // scene.add(light3);
+
         // const light4 = new THREE.AmbientLight(this.settings.lightColor3 || 0xffffff, 0.3);
         // light4.position.y = 10;
         // scene.add(light4);
@@ -576,7 +613,7 @@ export class VuetrexStage extends Scene implements VxStage {
     }
 
     addCaption(el: Element3d, size: number, caption: string) {
-        if (this.settings.floorCaptions === false) return undefined
+        // Retain caption records while hidden so a floor declaration can reveal them later.
         const pos = el.getWorldPosition();
         if (el.mesh && pos.length() === 0) {
             // fallback if mesh exists but matrix not updated

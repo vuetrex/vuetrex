@@ -1,5 +1,6 @@
+import { materialStylesKey } from './styling/stylesheets.js';
 import { createRendererForStage } from '@/lib-components/renderer.js';
-import { defineComponent, Fragment, getCurrentInstance, nextTick, h, onMounted, onUnmounted, ref, PropType, watch } from 'vue';
+import { defineComponent, Fragment, getCurrentInstance, nextTick, h, onMounted, onUnmounted, ref, PropType, watch, inject } from 'vue';
 import { Root } from '@/lib-components/nodes/Root.js';
 import { VuetrexStage, VxStage as _VxStage, VxSettings as _VxSettings, VxMouseEvent as _VxMouseEvent } from '@/lib-components/three/stage.js';
 import { ElementRegistry } from '@/lib-components/nodes/types.js';
@@ -31,6 +32,7 @@ export default defineComponent({
     },
     emits: ["ready"],
     setup(props, {slots, emit}) {
+        const materialStyles = inject(materialStylesKey, undefined);
         const elRef = ref(null);
         const maxWidth = ref(4096);
         const maxHeight = ref(4096);
@@ -75,6 +77,7 @@ export default defineComponent({
             }
 
             const stage = new VuetrexStage(elRef.value, {...props.settings});
+            stage.materialStyles = materialStyles;
             vuetrexRenderer = createRendererForStage(stage, props.elements);
             stageRoot = new Root(stage);
 
