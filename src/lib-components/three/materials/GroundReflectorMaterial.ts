@@ -92,7 +92,7 @@ vec3 tintedReflection = mix(vec3(luminance), reflectedRGB, 0.75) * vxReflectionC
 vec3 softReflection = tintedReflection * 0.7;
 
 // 4. Blend cleanly with the floor base color
-outgoingLight = mix(outgoingLight, softReflection, vxFloorOpacity);
+outgoingLight = mix(softReflection, outgoingLight, vxFloorOpacity);
 
 #include <opaque_fragment>`
             );

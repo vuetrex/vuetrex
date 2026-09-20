@@ -518,7 +518,7 @@ export class VuetrexStage extends Scene implements VxStage {
             const x = c.x * scale
             const y = c.y * scale
             texture.drawText(c.text, x + textureSize / 2 - w / 2, y + textureSize / 2 + this.boxRadius/4*scale,
-                '#'+(this.settings.captionColor || 0xffffff).toString(16))
+                '#'+(this.settings.captionColor ?? 0xffffff).toString(16))
         })
 
         if (this.settings.floorGrid !== false) {

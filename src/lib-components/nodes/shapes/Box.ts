@@ -19,7 +19,7 @@ export class Box extends MeshNode {
             const scale = this.getScale()
             const w = size * scale
             const d = (depthState > 0 ? depthState : size) * scale
-            const bGeometry = new THREEx.RoundedBoxGeometry(w, height, d, 5, 0.05);
+            const bGeometry = new THREEx.RoundedBoxGeometry(w, height, d, 5, 0.02);
             const mesh = new THREE.Mesh(bGeometry, this.material);
             mesh.castShadow = true;
             mesh.receiveShadow = true;

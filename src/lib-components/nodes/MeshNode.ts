@@ -247,7 +247,7 @@ export abstract class MeshNode extends Node {
             const lh = labelLineHeight > 0 ? labelLineHeight : 1.15;
             // The mesh is centered at its own origin: y ∈ [-h/2, h/2], z ∈ [-d/2, d/2].
             // Nudge the label just outside the face to avoid z-fighting.
-            const eps = 0.001;
+            const eps = 0.005;
             // vExt is the vertical extent of the target face in world units.
             const vExt = labelFace === 'top' ? d : height;
             const availW = w * (1 - 2 * pad);
