@@ -8,7 +8,7 @@ interface MousePosition {
     y: number
 }
 
-const CAMERA_MIN_Y = 0
+const CAMERA_MIN_Y = 0.1
 
 function keepCameraAboveFloor(position: THREE.Vector3): THREE.Vector3 {
     position.y = Math.max(CAMERA_MIN_Y, position.y)
@@ -32,7 +32,7 @@ export default class Scene extends LifeCycle {
     private readonly mouse: MousePosition
     protected lastMouseEvent: MouseEvent | null = null;
 
-    readonly camera: THREE.PerspectiveCamera
+    readonly renderCamera: THREE.PerspectiveCamera
     readonly scene: THREE.Scene
     renderer: THREE.WebGLRenderer
     selectedObject: (THREE.Mesh | null) = null
@@ -67,15 +67,15 @@ export default class Scene extends LifeCycle {
 
         this.domParent.appendChild(this.renderer.domElement);
         //camera
-        this.camera = this.createCamera();
-        this.camera.lookAt(this.cameraTarget);
+        this.renderCamera = this.createCamera();
+        this.renderCamera.lookAt(this.cameraTarget);
         //scene
         this.scene = this.createScene();
         this.scene.background = new Color('#808080');
 
         //composer for mirror and other effects
         this.composer = new THREEx.EffectComposer(this.renderer)
-        this.renderPass = new THREEx.RenderPass(this.scene, this.camera)
+        this.renderPass = new THREEx.RenderPass(this.scene, this.renderCamera)
         this.composer.addPass(this.renderPass)
 
         //events
@@ -137,7 +137,7 @@ export default class Scene extends LifeCycle {
         this.renderPass.dispose();
         this.composer.dispose();
         this.scene.clear();
-        this.camera.clear();
+        this.renderCamera.clear();
         while (this.domParent.lastChild) {
             this.domParent.removeChild(this.domParent.lastChild);
         }
@@ -213,6 +213,7 @@ export default class Scene extends LifeCycle {
         // event.preventDefault();
 
         if (event.metaKey && event.buttons === 1) {
+            this.onCameraInteraction()
             this.orbitalRetarget(event);
         }
         this.lastMouseEvent = event;
@@ -251,15 +252,18 @@ export default class Scene extends LifeCycle {
 
     protected onMouseOut(mesh: THREE.Mesh, event: MouseEvent) {}
 
+    protected onCameraInteraction(): void {}
+
     onMouseWheel(event: WheelEvent) {
         //event.preventDefault();
 
-        const dir = this.cameraTarget.clone().sub(this.camera.position).normalize();
+        const dir = this.cameraTarget.clone().sub(this.renderCamera.position).normalize();
         //dir.divideScalar(10);
         const x = this.cameraBase.x + event.deltaY / 300 * dir.x;
         const y = this.cameraBase.y + event.deltaY / 300 * dir.y;
         const z = this.cameraBase.z + event.deltaY / 300 * dir.z;
         if (y>0.8 && z>0.8 && y<17. && z<17.) {
+            this.onCameraInteraction()
             this.cameraBase.x = x;
             this.cameraBase.y = y;
             this.cameraBase.z = z;
@@ -274,10 +278,10 @@ export default class Scene extends LifeCycle {
             const mouse = this.mouse;
             if (mouse.x === 0 && mouse.y === 0) return;
             let vector = new THREE.Vector3(mouse.x, mouse.y, 0.5);
-            vector.unproject(this.camera);
+            vector.unproject(this.renderCamera);
             const ray = new THREE.Raycaster(
-                this.camera.position,
-                vector.sub(this.camera.position).normalize()
+                this.renderCamera.position,
+                vector.sub(this.renderCamera.position).normalize()
             );
 
             // create an array containing all objects in the scene with which the ray intersects
@@ -323,30 +327,30 @@ export default class Scene extends LifeCycle {
     cameraTransitionDuration = 1000;
 
     retargetCamera(lookAt: THREE.Vector3, atPosition: THREE.Vector3, duration = 1) {
-        keepCameraAboveFloor(this.camera.position)
+        keepCameraAboveFloor(this.renderCamera.position)
         keepCameraAboveFloor(this.cameraBase)
         const safePosition = keepCameraAboveFloor(atPosition.clone())
-        this.startCameraPos = this.camera.position.clone();
+        this.startCameraPos = this.renderCamera.position.clone();
         this.endCameraPos = safePosition;
         this.cameraTarget.copy(lookAt);
         this.cameraTransitionDuration = Math.max(0, duration * 1000);
 
-        this.startCameraRotation.copy(this.camera.quaternion);
+        this.startCameraRotation.copy(this.renderCamera.quaternion);
         //determine target camera rotation
-        const pos = this.camera.position.clone();
-        this.camera.position.copy(safePosition);
+        const pos = this.renderCamera.position.clone();
+        this.renderCamera.position.copy(safePosition);
         this.cameraBase.copy(safePosition);
-        this.camera.lookAt(lookAt);
+        this.renderCamera.lookAt(lookAt);
         //restore it back
-        this.targetCameraRotation.copy(this.camera.quaternion);
-        this.camera.position.copy(pos);
-        this.camera.quaternion.copy(this.startCameraRotation);
+        this.targetCameraRotation.copy(this.renderCamera.quaternion);
+        this.renderCamera.position.copy(pos);
+        this.renderCamera.quaternion.copy(this.startCameraRotation);
         if (this.cameraTransitionDuration === 0) {
-            this.camera.position.copy(safePosition);
+            this.renderCamera.position.copy(safePosition);
             this.cameraBase.copy(safePosition);
-            this.camera.lookAt(lookAt);
-            this.startCameraRotation.copy(this.camera.quaternion);
-            this.targetCameraRotation.copy(this.camera.quaternion);
+            this.renderCamera.lookAt(lookAt);
+            this.startCameraRotation.copy(this.renderCamera.quaternion);
+            this.targetCameraRotation.copy(this.renderCamera.quaternion);
             this.startTime = -1;
         } else {
             this.startTime = this.lifecycle.timer.current
@@ -365,20 +369,20 @@ export default class Scene extends LifeCycle {
                 const progress = this.cameraTransitionDuration === 0
                     ? 1
                     : (timer - this.startTime) / this.cameraTransitionDuration;
-                this.camera.position.lerpVectors(this.startCameraPos, this.endCameraPos, this.easeInOut(progress))
-                keepCameraAboveFloor(this.camera.position)
+                this.renderCamera.position.lerpVectors(this.startCameraPos, this.endCameraPos, this.easeInOut(progress))
+                keepCameraAboveFloor(this.renderCamera.position)
 
-                this.camera.quaternion.slerpQuaternions(this.startCameraRotation, this.targetCameraRotation,
+                this.renderCamera.quaternion.slerpQuaternions(this.startCameraRotation, this.targetCameraRotation,
                     this.easeInOut(progress)
                 )
             } else {
                 //todo make camera move a little when idle for 5 seconds
                 //const phi = Math.sin(timer / 2000);
                 keepCameraAboveFloor(this.cameraBase)
-                this.camera.position.x = this.cameraBase.x; // + this.cameraMotion.x * Math.cos(phi);
-                this.camera.position.y = this.cameraBase.y;
-                this.camera.position.z = this.cameraBase.z; // + this.cameraMotion.z * Math.sin(phi);
-                this.camera.lookAt(this.cameraTarget);
+                this.renderCamera.position.x = this.cameraBase.x; // + this.cameraMotion.x * Math.cos(phi);
+                this.renderCamera.position.y = this.cameraBase.y;
+                this.renderCamera.position.z = this.cameraBase.z; // + this.cameraMotion.z * Math.sin(phi);
+                this.renderCamera.lookAt(this.cameraTarget);
             }
         };
     }
@@ -386,7 +390,7 @@ export default class Scene extends LifeCycle {
     onWindowResize() {
         let width = this.domParent.clientWidth || 1;
         let height = this.domParent.offsetHeight || 1;
-        const camera = this.camera;
+        const camera = this.renderCamera;
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
 

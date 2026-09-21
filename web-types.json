@@ -1,0 +1,173 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JetBrains/web-types/master/schema/web-types.json",
+  "name": "@exceeder/vuetrex",
+  "version": "0.7.0",
+  "framework": "vue",
+  "js-types-syntax": "typescript",
+  "description-markup": "markdown",
+  "contributions": {
+    "html": {
+      "elements": [
+        {
+          "name": "Vuetrex",
+          "description": "Root scene container. Import Vuetrex and place the scene in its default slot.",
+          "source": {
+            "file": "dist_types/src/lib-components/root-api.d.ts",
+            "offset": 271
+          },
+          "attributes": [
+            {
+              "name": "settings",
+              "description": "Initial scene configuration. Read once at mount; remount with a new key to replace settings.",
+              "default": "{}",
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 418
+              },
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxSettings"
+                }
+              },
+              "description-sections": {
+                "All settings": "| Name | Type | Default | Description |\n| --- | --- | --- | --- |\n| `color` | `number` | `0x555555` | Default node color. Zero currently falls back to the default. |\n| `backgroundColor` | `number` | `0x808080` | Solid scene background color. |\n| `mirrorOpacity` | `number` | `0.55` | Floor contribution over its reflection, clamped to 0–1. Lower values reveal more reflection; 1 skips the reflection pass. |\n| `floorColor` | `number` | `0x3f3f3f` | Floor texture color. When omitted, the reflection tint separately defaults to 0x777777. |\n| `floorFadeStart` | `number` | `undefined (disabled)` | World X/Z extent where floor fading begins. Set with floorFadeEnd; requires 0 <= start < end. Objects are unaffected. |\n| `floorFadeEnd` | `number` | `undefined (disabled)` | World X/Z extent where the floor matches the background. For example, start 20 and end 50 preserve the central 40-by-40 area. |\n| `highlightColor` | `number` | `0x4c7fb2` | Default interactive highlight color. Zero currently falls back to the default. |\n| `connectorColor` | `number` | `0xa0ffff` | Default connector color. |\n| `captionColor` | `number` | `0xffffff` | Floor caption and grid color. |\n| `lightColor1` | `number` | `0xccffff` | First directional light color. Zero currently falls back to the default. |\n| `lightColor2` | `number` | `0xffffff` | Second directional light color. Zero currently falls back to the default. |\n| `lightColor3` | `number` | `undefined` | Currently unused: the stage does not create a third light. |\n| `unit` | `number` | `1` | Base geometry unit in world units. Zero currently falls back to 1. |\n| `gap` | `number` | `1` | Default container spacing in world units. |\n| `fog` | `VxFogSettings` | `undefined (disabled)` | Linear camera-distance fog affecting the scene. Use floorFadeStart/floorFadeEnd to fade only the floor. |\n| `diagnostics` | `boolean \\| VxDiagnosticsSettings` | `false` | Enable all diagnostic overlays with true, or configure individual overlays. Omitted flags in an object are enabled. |\n| `floorGrid` | `boolean` | `true` | Draw the floor grid. |\n| `floorMirror` | `boolean` | `true` | Enable floor reflections. mirrorOpacity=1 also disables the reflection pass. |\n| `floorCaptions` | `boolean` | `true` | Draw node captions on the floor. |\n| `shadows` | `boolean` | `true` | Enable renderer shadow maps, shadow lights, and mesh shadow flags. |"
+              }
+            },
+            {
+              "name": "position",
+              "description": "Wrapper CSS positioning mode.",
+              "default": "\"static\"",
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 515
+              },
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              }
+            },
+            {
+              "name": "height",
+              "description": "Wrapper CSS height, including units (for example \"520px\" or \"70vh\").",
+              "default": "\"50vh\"",
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 645
+              },
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              }
+            },
+            {
+              "name": "width",
+              "description": "Wrapper CSS width, including units. The wrapper has a 4096px maximum width.",
+              "default": "\"100%\"",
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 780
+              },
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              }
+            },
+            {
+              "name": "stopped",
+              "description": "Pause rendering and stage animations. Changes take effect reactively.",
+              "default": "false",
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 907
+              },
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              }
+            },
+            {
+              "name": "camera",
+              "description": "Node name/ID, \"scene\" for automatic fitting, or { orbit } for an explicit initial pose. Applied before ready; reactive changes replace camera animation.",
+              "default": "\"scene\"",
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 1122
+              },
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxCameraView"
+                }
+              }
+            },
+            {
+              "name": "items",
+              "description": "Currently unused by the renderer. Supply scene content through the default slot.",
+              "default": "[]",
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 1264
+              },
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "unknown[]"
+              }
+            },
+            {
+              "name": "elements",
+              "description": "Custom host constructors registered for this scene. Read once at mount.",
+              "default": "{}",
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 1393
+              },
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "ElementRegistry"
+                }
+              }
+            }
+          ],
+          "events": [
+            {
+              "name": "ready",
+              "description": "Emitted once after stage mounting, before the inner scene tree mounts on the next Vue tick.\nThe payload provides the public stage controls; content bounds are not ready yet.",
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 1702
+              },
+              "arguments": [
+                {
+                  "name": "stage",
+                  "type": {
+                    "module": "@exceeder/vuetrex",
+                    "name": "VxStage"
+                  }
+                }
+              ]
+            }
+          ],
+          "slots": [
+            {
+              "name": "default",
+              "description": "The scene tree rendered by Vuetrex. Required to create a stage."
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

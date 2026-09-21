@@ -91,6 +91,7 @@ export default {
                 text: 'Reference',
                 items: [
                     {text: 'Components and props', link: '/api/'},
+                    {text: 'Vuetrex root component', link: '/api/vuetrex'},
                     {text: 'Stage API', link: '/api/stage'},
                     {text: 'Composition API', link: '/api/composition'},
                     {text: 'Architecture', link: '/architecture'},

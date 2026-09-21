@@ -209,13 +209,13 @@ export default {
 
     function updateCameraReadout(stage: VxStage) {
       const debugStage = stage as VxStage & {
-        camera: THREE.PerspectiveCamera
+        renderCamera: THREE.PerspectiveCamera
         cameraTarget: THREE.Vector3
         renderer: THREE.WebGLRenderer
         width: number
         height: number
       }
-      const position = debugStage.camera.position
+      const position = debugStage.renderCamera.position
       const target = debugStage.cameraTarget
       const offset = position.clone().sub(target)
       const distance = offset.length()
@@ -233,7 +233,7 @@ export default {
         elevationDeg: round(elevationDeg),
         polarDeg: round(polarDeg),
         distance: round(distance),
-        fovDeg: round(debugStage.camera.fov),
+        fovDeg: round(debugStage.renderCamera.fov),
         viewportCss: [debugStage.width, debugStage.height],
         pixelRatio: round(debugStage.renderer.getPixelRatio()),
       }

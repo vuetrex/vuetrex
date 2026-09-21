@@ -1,10 +1,11 @@
-export type { VxStage, VxSettings, VxMouseEvent } from '@/lib-components/vuetrex.js';
+export type { VuetrexProps, VuetrexEvents, VxSettings, VxFogSettings, VxDiagnosticsSettings } from './root-api.js';
+export type { VxCameraController, VxCameraTimeline, VxCameraOrbit, VxCameraView,
+    VxCameraOrbitUpdate, VxCameraTweenOptions, VxCameraTimelineOptions } from './three/cameraController.js';
+export type { VxStage, VxMouseEvent } from '@/lib-components/vuetrex.js';
 export type {
     VxAnimProps,
     VxAnimOptions,
-    VxDiagnosticsSettings,
     VxFitOptions,
-    VxFogSettings,
 } from '@/lib-components/three/stage.js';
 export { DisplayWall } from '@/lib-components/nodes/DisplayWall.js';
 export type {

@@ -10,6 +10,8 @@ This page is a lookup reference. Start with [Build your first scene](/guide/) fo
 
 ## `<Vuetrex>`
 
+See the [complete root component reference](/api/vuetrex) for all attributes, settings, events, defaults, and editor support.
+
 ```vue
 <Vuetrex
   height="520px"
@@ -30,10 +32,11 @@ This page is a lookup reference. Start with [Build your first scene](/guide/) fo
 | `height` | `string` | `50vh` | Canvas wrapper CSS height |
 | `width` | `string` | `100%` | Canvas wrapper CSS width |
 | `position` | `string` | `static` | Canvas wrapper CSS position |
-| `settings` | `VxSettings` | `{}` | Stage colors, spacing, lights, and particles |
-| `camera` | `string` | `scene` | Named node to frame, or the overview |
+| `settings` | `VxSettings` | `{}` | Initial stage configuration; read at mount |
+| `camera` | `VxCameraView` | `scene` | Named node, automatic overview, or explicit `{ orbit }` pose |
 | `stopped` | `boolean` | `false` | Pause the stage animation loop |
 | `elements` | `ElementRegistry` | `{}` | Per-stage custom element registrations |
+| `items` | `unknown[]` | `[]` | Currently unused; supply content through the slot |
 
 The `ready` event receives the [`VxStage`](/api/stage) interface.
 
@@ -48,11 +51,13 @@ allowed per scene. Removing the declaration restores the previous stage configur
 | --- | --- |
 | `vx-environment` | `preset="studio"`, optional caller-owned `texture`, `enabled=true`, `intensity=0.55`, Y `rotation=0` in radians |
 | `vx-camera` | `fit="content"`, `direction=[0, 0.65, 1]`, `padding=0.75`, `duration=0.6` seconds |
-| `vx-floor` | `finish="matte"` or `"mirror"`, `color=0x3f3f3f`, `reflection=0.6`, `grid=false`, `captions=false` |
+| `vx-floor` | `finish="matte"` or `"mirror"`, `color=0x3f3f3f`, `reflection=0.6`, `grid=false`, `captions=false`; optional paired `fadeStart` and `fadeEnd` |
 
 Environment texture input takes precedence over the studio preset. Disabling preserves the generated texture for
 reuse; replacing it with a borrowed texture disposes the generated resource. Camera direction sets the view heading,
 while fitting determines distance. Floor reflection is 0–1; increasing it reduces the opaque floor contribution.
+Set both floor fade values to blend the floor into the exact stage background by its world-space X/Z extent. For
+example, `:fade-start="20" :fade-end="50"` keeps the central 40-by-40 area crisp and removes the distant edge.
 
 ### Containers
 

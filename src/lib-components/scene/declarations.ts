@@ -6,7 +6,17 @@ import { createStudioEnvironment } from './studio.js'
 
 export interface VxEnvironmentProps { preset?: 'studio'; texture?: Texture; enabled?: boolean; intensity?: number; rotation?: number }
 export interface VxCameraProps { direction?: readonly [number, number, number]; fit?: 'content'; padding?: number; duration?: number }
-export interface VxFloorProps { finish?: 'matte' | 'mirror'; color?: number; reflection?: number; grid?: boolean; captions?: boolean }
+export interface VxFloorProps {
+    finish?: 'matte' | 'mirror'
+    color?: number
+    reflection?: number
+    grid?: boolean
+    captions?: boolean
+    /** World-space X/Z extent where the floor starts blending into the background. */
+    fadeStart?: number
+    /** World-space X/Z extent where the floor has fully blended into the background. */
+    fadeEnd?: number
+}
 
 const owners = new WeakMap<VuetrexStage, Map<string, SceneDeclaration>>()
 
@@ -98,7 +108,15 @@ export class CameraDeclaration extends SceneDeclaration {
 
 export class FloorDeclaration extends SceneDeclaration {
     constructor(stage: VuetrexStage) {
-        super(stage, 'vx-floor', { finish: 'matte', color: 0x3f3f3f, reflection: 0.6, grid: false, captions: false })
+        super(stage, 'vx-floor', { finish: 'matte', color: 0x3f3f3f, reflection: 0.6, grid: false, captions: false,
+            fadeStart: undefined, fadeEnd: undefined })
+    }
+    override setStateValue(key: string, value: unknown): void {
+        if ((key === 'fadeStart' || key === 'fadeEnd') && value != null) {
+            value = Number(value)
+            if (!Number.isFinite(value)) throw new TypeError(`vx-floor.${key} must be finite`)
+        }
+        super.setStateValue(key, value)
     }
     protected capture(): () => void {
         const prior = this.stage.captureFloorStyle()
@@ -107,6 +125,12 @@ export class FloorDeclaration extends SceneDeclaration {
     protected apply(): void {
         if (!['matte', 'mirror'].includes(this.state.finish)) throw new Error('vx-floor.finish must be matte or mirror')
         if (this.state.reflection < 0 || this.state.reflection > 1) throw new RangeError('Floor reflection must be between 0 and 1')
+        const fadeStart = this.state.fadeStart as number | undefined
+        const fadeEnd = this.state.fadeEnd as number | undefined
+        if ((fadeStart === undefined) !== (fadeEnd === undefined)) throw new Error('vx-floor fadeStart and fadeEnd must be set together')
+        if (fadeStart !== undefined && (fadeStart < 0 || fadeEnd! <= fadeStart)) {
+            throw new RangeError('Floor fade requires 0 <= fadeStart < fadeEnd')
+        }
         this.stage.applyFloorStyle({ ...this.state })
     }
 }

@@ -6,6 +6,7 @@
   "main": "./dist/vuetrex.es.js",
   "module": "./dist/vuetrex.es.js",
   "sideEffects": false,
+  "web-types": "./web-types.json",
   "packageManager": "pnpm@12.4.1",
   "scripts": {
     "dev": "concurrently --kill-others --names demos,docs --prefix-colors cyan,magenta \"pnpm run dev:demos\" \"pnpm run dev:docs\"",
@@ -14,7 +15,7 @@
     "health:server": "node demo-health/server.mjs",
     "preinstall": "npx only-allow pnpm",
     "clean": "rm -rf ./dist && rm -rf ./dist_types && rm -rf ./coverage",
-    "build": "rm -rf ./dist_types && vue-tsc --declaration --emitDeclarationOnly && node scripts/fix-declaration-imports.mjs && vite build",
+    "build": "node scripts/generate-root-api.mjs && rm -rf ./dist_types && vue-tsc --declaration --emitDeclarationOnly && node scripts/fix-declaration-imports.mjs && vite build",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -29,7 +30,8 @@
   },
   "files": [
     "dist",
-    "dist_types"
+    "dist_types",
+    "web-types.json"
   ],
   "exports": {
     ".": {

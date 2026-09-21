@@ -5,7 +5,7 @@
     <Vuetrex>
       <vx-environment preset="studio" />
       <vx-camera :direction="[8, 6, 11]" fit="content" />
-      <vx-floor finish="mirror" :reflection="0.6" />
+      <vx-floor finish="mirror" :reflection="0.6" :fade-start="20" :fade-end="50" />
       <vx-layer>
         <vx-row>
           <vx-box name="a1" :material="{ color: 'royalblue', alphaMode: 'blend', opacity: 0.8 }" :hover="{ emissive: 'blue', transition: 0.1 }"/>

@@ -1,23 +1,16 @@
+import type { VuetrexProps, VuetrexEvents, VxSettings } from './root-api.js';
+import type { ComponentObjectPropsOptions } from 'vue';
 import { materialStylesKey } from './styling/stylesheets.js';
 import { createRendererForStage } from '@/lib-components/renderer.js';
 import { defineComponent, Fragment, getCurrentInstance, nextTick, h, onMounted, onUnmounted, ref, PropType, watch, inject } from 'vue';
 import { Root } from '@/lib-components/nodes/Root.js';
-import { VuetrexStage, VxStage as _VxStage, VxSettings as _VxSettings, VxMouseEvent as _VxMouseEvent } from '@/lib-components/three/stage.js';
+import { VuetrexStage, VxStage as _VxStage, VxMouseEvent as _VxMouseEvent } from '@/lib-components/three/stage.js';
 import { ElementRegistry } from '@/lib-components/nodes/types.js';
 
 export type VxStage = _VxStage;        // A ThreeJS scene rendered within a DOM element, supporting configurable camera and settings.
-export type VxSettings = _VxSettings;  // Configuration options such as color schemes and material opacity.
 export type VxMouseEvent = _VxMouseEvent; // Enables click translation into 3D space to identify affected elements.
 
-/**
- * Vuetrex serves as a container that encapsulates a 3D scene.
- * It leverages Vue's Custom Renderer to provide reactivity, seamlessly integrating Vue's reactivity model into
- * a ThreeJS environment.
- *
- * @vue-prop settings {VxSettings} - Configuration settings for Vuetrex (TBD).
- * @vue-prop position {String} - The CSS position of the container div (e.g., static, absolute, relative).
- * @vue-prop play {String} - Determines if the scene animates on load ("false" keeps it static until changed).
- */
+/** Root 3D scene container. See VuetrexProps for all attributes and VxSettings for initial configuration. */
 export default defineComponent({
     name: "Vuetrex",
     props: {
@@ -26,11 +19,14 @@ export default defineComponent({
         height: { type: String, default: "50vh" },
         width: { type: String, default: "100%" },
         stopped: { type: Boolean, default: false },
-        camera: {type: String, default: "scene"},
+        camera: {type: [String, Object] as PropType<VuetrexProps['camera']>, default: "scene"},
         items: { type: Array, default: () => [] },
         elements: { type: Object as PropType<ElementRegistry>, default: () => ({}) }
+    } satisfies ComponentObjectPropsOptions<VuetrexProps>,
+    emits: {
+        /** Stage mounted; the inner scene tree mounts on the next Vue tick. */
+        ready: (..._args: VuetrexEvents['ready']) => true,
     },
-    emits: ["ready"],
     setup(props, {slots, emit}) {
         const materialStyles = inject(materialStylesKey, undefined);
         const elRef = ref(null);
@@ -81,6 +77,13 @@ export default defineComponent({
             vuetrexRenderer = createRendererForStage(stage, props.elements);
             stageRoot = new Root(stage);
 
+            watch(
+                // Inline :camera="{ orbit }" creates a fresh wrapper on render;
+                // only a changed value should replace the active timeline.
+                () => JSON.stringify(props.camera),
+                () => stage.setCamera(props.camera),
+                { immediate: true }
+            );
             stage.mount();
             emit("ready", stage);
 
@@ -89,12 +92,6 @@ export default defineComponent({
             watch(
                 () => props.stopped,
                 (stopped) => (stopped ? stage.pause() : stage.unpause())
-            );
-
-            watch(
-                () => props.camera,
-                (camera) => stage.sendCameraTo(camera),
-                { immediate: true }
             );
 
             nextTick().then(() => {

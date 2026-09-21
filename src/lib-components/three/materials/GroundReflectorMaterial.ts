@@ -6,11 +6,85 @@ interface GroundReflectorShader {
     fragmentShader: string
 }
 
-export interface GroundReflectorMaterialOptions {
+export interface GroundHorizonFadeOptions {
+    horizonColor: THREE.ColorRepresentation
+    fadeStart?: number
+    fadeEnd?: number
+}
+
+export interface GroundSurfaceMaterialOptions extends GroundHorizonFadeOptions {
     floorTexture: THREE.Texture
+}
+
+export interface GroundReflectorMaterialOptions extends GroundSurfaceMaterialOptions {
     reflectionTexture: THREE.Texture
     reflectionTextureMatrix: THREE.Matrix4
     reflectionColor: THREE.ColorRepresentation
+}
+
+function hasHorizonFade(options: GroundHorizonFadeOptions): options is GroundHorizonFadeOptions & {
+    fadeStart: number
+    fadeEnd: number
+} {
+    return Number.isFinite(options.fadeStart)
+        && Number.isFinite(options.fadeEnd)
+        && options.fadeStart! >= 0
+        && options.fadeEnd! > options.fadeStart!
+}
+
+function addHorizonFade(shader: GroundReflectorShader, options: GroundHorizonFadeOptions): void {
+    if (!hasHorizonFade(options)) return
+
+    shader.uniforms.vxHorizonColor = { value: new THREE.Color(options.horizonColor) }
+    shader.uniforms.vxFloorFadeStart = { value: options.fadeStart }
+    shader.uniforms.vxFloorFadeEnd = { value: options.fadeEnd }
+    shader.vertexShader = replaceShaderChunk(shader.vertexShader,
+        '#define STANDARD',
+        `#define STANDARD
+varying vec3 vxFloorWorldPosition;`)
+    shader.vertexShader = replaceShaderChunk(shader.vertexShader,
+        '#include <project_vertex>',
+        `#include <project_vertex>
+vxFloorWorldPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;`)
+    shader.fragmentShader = replaceShaderChunk(shader.fragmentShader,
+        '#define STANDARD',
+        `#define STANDARD
+uniform vec3 vxHorizonColor;
+uniform float vxFloorFadeStart;
+uniform float vxFloorFadeEnd;
+varying vec3 vxFloorWorldPosition;`)
+    // A solid scene background bypasses tone mapping. Blend in output space,
+    // after tone mapping and fog, so the distant floor matches that background.
+    shader.fragmentShader = replaceShaderChunk(shader.fragmentShader,
+        '#include <premultiplied_alpha_fragment>',
+        `float vxFloorExtent = max(abs(vxFloorWorldPosition.x), abs(vxFloorWorldPosition.z));
+float vxHorizonFade = smoothstep(vxFloorFadeStart, vxFloorFadeEnd, vxFloorExtent);
+vec3 vxHorizonOutput = linearToOutputTexel(vec4(vxHorizonColor, 1.0)).rgb;
+gl_FragColor.rgb = mix(gl_FragColor.rgb, vxHorizonOutput, vxHorizonFade);
+gl_FragColor.a = mix(gl_FragColor.a, 1.0, vxHorizonFade);
+
+#include <premultiplied_alpha_fragment>`)
+}
+
+function commonSurfaceParameters(floorTexture: THREE.Texture): THREE.MeshStandardMaterialParameters {
+    return {
+        color: 0xf0f0f0,
+        roughness: 0.7,
+        metalness: 0.5,
+        map: floorTexture,
+        depthWrite: true,
+    }
+}
+
+/** The non-reflective floor material, with an optional world-space horizon fade. */
+export class GroundSurfaceMaterial extends THREE.MeshStandardMaterial {
+    constructor(options: GroundSurfaceMaterialOptions) {
+        super({ ...commonSurfaceParameters(options.floorTexture), transparent: true })
+        this.name = 'vx-ground-surface-material'
+        this.toneMapped = false
+        this.customProgramCacheKey = () => `vx-ground-surface-material-${hasHorizonFade(options) ? 'fade' : 'plain'}`
+        this.onBeforeCompile = (shader) => addHorizonFade(shader as GroundReflectorShader, options)
+    }
 }
 
 function replaceShaderChunk(source: string, anchor: string, replacement: string): string {
@@ -27,15 +101,11 @@ function replaceShaderChunk(source: string, anchor: string, replacement: string)
 export class GroundReflectorMaterial extends THREE.MeshStandardMaterial {
     constructor(options: GroundReflectorMaterialOptions) {
         super({
-            color: 0xf0f0f0,
-            roughness: 0.7,
-            metalness: 0.5,
-            map: options.floorTexture,
+            ...commonSurfaceParameters(options.floorTexture),
             transparent: false,
-            depthWrite: true,
         })
         this.name = 'vx-ground-reflector-material'
-        this.customProgramCacheKey = () => 'vx-ground-reflector-material-v1'
+        this.customProgramCacheKey = () => `vx-ground-reflector-material-v2-${hasHorizonFade(options) ? 'fade' : 'plain'}`
         this.onBeforeCompile = (shader) => {
             const groundShader = shader as GroundReflectorShader
             groundShader.uniforms.vxReflectionMap = { value: options.reflectionTexture }
@@ -96,6 +166,7 @@ outgoingLight = mix(softReflection, outgoingLight, vxFloorOpacity);
 
 #include <opaque_fragment>`
             );
+            addHorizonFade(groundShader, options)
         }
     }
 }

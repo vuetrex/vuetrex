@@ -15,7 +15,7 @@ vi.mock('@/lib-components/three/stage.js', () => ({
         start = vi.fn()
         pause = vi.fn()
         unpause = vi.fn()
-        sendCameraTo = vi.fn()
+        setCamera = vi.fn()
         destroy = vi.fn(() => stageMock.events.push('stage-destroyed'))
 
         constructor() {

@@ -114,9 +114,55 @@ Group bounds are green, measured layout footprints are cyan, current default con
 node IDs are labeled above content. Diagnostic objects are excluded from camera fitting, pointer events, and the
 logical node tree. The same value can be supplied initially as `settings.diagnostics`.
 
+## Camera orbit timelines
+
+The root `camera` prop accepts a named node, `"scene"` for automatic fitting, or `{ orbit }` for an explicit pose.
+An explicit pose is applied before `ready` and remains in control when scene bounds or the viewport change.
+
+```vue
+<script setup lang="ts">
+import { Vuetrex, type VxStage, type VxCameraOrbit } from '@exceeder/vuetrex'
+
+const orbit = {
+  target: [0, 0, 0],
+  height: 9,
+  radius: 24,
+  azimuth: -30,
+} satisfies VxCameraOrbit
+
+function startCameraOrbit(stage: VxStage) {
+  stage.camera.timeline({ repeat: -1, yoyo: true })
+    .to({ azimuth: 30 }, { duration: 60, ease: 'none' })
+}
+</script>
+
+<template>
+  <Vuetrex :camera="{ orbit }" @ready="startCameraOrbit">
+    <vx-box />
+  </Vuetrex>
+</template>
+```
+
+`height` is absolute world Y; `radius` is horizontal distance from `target`. Azimuth is in degrees: zero is +Z,
+and positive angles turn toward +X. With `ease: 'none'`, this example moves one degree per second.
+
+`stage.camera.orbit(orbit)` applies another pose immediately. `.timeline({ repeat, yoyo, paused, defaults })`
+creates a stage-owned GSAP timeline. Its fluent methods are `.to(values, options, position?)`, `.set(values, position?)`,
+`.addLabel(name, position?)`, `.pause()`, `.resume()`, and `.seek(secondsOrLabel)`. `.kill()` ends the timeline.
+Animate `azimuth`, `height`, and `radius`; set the target with `.orbit()`. Timeline positions and easing use GSAP semantics.
+
+Timelines follow the stage clock, so `stopped` pauses their progress without a catch-up jump. Starting another camera
+timeline or changing the root `camera` prop replaces the old animation. User camera interaction pauses it; explicitly
+resuming continues the authored trajectory. Unmount disposes it automatically. `sendCameraTo('scene')` or
+`fitToContent()` stops the animation and restores automatic framing. A `<vx-camera>` declaration also explicitly
+requests fitting; do not combine it with an orbit you want to keep in control.
+
+The underlying Three.js perspective camera is available on the concrete `VuetrexStage` as `renderCamera`.
+
 ## Settings
 
-Pass settings through the `<Vuetrex :settings>` prop.
+Pass settings through the `<Vuetrex :settings>` prop. See the [complete root reference](/api/vuetrex#settings)
+for every setting, its default, and nested fog and diagnostic options. Settings are read at mount.
 
 ```ts
 import type { VxSettings } from '@exceeder/vuetrex'
@@ -125,6 +171,8 @@ const settings: VxSettings = {
   backgroundColor: 0x101719,
   fog: { near: 18, far: 42 },
   floorColor: 0x263338,
+  floorFadeStart: 20,
+  floorFadeEnd: 50,
   color: 0x3d8295,
   highlightColor: 0x58b7c0,
   captionColor: 0xe7eef0,
@@ -143,7 +191,8 @@ const settings: VxSettings = {
 | `backgroundColor` | Renderer background |
 | `fog` | Optional linear distance fog; accepts `near`, `far`, and an optional `color` that defaults to `backgroundColor` |
 | `floorColor` | Floor and floor texture color |
-| `mirrorOpacity` | Floor-graphics blend over the reflection; defaults to `0.95`, lower values reveal more reflection, and `1` skips the reflection pass |
+| `floorFadeStart`, `floorFadeEnd` | Optional paired world-space X/Z extents that blend only the floor into `backgroundColor` |
+| `mirrorOpacity` | Floor-graphics blend over the reflection; defaults to `0.55`, lower values reveal more reflection, and `1` skips the reflection pass |
 | `floorGrid` | Draw the floor grid; defaults to `true` |
 | `floorMirror` | Create the reflection pass; defaults to `true` |
 | `floorCaptions` | Draw mesh `text` on the floor texture; defaults to `true` |
@@ -151,7 +200,7 @@ const settings: VxSettings = {
 | `highlightColor` | Default interactive highlight |
 | `captionColor` | Shared caption color |
 | `connectorColor` | Solid connector and arrowhead color |
-| `lightColor1..3` | Stage light colors |
+| `lightColor1`, `lightColor2` | Stage directional light colors; `lightColor3` is currently unused |
 | `unit` | Base geometry unit |
 | `gap` | Default container gap |
 | `diagnostics` | `true` or per-overlay `VxDiagnosticsSettings` |
@@ -162,6 +211,8 @@ Configure particle color, size, blending, and density on a `ParticleSource` insi
 The stage floor is world `Y = 0`; base-anchored objects extend upward from that plane. With `floorMirror` enabled, the
 reflection, floor tint, grid, captions, lighting, and shadows are composed by one material on one surface at `Y = 0`.
 There is no second, nearly coplanar floor layer, so camera rotation cannot make the two layers compete for depth.
+When both floor fade settings are present, the floor remains unchanged inside `floorFadeStart`, blends toward the
+background, and disappears at `floorFadeEnd`. Scene objects stay crisp because the fade applies only to the floor material.
 See [Layout in 3D](/guide/layouts#start-at-the-ground-plane) for the coordinate convention.
 
 ## Lifecycle controls

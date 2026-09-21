@@ -5,7 +5,7 @@ import { shallowMount } from '@vue/test-utils'
 import { describe, it, expect, vi } from 'vitest'
 import Scene from '@/lib-components/three/scene.js'
 import { createRendererForStage } from '@/lib-components/renderer.js';
-import { GroundReflectorMaterial } from '@/lib-components/three/materials/GroundReflectorMaterial.js';
+import { GroundReflectorMaterial, GroundSurfaceMaterial } from '@/lib-components/three/materials/GroundReflectorMaterial.js';
 import {
     attachFloorSurface,
     cameraFrameForBounds,
@@ -40,7 +40,7 @@ describe('The Vuetrex Stage object', () => {
         camera.lookAt(0, 0, 0)
         const scene = Object.create(Scene.prototype) as Scene
         Object.assign(scene as any, {
-            camera,
+            renderCamera: camera,
             cameraBase: new THREE.Vector3(0, 2, 8),
             cameraTarget: new THREE.Vector3(),
             lifecycle: { timer: { current: 0 } },
@@ -115,6 +115,7 @@ describe('The Vuetrex Stage object', () => {
             reflectionTexture,
             reflectionTextureMatrix: reflectionMatrix,
             reflectionColor: 0x20282d,
+            horizonColor: 0x20282d,
         })
         const shader = {
             uniforms: {},
@@ -134,13 +135,76 @@ describe('The Vuetrex Stage object', () => {
         })
         expect(shader.vertexShader).toContain('vxReflectionTextureMatrix * vec4(position, 1.0)')
         const alphaCapture = shader.fragmentShader.indexOf('float vxFloorOpacity = diffuseColor.a')
-        const reflectionMix = shader.fragmentShader.indexOf('outgoingLight = mix(vxReflectedColor, outgoingLight, vxFloorOpacity)')
+        const reflectionMix = shader.fragmentShader.indexOf('outgoingLight = mix(softReflection, outgoingLight, vxFloorOpacity)')
         const opaqueOutput = shader.fragmentShader.indexOf('#include <opaque_fragment>')
         const toneMapping = shader.fragmentShader.indexOf('#include <tonemapping_fragment>')
         expect(alphaCapture).toBeGreaterThan(-1)
         expect(reflectionMix).toBeGreaterThan(alphaCapture)
         expect(opaqueOutput).toBeGreaterThan(reflectionMix)
         expect(toneMapping).toBeGreaterThan(opaqueOutput)
+    })
+
+    it('fades matte and reflected floors into the background by world-space extent', () => {
+        const floorTexture = new THREE.Texture()
+        const horizonColor = 0x85898d
+        const materials = [
+            new GroundSurfaceMaterial({ floorTexture, horizonColor, fadeStart: 20, fadeEnd: 50 }),
+            new GroundReflectorMaterial({
+                floorTexture,
+                horizonColor,
+                fadeStart: 20,
+                fadeEnd: 50,
+                reflectionTexture: new THREE.Texture(),
+                reflectionTextureMatrix: new THREE.Matrix4(),
+                reflectionColor: 0x20282d,
+            }),
+        ]
+
+        for (const material of materials) {
+            const shader = {
+                uniforms: {},
+                vertexShader: THREE.ShaderLib.standard.vertexShader,
+                fragmentShader: THREE.ShaderLib.standard.fragmentShader,
+            }
+            material.onBeforeCompile(shader as any, {} as THREE.WebGLRenderer)
+
+            expect(shader.uniforms).toMatchObject({
+                vxHorizonColor: { value: expect.any(THREE.Color) },
+                vxFloorFadeStart: { value: 20 },
+                vxFloorFadeEnd: { value: 50 },
+            })
+            expect((shader.uniforms as any).vxHorizonColor.value.getHex()).toBe(horizonColor)
+            expect(shader.vertexShader).toContain('modelMatrix * vec4(transformed, 1.0)')
+            expect(shader.fragmentShader).toContain('max(abs(vxFloorWorldPosition.x), abs(vxFloorWorldPosition.z))')
+            expect(shader.fragmentShader).not.toContain('discard')
+            expect(shader.fragmentShader).toContain('linearToOutputTexel(vec4(vxHorizonColor, 1.0))')
+            const fade = shader.fragmentShader.indexOf('gl_FragColor.rgb = mix(gl_FragColor.rgb, vxHorizonOutput')
+            for (const chunk of ['opaque_fragment', 'tonemapping_fragment', 'colorspace_fragment', 'fog_fragment']) {
+                expect(fade).toBeGreaterThan(shader.fragmentShader.indexOf(`#include <${chunk}>`))
+            }
+            expect(fade).toBeLessThan(shader.fragmentShader.indexOf('#include <premultiplied_alpha_fragment>'))
+        }
+
+        materials.forEach(material => material.dispose())
+    })
+
+    it('leaves the floor shader unchanged when no complete fade range is configured', () => {
+        const material = new GroundSurfaceMaterial({
+            floorTexture: new THREE.Texture(),
+            horizonColor: 0x808080,
+            fadeStart: 20,
+        })
+        const shader = {
+            uniforms: {},
+            vertexShader: THREE.ShaderLib.standard.vertexShader,
+            fragmentShader: THREE.ShaderLib.standard.fragmentShader,
+        }
+
+        material.onBeforeCompile(shader as any, {} as THREE.WebGLRenderer)
+
+        expect(shader.uniforms).not.toHaveProperty('vxFloorFadeStart')
+        expect(shader.fragmentShader).not.toContain('vxHorizonFade')
+        material.dispose()
     })
 
     it('uses one full-size reflected floor surface at Y=0', () => {
@@ -301,7 +365,7 @@ describe('The Vuetrex Stage object', () => {
         const stage = Object.create(VuetrexStage.prototype) as VuetrexStage
         Object.assign(stage as any, {
             scene,
-            camera: new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 64),
+            renderCamera: new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 64),
             cameraTarget: new THREE.Vector3(),
             cameraMotion: new THREE.Vector3(),
             activeCameraTarget: 'scene',
@@ -332,7 +396,7 @@ describe('The Vuetrex Stage object', () => {
         const stage = Object.create(VuetrexStage.prototype) as VuetrexStage
         Object.assign(stage as any, {
             scene,
-            camera: new THREE.PerspectiveCamera(40, 1.5, 0.1, 64),
+            renderCamera: new THREE.PerspectiveCamera(40, 1.5, 0.1, 64),
             cameraTarget: new THREE.Vector3(0, 0, 1),
             cameraBase: new THREE.Vector3(0, 12, 9),
             fitOptions: { padding: 0.75, duration: 0.6 },
@@ -405,7 +469,7 @@ describe('The Vuetrex Stage object', () => {
                 renderPass,
                 composer,
                 scene: new THREE.Scene(),
-                camera: new THREE.PerspectiveCamera(),
+                renderCamera: new THREE.PerspectiveCamera(),
                 mouse: { x: 0, y: 0 },
                 removeEventListeners: previousEventCleanup,
                 stopRenderLoop: vi.fn(),
@@ -467,7 +531,7 @@ describe('The Vuetrex Stage object', () => {
         ;(floor.material as THREE.Material).addEventListener('dispose', floorMaterialDisposed)
         floorTexture.addEventListener('dispose', floorTextureDisposed)
         mirror.geometry.addEventListener('dispose', mirrorGeometryDisposed)
-        mirror.material.addEventListener('dispose', mirrorMaterialDisposed)
+        ;(mirror.material as THREE.Material).addEventListener('dispose', mirrorMaterialDisposed)
         mirror.getRenderTarget().addEventListener('dispose', mirrorTargetDisposed)
 
         const stage = Object.create(VuetrexStage.prototype) as VuetrexStage

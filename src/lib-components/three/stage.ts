@@ -1,3 +1,5 @@
+import type { VxSettings, VxDiagnosticsSettings } from '../root-api.js';
+import { VxCameraController, type VxCameraView } from './cameraController.js';
 import type { VxCameraProps, VxFloorProps } from '../scene/declarations.js';
 import type { ComputedRef } from 'vue';
 import type { MaterialStyles } from '../styling/stylesheets.js';
@@ -12,7 +14,7 @@ import type {ParticleHit} from '@/lib-components/particles/types.js';
 import type {ConnectorHit} from '@/lib-components/connectors/types.js';
 import type {ConnectorRuntimeDiagnostics} from '@/lib-components/connectors/types.js';
 import {Connectors} from '@/lib-components/three/connectors/connectors.js';
-import {GroundReflectorMaterial} from '@/lib-components/three/materials/GroundReflectorMaterial.js';
+import {GroundReflectorMaterial, GroundSurfaceMaterial} from '@/lib-components/three/materials/GroundReflectorMaterial.js';
 import gsap from 'gsap';
 import {Text} from 'troika-three-text';
 
@@ -49,6 +51,8 @@ export interface VxFitOptions {
 }
 
 export interface VxStage {
+    /** Explicit orbit and stage-owned GSAP camera timelines. */
+    readonly camera: VxCameraController
     getScene(): THREE.Scene
     onEachFrame(fn: (time: number, tick:number) => void): () => void
     /**
@@ -65,45 +69,6 @@ export interface VxStage {
     setDiagnostics(diagnostics: boolean | VxDiagnosticsSettings): void
     /** Inspect authored, resolved, and realized connector state without exposing mutable paths. */
     connectorDiagnostics(): ConnectorRuntimeDiagnostics
-}
-
-export interface VxDiagnosticsSettings {
-    groupBounds?: boolean
-    footprints?: boolean
-    connectionPorts?: boolean
-    nodeIds?: boolean
-}
-
-export interface VxFogSettings {
-    /** Fog starts at this camera distance, in world units. */
-    near?: number
-    /** Scene is fully fogged at this camera distance, in world units. */
-    far?: number
-    /** Fog colour. Defaults to the stage background colour. */
-    color?: number
-}
-
-export interface VxSettings {
-    color?: number
-    backgroundColor?: number
-    mirrorOpacity?: number
-    floorColor?: number
-    highlightColor?: number
-    connectorColor?: number
-    captionColor?: number
-
-    lightColor1?: number
-    lightColor2?: number
-    lightColor3?: number
-
-    unit?: number
-    gap?: number
-    fog?: VxFogSettings
-    diagnostics?: boolean | VxDiagnosticsSettings
-    floorGrid?: boolean
-    floorMirror?: boolean
-    floorCaptions?: boolean
-    shadows?: boolean
 }
 
 export interface VxMouseEvent extends MouseEvent {
@@ -274,6 +239,32 @@ export function cameraFrameForBounds(
  * ThreeJS scene.
  */
 export class VuetrexStage extends Scene implements VxStage {
+    readonly camera = new VxCameraController({
+        now: () => this.lifecycle.timer.current,
+        onFrame: fn => this.registerAnimation(fn),
+        read: () => ({
+            target: this.cameraTarget.toArray() as [number, number, number],
+            height: this.renderCamera.position.y,
+            radius: Math.max(0.001, Math.hypot(this.renderCamera.position.x - this.cameraTarget.x, this.renderCamera.position.z - this.cameraTarget.z)),
+            azimuth: THREE.MathUtils.radToDeg(Math.atan2(this.renderCamera.position.x - this.cameraTarget.x, this.renderCamera.position.z - this.cameraTarget.z)),
+        }),
+        apply: orbit => {
+            const heading = THREE.MathUtils.degToRad(orbit.azimuth)
+            this.retargetCamera(new THREE.Vector3(...orbit.target), new THREE.Vector3(
+                orbit.target[0] + orbit.radius * Math.sin(heading), orbit.height,
+                orbit.target[2] + orbit.radius * Math.cos(heading),
+            ), 0)
+            this.renderCamera.far = Math.max(this.renderCamera.far, orbit.radius * 4, orbit.height * 4)
+            this.renderCamera.updateProjectionMatrix()
+        },
+    })
+
+    setCamera(view: VxCameraView): void {
+        if (typeof view === 'string') this.sendCameraTo(view)
+        else this.camera.orbit(view.orbit)
+    }
+
+    protected override onCameraInteraction(): void { this.camera.interrupt() }
     private subscribers: Function[] = [];
     public connectors: Connectors;
     materialStyles?: ComputedRef<MaterialStyles>
@@ -325,10 +316,11 @@ export class VuetrexStage extends Scene implements VxStage {
         return this.scene;
     }
 
-    captureFloorStyle(): Required<VxFloorProps> {
+    captureFloorStyle(): Required<Omit<VxFloorProps, 'fadeStart' | 'fadeEnd'>> & Pick<VxFloorProps, 'fadeStart' | 'fadeEnd'> {
         return { finish: this.settings.floorMirror === false ? 'matte' : 'mirror',
             color: this.settings.floorColor ?? 0x3f3f3f, reflection: 1 - floorSurfaceOpacity(this.settings),
-            grid: this.settings.floorGrid !== false, captions: this.settings.floorCaptions !== false }
+            grid: this.settings.floorGrid !== false, captions: this.settings.floorCaptions !== false,
+            fadeStart: this.settings.floorFadeStart, fadeEnd: this.settings.floorFadeEnd }
     }
 
     applyFloorStyle(style: VxFloorProps): void {
@@ -337,7 +329,8 @@ export class VuetrexStage extends Scene implements VxStage {
         const next = { ...before, ...style }
         if (Object.keys(before).every(key => before[key as keyof typeof before] === next[key as keyof typeof next])) return
         Object.assign(this.settings, { floorMirror: next.finish === 'mirror', floorColor: next.color,
-            mirrorOpacity: 1 - next.reflection, floorGrid: next.grid, floorCaptions: next.captions })
+            mirrorOpacity: 1 - next.reflection, floorGrid: next.grid, floorCaptions: next.captions,
+            floorFadeStart: next.fadeStart, floorFadeEnd: next.fadeEnd })
         this.disposeStageSurfaces()
         this.createFloor(this.scene)
     }
@@ -372,7 +365,7 @@ export class VuetrexStage extends Scene implements VxStage {
         this.connectors.mount();
 
         //TODO
-        //gsap.to(this.camera.position, {duration:2.1, x:0.2, y:1.75, z:2.5,  delay: 0.5});
+        //gsap.to(this.renderCamera.position, {duration:2.1, x:0.2, y:1.75, z:2.5,  delay: 0.5});
         this.registerAnimation(this.cameraAnimationFn()); //push tween function to be called on each frame
         this.registerAnimation(this.mouseAnimationFn());
         this.refreshDiagnostics()
@@ -452,6 +445,9 @@ export class VuetrexStage extends Scene implements VxStage {
             reflectionTexture: groundMirror.getRenderTarget().texture,
             reflectionTextureMatrix,
             reflectionColor: this.settings.floorColor ?? 0x777777,
+            horizonColor: this.settings.backgroundColor ?? 0x808080,
+            fadeStart: this.settings.floorFadeStart,
+            fadeEnd: this.settings.floorFadeEnd,
         })
         stockMaterial.dispose()
         groundMirror.name = 'vx-ground-reflector'
@@ -484,15 +480,12 @@ export class VuetrexStage extends Scene implements VxStage {
         // floor pixel has exactly one depth value.
         if (this.createGroundMirror(scene, texture.texture)) return
 
-        const material = new THREE.MeshStandardMaterial({
-            color: '#f0f0f0',
-            roughness: 0.7,
-            metalness: 0.5,
-            opacity: 1.0,
-            transparent: true,
-            map: texture.texture
+        const material = new GroundSurfaceMaterial({
+            floorTexture: texture.texture,
+            horizonColor: this.settings.backgroundColor ?? 0x808080,
+            fadeStart: this.settings.floorFadeStart,
+            fadeEnd: this.settings.floorFadeEnd,
         });
-        material.toneMapped = false;
         const plane = new THREE.Mesh(new THREE.PlaneGeometry(caps.planeSize, caps.planeSize), material);
         this.floorSurface = plane
         attachFloorSurface(scene, plane)
@@ -849,6 +842,7 @@ export class VuetrexStage extends Scene implements VxStage {
     destroy() {
         if (this.destroyed) return
         this.destroyed = true
+        this.camera?.dispose()
         if (this.refitFrame !== undefined && typeof cancelAnimationFrame === 'function') {
             cancelAnimationFrame(this.refitFrame)
             this.refitFrame = undefined
@@ -960,11 +954,12 @@ export class VuetrexStage extends Scene implements VxStage {
     onShowAnnotation(mesh: THREE.Mesh) {
         if (!mesh) return;
 
-        const vector = this.toScreenPosition(mesh, this.camera);
+        const vector = this.toScreenPosition(mesh, this.renderCamera);
         this.subscribers.forEach(fn => fn(mesh.name, vector));
     }
 
     fitToContent(options: VxFitOptions = {}): boolean {
+        this.camera?.release()
         this.activeCameraTarget = 'scene'
         this.fitOptions = {
             padding: options.padding ?? this.fitOptions.padding,
@@ -987,6 +982,7 @@ export class VuetrexStage extends Scene implements VxStage {
             this.refitFrame = undefined
             if (this.destroyed) return
             this.refreshDiagnostics()
+            if (this.camera?.isExplicit) return
             if (this.activeCameraTarget === 'scene') {
                 this.refitContent()
             } else {
@@ -1007,6 +1003,7 @@ export class VuetrexStage extends Scene implements VxStage {
     }
 
     sendCameraTo(camera: string) {
+        this.camera?.release()
         this.activeCameraTarget = camera
         if (camera === 'scene') {
             this.fitToContent()
@@ -1037,26 +1034,26 @@ export class VuetrexStage extends Scene implements VxStage {
         force: boolean,
     ): boolean {
         if (!force && this.framingIsCurrent(bounds)) return true
-        const frame = cameraFrameForBounds(this.camera, bounds, direction, options.padding)
+        const frame = cameraFrameForBounds(this.renderCamera, bounds, direction, options.padding)
         if (!frame) return false
 
         const size = bounds.getSize(new THREE.Vector3())
         const distance = frame.position.distanceTo(frame.target)
-        this.camera.near = Math.max(0.01, distance / 1000)
-        this.camera.far = Math.max(64, distance + size.length() * 3)
-        this.camera.updateProjectionMatrix()
+        this.renderCamera.near = Math.max(0.01, distance / 1000)
+        this.renderCamera.far = Math.max(64, distance + size.length() * 3)
+        this.renderCamera.updateProjectionMatrix()
         this.retargetCamera(frame.target, frame.position, options.duration)
         this.lastFraming = {
             target: this.activeCameraTarget,
             bounds: bounds.clone(),
-            aspect: this.camera.aspect,
+            aspect: this.renderCamera.aspect,
         }
         return true
     }
 
     private framingIsCurrent(bounds: THREE.Box3): boolean {
         const previous = this.lastFraming
-        if (!previous || previous.target !== this.activeCameraTarget || previous.aspect !== this.camera.aspect) return false
+        if (!previous || previous.target !== this.activeCameraTarget || previous.aspect !== this.renderCamera.aspect) return false
         const epsilon = 0.01
         return previous.bounds.min.distanceToSquared(bounds.min) <= epsilon * epsilon
             && previous.bounds.max.distanceToSquared(bounds.max) <= epsilon * epsilon

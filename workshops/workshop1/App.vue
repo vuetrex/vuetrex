@@ -1,84 +1,126 @@
 <template>
   <h1>Workshop 1</h1>
   <section>
-    <vuetrex
-      height="79vh"
-      width="100%"
-      :settings="settings"
-    >
+    <vuetrex height="79vh" width="100%" :settings="settings" :camera="{ orbit }" @ready="initStage">
       <vx-layer elevation="0.1">
         <vx-row>
-          <VNode :body="text"/>
-          <VNode :body="text"/>
+          <VNode :body="text" header="Camera" :footer="footer1" id="node1"/>
+          <VNode body="" header="Config" :footer="footer2" id="node2"/>
         </vx-row>
         <vx-row :gap="1.4">
-          <VColumns/>
+          <VColumns id="c1"/>
         </vx-row>
+        <vx-particles :graph="fireflies" anchor="origin" :participates-in-layout="false"/>
       </vx-layer>
+      <vx-connectors :graph="connections"/>
     </vuetrex>
   </section>
 </template>
 
 <script setup lang="ts">
-import {Vuetrex, type VuetrexStage, type VxSettings} from '@/lib-components/index.js'
+import {Vuetrex, type VxSettings, type VxStage, type VxCameraOrbit} from '@/lib-components'
+import {particles, connectors} from "@/lib-components";
 import VColumns from './things/VColumns.vue'
 import VNode from './things/VNode.vue'
-import {onBeforeUnmount, reactive} from 'vue';
-import {MathUtils} from 'three'
+import {ref, reactive, computed} from 'vue';
+import * as THREE from 'three';
 
 const settings: VxSettings = {
-  fog: {
-    color: 0x85898d,
-    near: 10,
-    far: 23,
-  }
+  backgroundColor: 0x85898d,
+  floorFadeStart: 20,
+  floorFadeEnd: 50,
 }
 
-let stopCameraOrbit: (() => void) | undefined
-let orbitSetupTimer: ReturnType<typeof window.setTimeout> | undefined
+const orbit = {
+  target: [0, 0, 0],
+  height: 4,
+  radius: 9,
+  azimuth: -10,
+} satisfies VxCameraOrbit;
 
-function startCameraOrbit(stage: VuetrexStage) {
-  // Let the initial bounds-driven camera fit settle before preserving its
-  // radius and height. The orbit then looks at the authored world origin.
-  orbitSetupTimer = window.setTimeout(() => {
-    const radius = Math.hypot(stage.cameraBase.x, stage.cameraBase.z)
-    const height = stage.cameraBase.y
-    const initialHeading = Math.atan2(stage.cameraBase.x, stage.cameraBase.z)
-    let startedAt: number | undefined
+const nodeLink = connectors
+    .edge(
+        { node: 'node1', port: { x: 1, y: 0.1, z: 0.5 } },
+        { node: 'node2', port: { x: 0, y: 0.1, z: 0.5 } },
+        { key: 'n1-n2' },
+    )
+    .route({strategy: 'orthogonal', clearance: 0.5})
+    .stroke({color: 0xffffff, width: 0.05, markerEnd: 'arrow'});
 
-    stage.cameraTarget.set(0, 0, 0)
-    stopCameraOrbit = stage.onEachFrame(time => {
-      startedAt ??= time
-      const seconds = (time - startedAt) / 1000
-      // asin(sin()) is a triangle wave. This ranges from -30° to +30°
-      // with a constant slope of one degree per second between turnarounds.
-      const offsetDegrees = Math.asin(Math.sin(seconds * Math.PI / 60)) * 60 / Math.PI
-      const heading = initialHeading + MathUtils.degToRad(offsetDegrees)
-      stage.cameraBase.set(
-        radius * Math.sin(heading),
-        height,
-        radius * Math.cos(heading),
-      )
-      stage.cameraTarget.set(0, 0, 0)
+const databaseLinks = connectors
+    .join([
+      connectors.edge('c1', 'node1', { key: 'c-n1' }),
+      connectors.edge('c1', 'node2', { key: 'c-n2' }),
+    ])
+    .route({ strategy: 'direct' })
+
+const connections = connectors.join([nodeLink, databaseLinks])
+
+const debug = reactive({c:[0,0,0], t:[0,0,0], f:0});
+
+const text = computed(() =>
+    `  Position
+    X: ${debug.c[0].toFixed(2)}
+    Y: ${debug.c[1].toFixed(2)}
+    Z: ${debug.c[2].toFixed(2)}
+  Frame: ${debug.f.toFixed(0)}
+  Target:
+    X: ${debug.t[0].toFixed(2)}
+    Y: ${debug.t[0].toFixed(2)}
+    Z: ${debug.t[0].toFixed(2)}
+  `)
+
+
+function startCameraOrbit(stage: VxStage) {
+  stage.camera
+      .timeline({repeat: -1, yoyo: true})
+      .to({azimuth: 30}, {duration: 60, ease: 'none'})
+}
+
+function initStage(stage: VxStage) {
+  startCameraOrbit(stage)
+  stage.onEachFrame(n => {
+    const debugStage = stage as VxStage & {
+      renderCamera: THREE.PerspectiveCamera
+      cameraTarget: THREE.Vector3
+    }
+    debugStage.renderCamera.position.toArray(debug.c)
+    debugStage.cameraTarget.toArray(debug.t)
+    debug.f = n
+  })
+}
+
+const fireflies = computed(() =>
+    particles.cloud('fireflies', {count: 4096, radius: 1.5, distribution: 'surface', seed: 42,})
+    .appearance({
+      color: ({random}) => random > 0.78 ? 0x8989d9 : 0x272d84,
+      size: ({random}) => 0.02 + random * 0.1,
+      opacity: ({random}) => 0.5 + random * 0.18, blending: 'additive'
     })
-  }, 750)
-}
+    .motion({
+      turbulence: ({random}) => 0.025 + random * 0.04,
+      turbulenceScale: 1.35,
+      orbit: {axis: [0, 1, 0], speed: 0.11}
+    })
+    .named('plant-fireflies'),
+)
 
-onBeforeUnmount(() => {
-  if (orbitSetupTimer !== undefined) window.clearTimeout(orbitSetupTimer)
-  stopCameraOrbit?.()
-})
+const footer1 = ref("")
+const footer2 = ref("")
+const n1 = ref(0)
+const n2 = ref(0)
 
-const text = reactive(
-    `  Geometry
-  Selection
-  Position
-    X
-    Y
-    Z
-  Offset
-    X
-    Y
-    Z` as String)
+const timer = setInterval(() => {
+  footer1.value = "Loading: " + (n1.value++) + "%"
+  if (Math.random() > 0.5) {
+    footer2.value = "Loading: " + (n2.value++) + "%"
+  }
+  if (n1.value > 100) n1.value = 100
+  if (n2.value >= 100) {
+    clearInterval(timer)
+    footer1.value = "Ready"
+    footer2.value = "Steady"
+  }
+}, 50)
 
 </script>
