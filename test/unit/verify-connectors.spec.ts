@@ -73,6 +73,79 @@ describe('route network realization', () => {
         h.dispose()
     })
 
+    it.each([0.012, 0.05, 0.2])('ends a width-%s shaft at the arrow base instead of exposing its square cap', width => {
+        const h = harness()
+        const graph = connectors.edge({ position: [0, 1, 0] }, { position: [4, 1, 0] }, { key: 'arrow' })
+            .route({ strategy: 'direct' })
+        h.controller.reconcile('owner', compileConnectors(graph.stroke({ width: 0.01, markerEnd: 'arrow' })))
+        const network = h.controller.getResolvedNetwork('owner', 'arrow')!
+        h.controller.reconcile('owner', compileConnectors(graph.stroke({ width, offset: 0.04, markerEnd: 'arrow' })))
+        expect(h.controller.getResolvedNetwork('owner', 'arrow')).toBe(network)
+        const mesh = h.scene.getObjectByName('vx-connector-owner-arrow') as THREE.Mesh
+        const positions = mesh.geometry.getAttribute('position')
+        const tipIndex = positions.count - 3
+        const baseX = positions.getX(tipIndex + 1)
+        expect(positions.getX(tipIndex)).toBeCloseTo(4)
+        expect(positions.getY(tipIndex)).toBeCloseTo(1.04)
+        const shaftXs = Array.from({ length: tipIndex }, (_, i) => positions.getX(i))
+        expect(Math.max(...shaftXs)).toBeCloseTo(baseX)
+        // A ray just outside the taper must miss, even though it lies inside the shaft's old square cap.
+        mesh.updateMatrixWorld(true)
+        const ray = new THREE.Raycaster(new THREE.Vector3(4 - width * 0.1, 2, width * 0.4), new THREE.Vector3(0, -1, 0))
+        expect(ray.intersectObject(mesh)).toHaveLength(0)
+        expect(network.traversals[0].points.at(-1)!.x).toBe(4)
+        h.dispose()
+    })
+
+    it.each([[0, 4, 0], [2, 3, 4]])('joins the arrow and shaft in the same plane toward (%s, %s, %s)', (x, y, z) => {
+        const h = harness()
+        h.controller.reconcile('owner', compileConnectors(connectors
+            .edge({ position: [0, 1, 0] }, { position: [x, y, z] }, { key: 'spatial' })
+            .route({ strategy: 'direct' }).stroke({ width: 0.15, markerEnd: 'arrow' })))
+        const mesh = h.scene.getObjectByName('vx-connector-owner-spatial') as THREE.Mesh
+        const positions = mesh.geometry.getAttribute('position')
+        const point = (i: number) => new THREE.Vector3().fromBufferAttribute(positions, i)
+        const arrow = positions.count - 3
+        const shaftEnd = point(2).add(point(5)).multiplyScalar(0.5)
+        const arrowBase = point(arrow + 1).add(point(arrow + 2)).multiplyScalar(0.5)
+        expect(shaftEnd.distanceTo(arrowBase)).toBeLessThan(1e-6)
+        const shaftNormal = point(1).sub(point(0)).cross(point(2).sub(point(0))).normalize()
+        const arrowNormal = point(arrow + 1).sub(point(arrow)).cross(point(arrow + 2).sub(point(arrow))).normalize()
+        expect(Math.abs(shaftNormal.dot(arrowNormal))).toBeCloseTo(1)
+        h.dispose()
+    })
+
+    it('trims both arrows across short terminal segments without shifting existing dash spans', () => {
+        const h = harness()
+        h.controller.reconcile('owner', compileConnectors(connectors
+            .edge({ position: [0, 1, 0] }, { position: [4, 1, 0] }, { key: 'dashed' })
+            .route({ strategy: 'manual', waypoints: [[3.9, 1, 0]] })
+            .stroke({ width: 0.2, dash: [0.15, 0.1], markerStart: 'arrow', markerEnd: 'arrow' })))
+        const mesh = h.scene.getObjectByName('vx-connector-owner-dashed') as THREE.Mesh
+        const positions = mesh.geometry.getAttribute('position')
+        const shaftXs = Array.from({ length: positions.count - 6 }, (_, i) => positions.getX(i))
+        expect(Math.min(...shaftXs)).toBeCloseTo(0.5)
+        expect(Math.max(...shaftXs)).toBeCloseTo(3.6)
+        expect(positions.getX(positions.count - 6)).toBeCloseTo(0)
+        expect(positions.getX(positions.count - 3)).toBeCloseTo(4)
+        h.dispose()
+    })
+
+    it('omits the shaft on a route shorter than its arrow and leaves unmarked ends intact', () => {
+        const h = harness()
+        const graph = connectors.edge({ position: [0, 1, 0] }, { position: [0.05, 1, 0] }, { key: 'short' })
+            .route({ strategy: 'direct' })
+        h.controller.reconcile('owner', compileConnectors(graph.stroke({ width: 0.1, markerEnd: 'arrow' })))
+        const arrow = h.scene.getObjectByName('vx-connector-owner-short') as THREE.Mesh
+        expect(arrow.geometry.getAttribute('position').count).toBe(3)
+        h.controller.reconcile('owner', compileConnectors(graph.stroke({ width: 0.1, markerEnd: false })))
+        const plain = h.scene.getObjectByName('vx-connector-owner-short') as THREE.Mesh
+        const positions = plain.geometry.getAttribute('position')
+        expect(positions.count).toBe(6)
+        expect(Math.max(...Array.from({ length: positions.count }, (_, i) => positions.getX(i)))).toBeCloseTo(0.05)
+        h.dispose()
+    })
+
     it('preserves parallel owners and recenters the surviving automatic lane', () => {
         const h = harness()
         h.add('a').mesh!.position.x = -2

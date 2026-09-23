@@ -73,3 +73,60 @@ export function resolvePort(
     }
     return { point, normal, bounds }
 }
+
+/** Bounds measured in the owner's coordinate system, before its world transform. */
+export function localPortBounds(object: THREE.Object3D): THREE.Box3 {
+    object.updateWorldMatrix(true, true)
+    const bounds = new THREE.Box3()
+    const visit = (child: THREE.Object3D, matrix: THREE.Matrix4) => {
+        const geometry = (child as THREE.Mesh).geometry
+        if (geometry) {
+            if ((child as THREE.InstancedMesh).isInstancedMesh) {
+                const instance = child as THREE.InstancedMesh
+                instance.computeBoundingBox()
+                if (instance.boundingBox) bounds.union(instance.boundingBox.clone().applyMatrix4(matrix))
+            } else {
+                geometry.computeBoundingBox()
+                if (geometry.boundingBox) bounds.union(geometry.boundingBox.clone().applyMatrix4(matrix))
+            }
+        }
+        for (const descendant of child.children) {
+            // Text and other decorations are not the model's connection surface.
+            if ((descendant as any).isTroikaText) continue
+            visit(descendant, matrix.clone().multiply(descendant.matrix))
+        }
+    }
+    visit(object, new THREE.Matrix4())
+    return bounds
+}
+
+export function declaredPortDefinition(element: Element3d, record: import('../declarations.js').ConnectorPortDeclarationRecord): import('../types.js').ConnectorPortDefinition | undefined {
+    if (record.disabled) return undefined
+    if (record.position && record.normal) return { position: record.position, normal: record.normal }
+    if (!element.mesh) return undefined
+    const bounds = localPortBounds(element.mesh)
+    const size = bounds.getSize(new THREE.Vector3())
+    // Group objects exist before the post-flush mesh effects attach their children.
+    // Keep the edge unresolved during that insertion phase; later mesh sync reroutes it.
+    const pending = (node: import('../../nodes/Base.js').Base): boolean => node.getHostChildren().some(child =>
+        child.isRenderableNode() && (!(child as import('../../nodes/Node.js').Node).element.mesh || pending(child)))
+    if (bounds.isEmpty() && pending(element.node)) return undefined
+    if (bounds.isEmpty() || size.x <= EPSILON || size.y <= EPSILON || size.z <= EPSILON) {
+        throw new Error(`Face port '${record.name}' on '${element.node.id}' requires nonzero local bounds.`)
+    }
+    const [u, v] = record.at ?? [0.5, 0.5]
+    const point = bounds.min.clone()
+    const normal = new THREE.Vector3()
+    switch (record.face) {
+        case 'front': case 'back':
+            point.add(new THREE.Vector3(size.x * u, size.y * v, record.face === 'front' ? size.z : 0))
+            normal.z = record.face === 'front' ? 1 : -1; break
+        case 'left': case 'right':
+            point.add(new THREE.Vector3(record.face === 'right' ? size.x : 0, size.y * v, size.z * u))
+            normal.x = record.face === 'right' ? 1 : -1; break
+        case 'top': case 'bottom':
+            point.add(new THREE.Vector3(size.x * u, record.face === 'top' ? size.y : 0, size.z * v))
+            normal.y = record.face === 'top' ? 1 : -1; break
+    }
+    return { position: Object.freeze(point.toArray()) as readonly [number, number, number], normal: Object.freeze(normal.toArray()) as readonly [number, number, number] }
+}

@@ -166,6 +166,492 @@
               "description": "The scene tree rendered by Vuetrex. Required to create a stage."
             }
           ]
+        },
+        {
+          "name": "vx-connectors",
+          "description": "Non-spatial connector host. Use either graph or keyed vx-edge children. Supply a scope for stable public handles.",
+          "attributes": [
+            {
+              "name": "graph",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "ConnectorSource"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 595
+              }
+            },
+            {
+              "name": "parameters",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "import('./types.js').ConnectorParameterValues"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 623
+              }
+            },
+            {
+              "name": "scope",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 686
+              }
+            },
+            {
+              "name": "interactive",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 705
+              }
+            },
+            {
+              "name": "appearance",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 221
+              }
+            },
+            {
+              "name": "route-strategy",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "ConnectorStrategyName"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 245
+              }
+            },
+            {
+              "name": "clearance",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 287
+              }
+            },
+            {
+              "name": "elevation",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 310
+              }
+            },
+            {
+              "name": "stroke-color",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "THREE.ColorRepresentation"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 333
+              }
+            },
+            {
+              "name": "stroke-width",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 377
+              }
+            },
+            {
+              "name": "stroke-opacity",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 402
+              }
+            },
+            {
+              "name": "marker-start",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "BuiltinConnectorMarker | false"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 429
+              }
+            },
+            {
+              "name": "marker-end",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "BuiltinConnectorMarker | false"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 478
+              }
+            }
+          ],
+          "events": [
+            {
+              "name": "click",
+              "description": "Receives the connector hit, including its public scope/key handle, and the original mouse event."
+            },
+            {
+              "name": "dblclick",
+              "description": "Receives the connector hit, including its public scope/key handle, and the original mouse event."
+            },
+            {
+              "name": "pointerenter",
+              "description": "Receives the connector hit, including its public scope/key handle, and the original mouse event."
+            },
+            {
+              "name": "pointerleave",
+              "description": "Receives the connector hit, including its public scope/key handle, and the original mouse event."
+            }
+          ]
+        },
+        {
+          "name": "vx-edge",
+          "description": "Keyed relationship. A direct spatial parent supplies from and scope; central edges require from and to.",
+          "attributes": [
+            {
+              "name": "key",
+              "required": true,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 813
+              }
+            },
+            {
+              "name": "from",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 829
+              }
+            },
+            {
+              "name": "to",
+              "required": true,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 847
+              }
+            },
+            {
+              "name": "from-port",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 862
+              }
+            },
+            {
+              "name": "to-port",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 884
+              }
+            },
+            {
+              "name": "interactive",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 904
+              }
+            },
+            {
+              "name": "appearance",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 221
+              }
+            },
+            {
+              "name": "route-strategy",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "ConnectorStrategyName"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 245
+              }
+            },
+            {
+              "name": "clearance",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 287
+              }
+            },
+            {
+              "name": "elevation",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 310
+              }
+            },
+            {
+              "name": "stroke-color",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "THREE.ColorRepresentation"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 333
+              }
+            },
+            {
+              "name": "stroke-width",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 377
+              }
+            },
+            {
+              "name": "stroke-opacity",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 402
+              }
+            },
+            {
+              "name": "marker-start",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "BuiltinConnectorMarker | false"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 429
+              }
+            },
+            {
+              "name": "marker-end",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "BuiltinConnectorMarker | false"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 478
+              }
+            }
+          ],
+          "events": [
+            {
+              "name": "click",
+              "description": "Receives the connector hit, including its public scope/key handle, and the original mouse event."
+            },
+            {
+              "name": "dblclick",
+              "description": "Receives the connector hit, including its public scope/key handle, and the original mouse event."
+            },
+            {
+              "name": "pointerenter",
+              "description": "Receives the connector hit, including its public scope/key handle, and the original mouse event."
+            },
+            {
+              "name": "pointerleave",
+              "description": "Receives the connector hit, including its public scope/key handle, and the original mouse event."
+            }
+          ]
+        },
+        {
+          "name": "vx-port",
+          "description": "Named local port on an explicit spatial owner ID. Use position/normal or face/at; overrides must reference a built-in name.",
+          "attributes": [
+            {
+              "name": "name",
+              "required": true,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 982
+              }
+            },
+            {
+              "name": "position",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "ConnectorVector3Tuple"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 999
+              }
+            },
+            {
+              "name": "normal",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "ConnectorVector3Tuple"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 1036
+              }
+            },
+            {
+              "name": "face",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "Exclude<ConnectorPortName, 'auto' | 'center'>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 1071
+              }
+            },
+            {
+              "name": "at",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "readonly [number, number]"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 1128
+              }
+            },
+            {
+              "name": "override",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 1163
+              }
+            },
+            {
+              "name": "disabled",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 1186
+              }
+            },
+            {
+              "name": "direction",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "'in' | 'out' | 'bidirectional'"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 1209
+              }
+            }
+          ]
         }
       ]
     }

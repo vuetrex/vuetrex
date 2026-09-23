@@ -5,5 +5,5 @@ import App from './App.vue';
 const app = createApp(App);
 //helps only if running via in-browser sfc loader; here for demo purposes
 app.config.compilerOptions.isCustomElement = (tag: string) =>
-    /^vx-(group|layer|row|stack|ring|panel|instances|geometry|box|cylinder|wedge|connectors)$/.test(tag);
+    /^vx-(group|layer|row|stack|ring|panel|instances|geometry|box|cylinder|wedge|connectors|edge|port)$/.test(tag);
 app.mount('#app');

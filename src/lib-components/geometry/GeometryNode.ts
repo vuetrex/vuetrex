@@ -1,3 +1,4 @@
+import type { Base } from '@/lib-components/nodes/Base.js'
 import { MaterialController } from '../styling/MaterialController.js'
 import { resolveMaterialBinding, type VxMaterialBinding } from '../styling/stylesheets.js'
 import * as THREE from 'three'
@@ -41,6 +42,10 @@ interface ProceduralGeometryState {
 }
 
 export class GeometryNode extends Node {
+    protected override validateChild(child: Base): void {
+        if (child.isRenderableNode()) throw new Error('This host accepts declarations only; put visual children in a vx-group.');
+    }
+
     declare protected state: ProceduralGeometryState
 
     readonly group = new THREE.Group()

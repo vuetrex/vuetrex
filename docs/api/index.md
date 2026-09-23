@@ -185,8 +185,30 @@ const graph = connectors
 ```
 
 ```vue
-<vx-connectors :graph="graph" :parameters="parameters" @click="onConnectorClick" />
+<vx-connectors scope="network" :graph="graph" :parameters="parameters" @click="onConnectorClick" />
 ```
+
+`vx-connectors` also accepts direct keyed `vx-edge` children instead of `graph`. Each child requires `from` and `to`.
+A local `vx-edge` under a spatial host inherits `from` and its public scope from that host's explicit `id`.
+Keys must be unique per scope. Host `scope` defaults to a generated identity; give it a name for handles that survive remounts.
+
+| Tag | Props | Contract |
+| --- | --- | --- |
+| `vx-connectors` | `graph`, `parameters`, `scope`, `interactive`, presentation props | Either graph or direct edge children |
+| `vx-edge` | Vue `key`, `from`, `to`, `from-port`, `to-port`, `interactive`, presentation props | Required stable key; local `from` must match parent ID |
+| `vx-port` | `name`, `position` + `normal`, or `face` + optional `at`; `override`, `disabled`, `direction` | Direct owner must have explicit ID; one base and one override per name |
+
+Presentation props are `appearance`, `route-strategy`, `clearance`, `elevation`, `stroke-color`, `stroke-width`,
+`stroke-opacity`, `marker-start`, and `marker-end`. `VxStyleSheet` definitions support a separate `connectors` registry
+in each common/light/dark scheme. Backend defaults, named appearance, host props, then edge props or explicit graph
+fields determine the final values. `null`/`undefined` template props restore inheritance.
+
+A face is `left`, `right`, `front`, `back`, `top`, or `bottom`; `at` is a normalized pair, default `[0.5, 0.5]`.
+Exact position and normal are finite local triples with a nonzero normal. Disabled overrides can omit coordinates.
+See [component ports and coordinates](/guide/connections-and-focus#publish-ports-from-a-reusable-component).
+
+`stage.connections.get({ scope, key })`, `.list({ scope? })`, and `.portsOf(nodeId)` expose immutable read snapshots.
+Edge hits include `handle: { scope, key }`. Port declarations are invisible and not pickable by themselves.
 
 Sources are `connectors.empty()`, `edge()`, `edges()`, `bus()`, and `buses()`. Every source supports immutable fluent
 `.profile()`, `.route()`, `.bundle()`, `.stroke()`, `.marker()`, `.flow()`, `.geometry()`, `.visible()`, `.named()`,

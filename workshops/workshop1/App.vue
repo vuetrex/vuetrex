@@ -1,10 +1,18 @@
 <template>
   <h1>Workshop 1</h1>
   <section>
+    <VxStyleSheet :sheets="[styles]">
     <vuetrex height="79vh" width="100%" :settings="settings" :camera="{ orbit }" @ready="initStage">
       <vx-layer elevation="0.1">
         <vx-row>
-          <VNode :body="text" header="Camera" :footer="footer1" id="node1"/>
+          <VNode :body="text" header="Camera" :footer="footer1" id="node1">
+            <template #ports>
+              <vx-port name="trigger" face="front" :at="[0.5, 0.8]" />
+            </template>
+            <template #connections>
+              <vx-edge key="n1-n2" to="node2" from-port="output" to-port="input" appearance="primary" />
+            </template>
+          </VNode>
           <VNode body="" header="Config" :footer="footer2" id="node2"/>
         </vx-row>
         <vx-row :gap="1.4">
@@ -12,14 +20,18 @@
         </vx-row>
         <vx-particles :graph="fireflies" anchor="origin" :participates-in-layout="false"/>
       </vx-layer>
-      <vx-connectors :graph="connections"/>
+      <vx-connectors scope="workshop" appearance="secondary">
+        <vx-edge key="c-n1" from="c1" to="node1" to-port="trigger" />
+        <vx-edge key="c-n2" from="c1" to="node2" to-port="input" />
+      </vx-connectors>
     </vuetrex>
+    </VxStyleSheet>
   </section>
 </template>
 
 <script setup lang="ts">
 import {Vuetrex, type VxSettings, type VxStage, type VxCameraOrbit} from '@/lib-components'
-import {particles, connectors} from "@/lib-components";
+import {particles, VxStyleSheet, defineVxStyleSheet} from "@/lib-components";
 import VColumns from './things/VColumns.vue'
 import VNode from './things/VNode.vue'
 import {ref, reactive, computed} from 'vue';
@@ -38,23 +50,14 @@ const orbit = {
   azimuth: -10,
 } satisfies VxCameraOrbit;
 
-const nodeLink = connectors
-    .edge(
-        { node: 'node1', port: { x: 1, y: 0.1, z: 0.5 } },
-        { node: 'node2', port: { x: 0, y: 0.1, z: 0.5 } },
-        { key: 'n1-n2' },
-    )
-    .route({strategy: 'orthogonal', clearance: 0.5})
-    .stroke({color: 0xffffff, width: 0.05, markerEnd: 'arrow'});
-
-const databaseLinks = connectors
-    .join([
-      connectors.edge('c1', 'node1', { key: 'c-n1' }),
-      connectors.edge('c1', 'node2', { key: 'c-n2' }),
-    ])
-    .route({ strategy: 'direct' })
-
-const connections = connectors.join([nodeLink, databaseLinks])
+const styles = defineVxStyleSheet({
+  common: {
+    connectors: {
+      primary: { routeStrategy: 'orthogonal', clearance: 0.5, strokeColor: '#ffffff', strokeWidth: 0.05, markerEnd: 'arrow' },
+      secondary: { routeStrategy: 'bezier', clearance: 0.5, strokeColor: '#a5d6db', strokeWidth: 0.025 },
+    },
+  },
+})
 
 const debug = reactive({c:[0,0,0], t:[0,0,0], f:0});
 

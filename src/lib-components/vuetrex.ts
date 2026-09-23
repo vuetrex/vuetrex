@@ -1,6 +1,6 @@
 import type { VuetrexProps, VuetrexEvents, VxSettings } from './root-api.js';
 import type { ComponentObjectPropsOptions } from 'vue';
-import { materialStylesKey } from './styling/stylesheets.js';
+import { materialStylesKey, connectorAppearancesKey } from './styling/stylesheets.js';
 import { createRendererForStage } from '@/lib-components/renderer.js';
 import { defineComponent, Fragment, getCurrentInstance, nextTick, h, onMounted, onUnmounted, ref, PropType, watch, inject } from 'vue';
 import { Root } from '@/lib-components/nodes/Root.js';
@@ -28,6 +28,7 @@ export default defineComponent({
         ready: (..._args: VuetrexEvents['ready']) => true,
     },
     setup(props, {slots, emit}) {
+        const connectorAppearances = inject(connectorAppearancesKey, undefined);
         const materialStyles = inject(materialStylesKey, undefined);
         const elRef = ref(null);
         const maxWidth = ref(4096);
@@ -74,6 +75,7 @@ export default defineComponent({
 
             const stage = new VuetrexStage(elRef.value, {...props.settings});
             stage.materialStyles = materialStyles;
+            stage.connectorAppearances = connectorAppearances;
             vuetrexRenderer = createRendererForStage(stage, props.elements);
             stageRoot = new Root(stage);
 

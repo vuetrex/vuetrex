@@ -1,5 +1,6 @@
 import { resolveMaterialBinding, type VxMaterialBinding } from '../styling/stylesheets.js'
 import {reactive, watchEffect, WatchStopHandle, computed, ComputedRef} from 'vue';
+import { Base } from './Base.js';
 import { Node } from '@/lib-components/nodes/Node.js';
 import { VuetrexStage } from '@/lib-components/three/stage.js';
 import type { VxMaterialProps, VxHoverProps } from '@/lib-components/styling/types.js';
@@ -116,6 +117,10 @@ export abstract class MeshNode extends Node {
         });
         this.material = stage.createElementMaterial();
         this.materialController = new MaterialController(this.material);
+    }
+
+    protected override validateChild(child: Base): void {
+        if (child.isRenderableNode()) throw new Error('Fixed meshes accept declarations only; put visual children in a vx-group or vx-stack.');
     }
 
     protected override intrinsicSize(): Vector3 {

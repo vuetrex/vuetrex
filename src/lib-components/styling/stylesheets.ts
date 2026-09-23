@@ -1,12 +1,14 @@
+import { mergePresentation, type ConnectorAppearances } from '../connectors/declarations.js'
 import { computed, defineComponent, Fragment, h, onMounted, onUnmounted, provide, ref, type InjectionKey, type ComputedRef, type PropType } from 'vue'
 import type { VxHoverProps, VxMaterialProps } from './types.js'
 
 export type VxMaterialBinding = string | (VxMaterialProps & { preset?: string })
 export interface VxMaterialStyle { extends?: string; base?: VxMaterialProps; hover?: VxHoverProps }
-export interface VxStyleScheme { materials?: Readonly<Record<string, VxMaterialStyle>> }
+export interface VxStyleScheme { connectors?: ConnectorAppearances; materials?: Readonly<Record<string, VxMaterialStyle>> }
 export interface VxStyleSheetDefinition { common?: VxStyleScheme; light?: VxStyleScheme; dark?: VxStyleScheme }
 export type VxColorScheme = 'light' | 'dark' | 'system'
 export type MaterialStyles = Readonly<Record<string, VxMaterialStyle>>
+export const connectorAppearancesKey: InjectionKey<ComputedRef<ConnectorAppearances>> = Symbol('Vuetrex connector appearances')
 export const materialStylesKey: InjectionKey<ComputedRef<MaterialStyles>> = Symbol('Vuetrex material styles')
 
 /** Freeze the authored structure, never the caller's textures or color objects. */
@@ -21,7 +23,7 @@ export function defineVxStyleSheet(definition: VxStyleSheetDefinition): VxStyleS
                 base: style.base && Object.freeze({ ...style.base }),
                 hover: style.hover && Object.freeze({ ...style.hover }) })
         }
-        result[scheme] = Object.freeze({ materials: Object.freeze(materials) })
+        result[scheme] = Object.freeze({ materials: Object.freeze(materials), connectors: Object.freeze(Object.fromEntries(Object.entries(value.connectors ?? {}).map(([name, style]) => [name, Object.freeze({ ...style })]))) })
     }
     return Object.freeze(result)
 }
@@ -70,6 +72,14 @@ export function resolveMaterialBinding(styles: MaterialStyles = {}, binding?: Vx
     return { layers, hover: mergeDefined(inheritedHover, hover) }
 }
 
+export function mergeConnectorAppearances(sheets: readonly VxStyleSheetDefinition[], scheme: 'light' | 'dark'): ConnectorAppearances {
+    const styles: Record<string, import('../connectors/declarations.js').ConnectorPresentation> = Object.create(null)
+    for (const sheet of sheets) for (const layer of [sheet.common, sheet[scheme]]) {
+        for (const [name, style] of Object.entries(layer?.connectors ?? {})) styles[name] = Object.freeze(mergePresentation(styles[name], style))
+    }
+    return Object.freeze(styles)
+}
+
 export const VxStyleSheet = defineComponent({
     name: 'VxStyleSheet',
     props: {
@@ -86,6 +96,8 @@ export const VxStyleSheet = defineComponent({
             media?.addEventListener('change', update)
         })
         onUnmounted(() => media?.removeEventListener('change', update))
+        provide(connectorAppearancesKey, computed(() => mergeConnectorAppearances(props.sheets,
+            props.scheme === 'system' ? systemDark.value ? 'dark' : 'light' : props.scheme)))
         provide(materialStylesKey, computed(() => mergeStyleSheets(props.sheets,
             props.scheme === 'system' ? systemDark.value ? 'dark' : 'light' : props.scheme)))
         return () => h(Fragment, slots.default?.())

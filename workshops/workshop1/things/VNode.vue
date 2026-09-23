@@ -8,7 +8,7 @@
   inherits transforms (including hover scale) and disposes with the mesh.
 -->
 <template>
-  <vx-stack :gap="0.02">
+  <vx-stack v-bind="$attrs" :gap="0.02">
     <!-- footer -->
     <vx-box
       :size="1.8"
@@ -49,6 +49,10 @@
       :material="{ color: 0x2f7a3a, roughness: 0.45, metalness: 0.05 }"
       :hover="{ color: 0x49a457, transition: 0.2 }"
     />
+    <vx-port name="input" face="left" />
+    <vx-port name="output" face="right" />
+    <slot name="ports" />
+    <slot name="connections" />
   </vx-stack>
 </template>
 
@@ -57,6 +61,7 @@ import { defineComponent } from 'vue'
 
 export default defineComponent({
   name: 'VNode',
+  inheritAttrs: false,
   props: {
     // Header label (top slab). Single line of text.
     header: {

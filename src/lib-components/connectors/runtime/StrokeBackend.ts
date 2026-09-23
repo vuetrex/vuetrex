@@ -15,6 +15,7 @@ interface StrokeEntry {
 }
 
 const EPSILON = 1e-10
+const ARROW_DEPTH_IN_WIDTHS = 2
 
 /** Keyed, static stroke realization. It allocates nothing on stable-key reorder. */
 export class StrokeBackend implements ConnectorAppearanceBackend<ConnectorDecorationRecord> {
@@ -96,10 +97,16 @@ export class StrokeBackend implements ConnectorAppearanceBackend<ConnectorDecora
     private createEntry(record: ConnectorDecorationRecord): StrokeEntry {
         const width = Math.max(0.001, record.style.width ?? this.stage.boxDistance * 0.032)
         const vertices: number[] = []
-        for (const part of record.network.runs) {
-            appendPolyline(vertices, part.points, width, record.style.offset, record.style.dash)
-        }
         const firstPart = record.network.traversals[0]
+        const arrowDepth = width * ARROW_DEPTH_IN_WIDTHS
+        const startRun = record.style.markerStart === 'arrow' ? firstPart?.runKeys[0] : undefined
+        const endRuns = new Set(record.style.markerEnd === 'arrow'
+            ? record.network.traversals.map(part => part.runKeys.at(-1)) : [])
+        for (const part of record.network.runs) {
+            appendPolyline(vertices, part.points, width, record.style.offset, record.style.dash,
+                part.key === startRun ? arrowDepth : 0,
+                endRuns.has(part.key) ? arrowDepth : 0)
+        }
         if (firstPart && record.style.markerStart && record.style.markerStart !== 'none') {
             appendMarker(
                 vertices,
@@ -185,11 +192,37 @@ function appendPolyline(
     width: number,
     offset: number,
     dash: readonly [number, number] | false,
+    trimStart = 0,
+    trimEnd = 0,
 ): void {
+    let length = 0
+    for (let index = 1; index < points.length; index++) length += points[index - 1].distanceTo(points[index])
+    const visibleEnd = length - trimEnd
+    if (visibleEnd <= trimStart) return
+    let distance = 0
     for (let index = 1; index < points.length; index++) {
-        const spans = dashSpans(points[index - 1], points[index], dash)
-        for (const [start, end] of spans) appendRibbon(vertices, start, end, width, offset)
+        const from = points[index - 1], to = points[index]
+        const segmentLength = from.distanceTo(to)
+        if (segmentLength > EPSILON) {
+            const direction = to.clone().sub(from).multiplyScalar(1 / segmentLength)
+            // Clip the original dash spans, so reserving marker space never shifts the dash pattern.
+            for (const [start, end] of dashSpans(from, to, dash)) {
+                const startDistance = Math.max(distance + from.distanceTo(start), trimStart)
+                const endDistance = Math.min(distance + from.distanceTo(end), visibleEnd)
+                if (endDistance <= startDistance) continue
+                appendRibbon(vertices,
+                    from.clone().addScaledVector(direction, startDistance - distance),
+                    from.clone().addScaledVector(direction, endDistance - distance), width, offset)
+            }
+        }
+        distance += segmentLength
     }
+}
+
+function ribbonSide(tangent: THREE.Vector3): THREE.Vector3 {
+    const side = new THREE.Vector3(0, 1, 0).cross(tangent)
+    if (side.lengthSq() <= EPSILON) side.copy(new THREE.Vector3(1, 0, 0).cross(tangent))
+    return side.normalize()
 }
 
 function appendRibbon(
@@ -204,9 +237,7 @@ function appendRibbon(
     const tangent = end.clone().sub(start)
     if (tangent.lengthSq() <= EPSILON) return
     tangent.normalize()
-    let side = new THREE.Vector3(0, 1, 0).cross(tangent)
-    if (side.lengthSq() <= EPSILON) side = new THREE.Vector3(1, 0, 0).cross(tangent)
-    side.normalize().multiplyScalar(width / 2)
+    const side = ribbonSide(tangent).multiplyScalar(width / 2)
     const a = start.clone().add(side)
     const b = start.clone().sub(side)
     const c = end.clone().sub(side)
@@ -246,24 +277,25 @@ function appendMarker(
     offset: number,
 ): void {
     const tangent = rawTangent?.lengthSq() ? rawTangent.clone().normalize() : new THREE.Vector3(1, 0, 0)
-    let side = new THREE.Vector3(0, 1, 0).cross(tangent)
-    if (side.lengthSq() <= EPSILON) side.set(1, 0, 0)
-    side.normalize()
+    const side = ribbonSide(tangent)
+    if (kind === 'arrow') {
+        const tip = point.clone().add(new THREE.Vector3(0, offset, 0))
+        const base = tip.clone().addScaledVector(tangent, -width * ARROW_DEPTH_IN_WIDTHS)
+        side.multiplyScalar(width * 1.2)
+        pushTriangle(vertices, tip, base.clone().add(side), base.clone().sub(side))
+        return
+    }
     const length = width * (kind === 'dot' ? 2.2 : 8)
     const center = point.clone()
         .add(new THREE.Vector3(0, offset, 0))
         .addScaledVector(tangent, -length * 0.25)
-    const halfWidth = width * (kind === 'arrow' ? 1.2 : 1.5)
-    const tip = center.clone().addScaledVector(tangent, kind === 'arrow' ? length * 0.25 : length / 2)
+    const halfWidth = width * 1.5
+    const tip = center.clone().addScaledVector(tangent, length / 2)
     const back = center.clone().addScaledVector(tangent, -length * 0.75)
     const left = center.clone().addScaledVector(side, halfWidth)
     const right = center.clone().addScaledVector(side, -halfWidth)
-    if (kind === 'arrow') {
-        pushTriangle(vertices, tip, left, right)
-    } else {
-        pushTriangle(vertices, tip, left, back)
-        pushTriangle(vertices, tip, back, right)
-    }
+    pushTriangle(vertices, tip, left, back)
+    pushTriangle(vertices, tip, back, right)
 }
 
 function pushTriangle(vertices: number[], a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3): void {

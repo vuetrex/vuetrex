@@ -41,6 +41,7 @@ export interface ConnectorOwnerInteraction {
 
 interface OwnerState {
     readonly ownerId: string
+    scope: string
     plan: AuthoredConnectorPlan
     resolved: Map<string, ResolvedConnectorNetwork>
     bundles: Map<string, ResolvedConnectorNetwork>
@@ -82,23 +83,41 @@ export class Connectors {
         plan: AuthoredConnectorPlan,
         interaction?: ConnectorOwnerInteraction,
         parameters: ConnectorParameterValues = {},
+        scope: string = ownerId,
     ): void {
+        if (!scope) throw new Error('Connector scope must be nonempty.')
+        const keys = new Set<string>()
+        for (const record of plan.records) {
+            if (keys.has(record.key)) throw new Error(`Duplicate connector (${scope}, ${record.key}).`)
+            keys.add(record.key)
+        }
+        for (const other of this.owners.values()) if (other.ownerId !== ownerId && other.scope === scope) {
+            for (const record of other.plan.records) if (keys.has(record.key)) throw new Error(`Duplicate connector (${scope}, ${record.key}).`)
+        }
         this.ensureMounted()
+        const previous = this.owners.get(ownerId)?.plan
+        const previousByKey = new Map(previous?.records.map(record => [record.key, record]))
+        const sameRoutes = previous?.records.length === plan.records.length && plan.records.every(record => {
+            const prior = previousByKey.get(record.key)
+            return prior?.topologySignature === record.topologySignature && prior.routeSignature === record.routeSignature && prior.item === record.item
+        })
         const changedPeerGroups = new Set(this.owners.get(ownerId)?.plan.records.map(peerGroupKey) ?? [])
         plan.records.forEach(record => changedPeerGroups.add(peerGroupKey(record)))
         const owner: OwnerState = this.owners.get(ownerId) ?? {
             ownerId,
+            scope,
             plan,
             resolved: new Map(),
             bundles: new Map(),
             missing: new Map(),
             parameters,
         }
+        owner.scope = scope
         owner.plan = plan
         owner.interaction = interaction
         owner.parameters = parameters
         this.owners.set(ownerId, owner)
-        this.resolvePeerGroups(changedPeerGroups)
+        if (!sameRoutes) this.resolvePeerGroups(changedPeerGroups)
         this.refreshOutputs()
     }
 
@@ -143,6 +162,20 @@ export class Connectors {
         if (changed) this.refreshOutputs()
     }
 
+    updatePorts(element: Element3d, names: ReadonlySet<string>): void {
+        let changed = false
+        for (const owner of this.owners.values()) {
+            const keys = new Set(owner.plan.records.filter(record => [record.from, ...record.to].some((endpoint, index) => {
+                if (endpointNodeId(endpoint) !== element.node.id) return false
+                const port = typeof endpoint === 'object' && 'node' in endpoint && endpoint.port !== undefined
+                    ? endpoint.port : index === 0 ? record.routing.fromPort : record.routing.toPort
+                return typeof port === 'object' && 'name' in port && names.has(port.name)
+            })).map(record => record.key))
+            if (keys.size) { this.resolveOwner(owner, keys); changed = true }
+        }
+        if (changed) this.refreshOutputs()
+    }
+
     /** Remove live output for a disappearing endpoint while retaining authored declarations. */
     remove(element: Element3d): void {
         let changed = false
@@ -163,6 +196,35 @@ export class Connectors {
         return owner?.resolved.get(key) ?? owner?.bundles.get(key)
     }
 
+    get(handle: import('../../connectors/declarations.js').ConnectorHandle) {
+        return this.list({ scope: handle.scope }).find(record => record.handle.key === handle.key)
+    }
+
+    list(filter: { scope?: string } = {}) {
+        return Object.freeze([...this.owners.values()].filter(owner => filter.scope === undefined || owner.scope === filter.scope)
+            .flatMap(owner => owner.plan.records.map(record => {
+                const network = owner.resolved.get(record.key)
+                return Object.freeze({
+                    handle: Object.freeze({ scope: owner.scope, key: record.key }),
+                    authored: record,
+                    resolved: network ? networkContext(network) : undefined,
+                    unresolved: Object.freeze([...(owner.missing.get(record.key) ?? [])]),
+                })
+            })))
+    }
+
+    portsOf(nodeId: string) {
+        const node = this.stage.getById(nodeId)?.node
+        if (!node) return Object.freeze([])
+        const ports = new Map(Object.entries(node.connectorPorts()).map(([name, definition]) => [name, { name, ...definition } as import('../../connectors/declarations.js').ConnectorPortDeclarationRecord]))
+        node.declaredConnectorPorts?.forEach((port, name) => ports.set(name, port))
+        return Object.freeze([...ports.values()].map(port => Object.freeze({ node: nodeId, ...port,
+            position: port.position && Object.freeze([...port.position]) as typeof port.position,
+            normal: port.normal && Object.freeze([...port.normal]) as typeof port.normal,
+            at: port.at && Object.freeze([...port.at]) as typeof port.at,
+        })))
+    }
+
     getConnectionPorts(): Array<{ id: string; role: 'from' | 'to'; point: THREE.Vector3 }> {
         const ports: Array<{ id: string; role: 'from' | 'to'; point: THREE.Vector3 }> = []
         for (const owner of this.owners.values()) {
@@ -176,9 +238,11 @@ export class Connectors {
     }
 
     hitAt(object: THREE.Object3D, instanceId?: number, intersection?: THREE.Intersection): ConnectorHit | undefined {
-        return this.strokeBackend?.hitAt?.(object, instanceId, intersection)
+        const hit = this.strokeBackend?.hitAt?.(object, instanceId, intersection)
             ?? this.geometryBridge?.hitAt(object, instanceId, intersection)
             ?? this.particleBridge?.hitAt(object, instanceId, intersection)
+        const owner = this.owners.get(object.userData.vxConnectorOwner)
+        return hit && owner ? Object.freeze({ ...hit, handle: Object.freeze({ scope: owner.scope, key: hit.key }) }) : hit
     }
 
     dispatchOwnerEvent(
@@ -226,6 +290,8 @@ export class Connectors {
             particleProgramBuildCount: particle?.rebuilds ?? 0,
             geometryEvaluationCount: geometry?.evaluations ?? 0,
             owners: Object.freeze(allOwners.map(owner => Object.freeze({
+                scope: owner.scope,
+                unresolved: Object.freeze([...owner.missing].map(([key, reasons]) => Object.freeze({ key, reasons }))),
                 name: owner.plan.records.flatMap(record => record.names).at(-1),
                 recordKeys: Object.freeze(owner.plan.records.map(record => record.key)),
                 unresolvedKeys: Object.freeze([...owner.missing.keys()]),

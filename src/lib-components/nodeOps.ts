@@ -3,6 +3,7 @@ import { Base } from '@/lib-components/nodes/Base.js';
 import { Comment, TextNode } from '@/lib-components/nodes/Root.js';
 import { VuetrexStage } from '@/lib-components/three/stage.js';
 import { types, ElementRegistry, FunctionalComponent, ClassComponent } from '@/lib-components/nodes/types.js';
+import { EdgeDeclaration } from './nodes/ConnectorGraphHost.js';
 import { Node } from '@/lib-components/nodes/Node.js';
 
 export const nodeOps = (stage: VuetrexStage, extraTypes?: ElementRegistry): Omit<RendererOptions<Base, Base>, "patchProp"> => ({
@@ -38,6 +39,7 @@ export const nodeOps = (stage: VuetrexStage, extraTypes?: ElementRegistry): Omit
     if (node instanceof Node && vnodeProps?.key !== undefined && vnodeProps.key !== null) {
       node.setRendererKey(String(vnodeProps.key));
     }
+    if (node instanceof EdgeDeclaration && vnodeProps?.key != null) node.declarationKey = String(vnodeProps.key);
     return node;
   },
 

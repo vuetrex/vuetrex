@@ -81,6 +81,10 @@ export abstract class Node extends Base {
         return this.identity.explicitId ?? this.generatedKey;
     }
 
+    get hasExplicitId(): boolean { return this.identity.explicitId !== undefined; }
+
+    declaredConnectorPorts: ReadonlyMap<string, import('../connectors/declarations.js').ConnectorPortDeclarationRecord> = new Map();
+
     set id(value: string) { this.setId(value); }
 
     /** Human-readable name. Use `id` for machine references and `text` for captions. */

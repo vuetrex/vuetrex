@@ -217,7 +217,7 @@ function resolveRecord(
         topology,
         profile,
         routing,
-        routingExplicit: Object.freeze(Object.keys(routeOptions ?? {}).filter(field => field !== 'replace')),
+        routingExplicit: Object.freeze(Object.keys(routeOptions ?? {}).filter(field => field !== 'replace' && (routeOptions as any)[field] !== undefined)),
         ...(bundleKey === undefined ? {} : { bundleKey }),
         bundleWidth: resolveConnectorField(state.bundle?.width, context, parameters),
         bundleColor: resolveConnectorField(state.bundle?.color, context, parameters),
@@ -406,7 +406,7 @@ function resolveStroke(
     const dash = resolveConnectorField(options.dash, context, parameters) ?? false
     return Object.freeze({
         key,
-        explicit: Object.freeze(Object.keys(options).filter(field => !['key', 'replace'].includes(field))),
+        explicit: Object.freeze(Object.keys(options).filter(field => !['key', 'replace'].includes(field) && (options as any)[field] !== undefined)),
         implicit: false,
         color: resolveConnectorField(options.color, context, parameters),
         width: resolveConnectorField(options.width, context, parameters),
@@ -445,7 +445,7 @@ function resolveMarker(
 ): ResolvedConnectorMarkerOptions {
     return Object.freeze({
         key,
-        explicit: Object.freeze(Object.keys(options).filter(field => !['key', 'replace'].includes(field))),
+        explicit: Object.freeze(Object.keys(options).filter(field => !['key', 'replace'].includes(field) && (options as any)[field] !== undefined)),
         start: options.start,
         end: options.end,
         junction: options.junction,

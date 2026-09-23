@@ -27,6 +27,13 @@ try {
         const contract = await readFile(join(packageRoot, item.source.file), 'utf8')
         assert.ok(contract.slice(item.source.offset).startsWith(item === root ? 'VuetrexProps' : item.name))
     }
+    for (const element of metadata.contributions.html.elements.slice(1)) {
+        for (const attr of element.attributes) {
+            const contract = await readFile(join(packageRoot, attr.source.file), 'utf8')
+            const camelCase = attr.name.replace(/-([a-z])/g, (_, character) => character.toUpperCase())
+            assert.ok(contract.slice(attr.source.offset).startsWith(camelCase))
+        }
+    }
     await mkdir(join(projectRoot, 'node_modules', '@types'), { recursive: true })
     for (const dependency of ['vue', 'three', 'gsap', '@types/three']) {
         await symlink(
@@ -54,7 +61,7 @@ try {
     ].join('\n'))
 
     await writeFile(join(projectRoot, 'consumer.ts'), [
-        "import { Vuetrex, VxStyleSheet, defineVxStyleSheet, finishes, useCanvasTexture, type VuetrexProps, type VuetrexEvents, type VxSettings, type VxMaterialBinding, type VxEnvironmentProps, type VxCameraProps, type VxFloorProps } from '@exceeder/vuetrex'",
+        "import { Vuetrex, VxStyleSheet, defineVxStyleSheet, finishes, useCanvasTexture, type VuetrexProps, type VuetrexEvents, type VxSettings, type VxMaterialBinding, type VxEnvironmentProps, type VxCameraProps, type VxFloorProps, type ConnectorHandle, type ConnectorPortDeclarationRecord, type ConnectorHostProps } from '@exceeder/vuetrex'",
         "const settings = { fog: { near: 20 }, diagnostics: { footprints: true }, floorFadeStart: 20 } satisfies VxSettings",
         "const root: VuetrexProps = { settings, height: '520px', stopped: false }",
         "type Props = InstanceType<typeof Vuetrex>['$props']",
@@ -67,7 +74,11 @@ try {
         "// @ts-expect-error nested settings are typed",
         "const invalidSettings: Props = { settings: { fog: { near: 'twenty' } } }",
         "void [liveRoot, invalid, invalidSettings]",
-        "const sheet = defineVxStyleSheet({ common: { materials: { metal: { base: finishes.satinMetal() } } } })",
+        "const connector: ConnectorHostProps = { scope: 'network', appearance: 'primary', strokeWidth: 0.02 }",
+        "const handle: ConnectorHandle = { scope: 'network', key: 'a-b' }",
+        "const port: ConnectorPortDeclarationRecord = { name: 'output', face: 'right' }",
+        "void [connector, handle, port]",
+        "const sheet = defineVxStyleSheet({ common: { materials: { metal: { base: finishes.satinMetal() } }, connectors: { primary: { strokeColor: '#abcdef' } } } })",
         "const binding: VxMaterialBinding = { preset: 'metal', roughness: 0.2, bumpMap: null, bumpScale: 0.012 }",
         "const environment: VxEnvironmentProps = { preset: 'studio', rotation: 0.5 }",
         "const camera: VxCameraProps = { direction: [8, 6, 11], fit: 'content' }",
@@ -108,7 +119,7 @@ try {
             vue({
                 template: {
                     compilerOptions: {
-                        isCustomElement: tag => /^vx-(group|layer|row|stack|ring|panel|instances|geometry|particles|box|cylinder|wedge|connectors|environment|camera|floor)$/.test(tag),
+                        isCustomElement: tag => /^vx-(group|layer|row|stack|ring|panel|instances|geometry|particles|box|cylinder|wedge|connectors|edge|port|environment|camera|floor)$/.test(tag),
                     },
                 },
             }),

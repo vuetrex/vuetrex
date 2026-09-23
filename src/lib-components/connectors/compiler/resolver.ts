@@ -3,7 +3,7 @@ import type { Node } from '@/lib-components/nodes/Node.js'
 import type { Element3d } from '@/lib-components/three/element3d.js'
 import type { VuetrexStage } from '@/lib-components/three/stage.js'
 import { enclosingElementsScale } from '@/lib-components/connectors/runtime/scale.js'
-import { resolvePort } from '@/lib-components/connectors/compiler/ports.js'
+import { resolvePort, declaredPortDefinition } from '@/lib-components/connectors/compiler/ports.js'
 import { stableValue } from '@/lib-components/connectors/compiler/evaluator.js'
 import type {
     AuthoredConnectorRecord,
@@ -55,14 +55,14 @@ export function resolveConnectorRecord<Item>(
         ? averageTarget.clone().add(new THREE.Vector3(1, 0, 0))
         : averageTarget
     const from = resolveEndpoint(stage, record.from, record.routing.fromPort, fromToward)
-    if (!from) return Object.freeze({ missing: Object.freeze([endpointLabel(record.from)]) })
+    if (!from) return Object.freeze({ missing: Object.freeze([unresolvedEndpoint(stage, record.from, record.routing.fromPort)]) })
     const targets: ResolvedConnectorEndpoint[] = []
     for (const [index, target] of record.to.entries()) {
         const targetToward = targetHints[index]!.point.distanceToSquared(fromHint.point) <= EPSILON
             ? fromHint.point.clone().add(new THREE.Vector3(-1, 0, 0))
             : fromHint.point
         const resolvedTarget = resolveEndpoint(stage, target, record.routing.toPort, targetToward)
-        if (!resolvedTarget) return Object.freeze({ missing: Object.freeze([endpointLabel(target)]) })
+        if (!resolvedTarget) return Object.freeze({ missing: Object.freeze([unresolvedEndpoint(stage, target, record.routing.toPort)]) })
         targets.push(resolvedTarget)
     }
     const scale = enclosingElementsScale([fromHint.element, ...targetHints.map(hint => hint!.element)])
@@ -370,10 +370,14 @@ function resolveEndpoint(
     const port = typeof reference === 'string' ? defaultPort : reference.port ?? defaultPort
     const customName = port && typeof port === 'object' && 'name' in port ? port.name : undefined
     if (customName) {
-        const definition = (element.node as Node & {
-            connectorPorts?: () => Readonly<Record<string, ConnectorPortDefinition>>
-        }).connectorPorts?.()[customName]
-        if (!definition) return undefined
+        const declared = element.node.declaredConnectorPorts?.get(customName)
+        const definition = declared ? declaredPortDefinition(element, declared) : element.node.connectorPorts?.()[customName]
+        if (!definition) {
+            if (!declared && ['auto', 'center', 'left', 'right', 'front', 'back', 'top', 'bottom'].includes(customName)) {
+                return resolveEndpoint(stage, { node: nodeId, port: customName as import('../types.js').ConnectorPortName }, defaultPort, toward)
+            }
+            return undefined
+        }
         const object = element.mesh
         if (!object) return undefined
         object.updateWorldMatrix(true, false)
@@ -486,4 +490,14 @@ function vectorFrom(value: ConnectorVector3Like): THREE.Vector3 {
 
 function finite(value: unknown, fallback: number): number {
     return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+function unresolvedEndpoint(stage: VuetrexStage, reference: ConnectorEndpoint, fallback: ConnectorPort): string {
+    const node = typeof reference === 'string' ? reference : 'node' in reference ? reference.node : undefined
+    const port = typeof reference !== 'string' && 'node' in reference ? reference.port ?? fallback : fallback
+    if (node && typeof port === 'object' && 'name' in port) {
+        const disabled = stage.getById(node)?.node.declaredConnectorPorts?.get(port.name)?.disabled
+        return `${disabled ? 'disabled' : 'missing'} port: ${node}/${port.name}`
+    }
+    return endpointLabel(reference)
 }

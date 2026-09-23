@@ -8,6 +8,8 @@ outline: deep
 
 **Status:** Implemented, with the route-network refinements below as the normative public contract.
 
+**Authoring follow-up:** [Connector template authoring and component ports](2026-09-22-connector-template-authoring.md) implements the template-facing contract for local edges, component-defined ports, and presentation. Its authoring and compatibility decisions supersede the corresponding sections here; the immutable graph, compiler, and stage-owned realization remain the foundation.
+
 **Goal:** Give connectors the same immutable, fluent, data-driven authoring model as procedural geometry and particles,
 while keeping route declarations out of layout, scene identity, focus, event bubbling, and the Three.js object tree.
 Connector topology, routing, appearance, markers, and flow should compose independently and reconcile by stable key.

@@ -51,6 +51,7 @@ export interface VxFitOptions {
 }
 
 export interface VxStage {
+    readonly connections: Pick<Connectors, 'get' | 'list' | 'portsOf'>
     /** Explicit orbit and stage-owned GSAP camera timelines. */
     readonly camera: VxCameraController
     getScene(): THREE.Scene
@@ -267,6 +268,8 @@ export class VuetrexStage extends Scene implements VxStage {
     protected override onCameraInteraction(): void { this.camera.interrupt() }
     private subscribers: Function[] = [];
     public connectors: Connectors;
+    get connections(): Pick<Connectors, 'get' | 'list' | 'portsOf'> { return this.connectors }
+    connectorAppearances?: ComputedRef<import('../connectors/declarations.js').ConnectorAppearances>
     materialStyles?: ComputedRef<MaterialStyles>
     settings: VxSettings
     private caps: { repeats: number; size: number; planeSize: number; updateFn: () => void; texture: THREEx.DynamicTexture | null } = {

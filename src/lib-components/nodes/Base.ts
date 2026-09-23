@@ -107,8 +107,16 @@ export abstract class Base {
         }
     }
 
+    public getHostChildren(): readonly Base[] { return this.children.value; }
+
+    public removing = false;
+
+    protected validateChild(child: Base): void {}
+
     appendChild(child: Base) {
+        this.validateChild(child);
         child.parentNodeValue?.detachChildForMove(child);
+        child.removing = false;
         child.setParent(this);
         if (child.isRenderableNode()) {
             const node = child as any;
@@ -122,6 +130,9 @@ export abstract class Base {
     removeChild(child: Base) {
         const idx = this.childList.indexOf(child);
         if (idx >= 0) {
+            child.removing = true;
+            // Declarations and descendant GPU resources leave before the endpoint owner.
+            while (child.childList.length) child.removeChild(child.childList[child.childList.length - 1]);
             child.setParent(null);
             this.childList.splice(idx, 1);
             triggerRef(this.children);
@@ -133,17 +144,16 @@ export abstract class Base {
                     node.stage.connectors.remove(node.element);
                 }
             }
-            const grandChildren = child.childList;
-            while (grandChildren && grandChildren.length > 0)
-                child.removeChild(grandChildren[grandChildren.length - 1]);
             this.registerSync();
         }
     }
 
     insertBefore(child: Base, anchor: Base) {
+        this.validateChild(child);
         // Match Node.insertBefore(): inserting a node before itself is a no-op.
         if (child === anchor) return;
         child.parentNodeValue?.detachChildForMove(child);
+        child.removing = false;
         child.setParent(this);
         if (child.isRenderableNode()) {
             const node = child as any;

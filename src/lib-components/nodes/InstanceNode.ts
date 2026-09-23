@@ -1,3 +1,4 @@
+import type { Base } from '@/lib-components/nodes/Base.js'
 import { MaterialController } from '../styling/MaterialController.js'
 import { resolveMaterialBinding, type VxMaterialBinding } from '../styling/stylesheets.js'
 import * as THREE from 'three'
@@ -66,6 +67,10 @@ function nextCapacity(required: number): number {
  * in keyed GPU slots and exposed through VxMouseEvent.vxInstance.
  */
 export class InstanceNode<T = unknown> extends Node {
+    protected override validateChild(child: Base): void {
+        if (child.isRenderableNode()) throw new Error('This host accepts declarations only; put visual children in a vx-group.');
+    }
+
     declare protected state: InstanceState<T>
 
     readonly material: THREE.MeshStandardMaterial

@@ -86,3 +86,5 @@ export {
     inspectConnectors,
 } from '@/lib-components/connectors/diagnostics.js'
 export type * from '@/lib-components/connectors/types.js'
+
+export type * from './declarations.js'

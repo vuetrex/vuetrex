@@ -317,6 +317,7 @@ export interface ConnectorModuleInstanceOptions {
 export type ConnectorHit<Item = unknown> = ConnectorEdgeHit<Item> | ConnectorBundleHit
 
 export interface ConnectorEdgeHit<Item = unknown> {
+    readonly handle?: import('./declarations.js').ConnectorHandle
     readonly kind: 'edge'
     readonly key: string
     readonly item: Item
@@ -327,6 +328,7 @@ export interface ConnectorEdgeHit<Item = unknown> {
 }
 
 export interface ConnectorBundleHit {
+    readonly handle?: import('./declarations.js').ConnectorHandle
     readonly kind: 'bundle'
     readonly key: string
     readonly part: 'bundle'
@@ -396,6 +398,8 @@ export interface ConnectorRuntimeDiagnostics {
     readonly particleProgramBuildCount: number
     readonly geometryEvaluationCount: number
     readonly owners: readonly Readonly<{
+        scope: string
+        unresolved: readonly Readonly<{ key: string; reasons: readonly string[] }>[]
         name?: string
         recordKeys: readonly string[]
         unresolvedKeys: readonly string[]

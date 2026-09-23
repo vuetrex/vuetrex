@@ -176,8 +176,13 @@ bundles into immutable paths. Keyed stroke, geometry, and particle bridges reali
 
 `ConnectorGraphHost` extends `StageDeclaration`, which extends `Base`, not `Node`. It remains in raw host order for Vue
 reconciliation but has no `Element3d`, spatial projection, stage identity, focus behavior, or authored Three.js object.
-Unmounting removes exactly its owner records. All relationships are authored as connector graphs and realized through
-`<vx-connectors>`; spatial meshes do not own connection declarations.
+Unmounting removes exactly its owner records. Hosts accept either a graph or keyed direct `vx-edge` children.
+Local `vx-edge` declarations inherit `from` and their public scope from an explicit spatial parent ID. All three forms
+lower to the same compiler records. `vx-port` declarations publish immutable local coordinates or local-bounds faces
+on their direct spatial owner, with deterministic overrides and disabled-port diagnostics. Fixed meshes and generated
+hosts accept declaration children without becoming spatial containers. Descendants tear down before their endpoint
+owner. Named connector appearances and template props supply defaults beneath explicit per-record graph fields.
+`stage.connections` exposes immutable records by `(scope, key)` and port descriptions by `(node ID, name)`.
 
 Endpoint changes reroute only dependent records. Stable-key reorder preserves resolved path identity and backend
 objects. Static stroke graphs register no frame callback; the particle bridge subscribes only while flow output exists.

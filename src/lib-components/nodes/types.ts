@@ -12,7 +12,8 @@ import {DisplayWall} from '@/lib-components/nodes/DisplayWall.js';
 import {Spacer} from '@/lib-components/nodes/Spacer.js';
 import {GeometryNode} from '@/lib-components/geometry/GeometryNode.js';
 import {ParticleNode} from '@/lib-components/particles/ParticleNode.js';
-import {ConnectorGraphHost} from '@/lib-components/nodes/ConnectorGraphHost.js';
+import {PortDeclaration} from './PortDeclaration.js';
+import {ConnectorGraphHost, EdgeDeclaration} from '@/lib-components/nodes/ConnectorGraphHost.js';
 
 import {Box} from '@/lib-components/nodes/shapes/Box.js';
 import {Cylinder} from '@/lib-components/nodes/shapes/Cylinder.js';
@@ -43,6 +44,8 @@ const builtins: ElementRegistry = {
     'vx-stack': Stack,
     'vx-ring': Ring,
     'vx-connectors': ConnectorGraphHost,
+    'vx-edge': EdgeDeclaration,
+    'vx-port': PortDeclaration,
     'vx-panel': Panel,
     'vx-instances': InstanceNode,
     'vx-display-wall': DisplayWall,

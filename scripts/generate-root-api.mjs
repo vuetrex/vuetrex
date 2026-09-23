@@ -1,7 +1,7 @@
 import ts from 'typescript'
 import { readFile, writeFile } from 'node:fs/promises'
 
-// Root only: annotated interfaces drive both IDEA metadata and the reference page.
+// Root interfaces drive the reference page; connector interfaces also contribute editor tags.
 const file = 'src/lib-components/root-api.d.ts'
 const navigationFile = 'dist_types/' + file
 const input = await readFile(file, 'utf8')
@@ -45,6 +45,28 @@ const webTypes = {
             arguments: [{ name: 'stage', type: { module: pkg.name, name: 'VxStage' } }] }],
         slots: [{ name: 'default', description: 'The scene tree rendered by Vuetrex. Required to create a stage.' }],
     }] } },
+}
+const declarationsFile = 'src/lib-components/connectors/template-api.d.ts'
+const declarationsInput = await readFile(declarationsFile, 'utf8')
+const declarationsSource = ts.createSourceFile(declarationsFile, declarationsInput, ts.ScriptTarget.Latest, true)
+const declarationInterfaces = declarationsSource.statements.filter(ts.isInterfaceDeclaration)
+const declarationFields = name => declarationInterfaces.find(node => node.name.text === name).members.map(node => ({
+    name: node.name.getText(declarationsSource).replace(/[A-Z]/g, char => `-${char.toLowerCase()}`),
+    required: !node.questionToken,
+    value: { kind: 'expression', type: node.type.getText(declarationsSource) },
+    source: { file: 'dist_types/' + declarationsFile, offset: node.name.getStart(declarationsSource) },
+}))
+const presentation = declarationFields('ConnectorPresentation')
+for (const [name, type, description] of [
+    ['vx-connectors', 'ConnectorHostProps', 'Non-spatial connector host. Use either graph or keyed vx-edge children. Supply a scope for stable public handles.'],
+    ['vx-edge', 'ConnectorEdgeDeclarationRecord', 'Keyed relationship. A direct spatial parent supplies from and scope; central edges require from and to.'],
+    ['vx-port', 'ConnectorPortDeclarationRecord', 'Named local port on an explicit spatial owner ID. Use position/normal or face/at; overrides must reference a built-in name.'],
+]) {
+    webTypes.contributions.html.elements.push({ name, description,
+        attributes: [...declarationFields(type), ...(name === 'vx-port' ? [] : presentation)],
+        ...(name === 'vx-port' ? {} : { events: ['click', 'dblclick', 'pointerenter', 'pointerleave'].map(name => ({ name,
+            description: 'Receives the connector hit, including its public scope/key handle, and the original mouse event.' })) }),
+    })
 }
 const reference = `---
 title: Vuetrex root component

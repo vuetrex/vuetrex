@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="320" viewBox="0 0 700 320" role="img" aria-labelledby="title desc">
+<title id="title">Local cafe ports rotate with their owner</title><desc id="desc">Top view. A cafe rotated 45 degrees has its front door on local positive Z and internet on local positive X. Outward normals rotate by the same angle.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#086b82"/></marker></defs>
+<rect width="700" height="320" rx="14" fill="#edf5f6"/>
+<g transform="translate(270 160) rotate(-45)"><rect x="-85" y="-50" width="170" height="100" rx="8" fill="#dec6a8" stroke="#6c5339" stroke-width="2"/><text text-anchor="middle" y="5" font-family="sans-serif" font-size="20" fill="#372a1a">CAFE</text><g fill="#086b82" stroke="#086b82" stroke-width="2"><circle cx="85" cy="0" r="5"/><path d="M85 0H145" marker-end="url(#arrow)"/><circle cx="0" cy="50" r="5"/><path d="M0 50V105" marker-end="url(#arrow)"/></g></g>
+<g font-family="sans-serif" font-size="17" fill="#193b47"><text x="387" y="60">internet · local +X</text><text x="362" y="265">mainDoor · local +Z</text><text x="24" y="34" font-size="15">TOP VIEW · rotated 45°</text><text x="24" y="296" font-size="15">Port position and outward normal follow the owner’s transform.</text></g>
+</svg>
