@@ -34,6 +34,20 @@ The row uses each child's measured width. No slot index or manual X coordinate i
 
 `<vx-group :layout="mode">` supports `grid`, `row`, `depth`, `stack`, and `ring` when layout is selected dynamically.
 
+![Four local layout relationships: row follows X, layer follows Z, stack follows Y, and ring follows a circle on the XZ plane.](/images/layout-relationships.svg)
+
+For example, put three service components in a row, then put that row and a database in a layer. The row handles
+horizontal spacing; the layer handles depth between the two groups. Neither service needs to know its world position.
+
+```vue
+<vx-layer :gap="0.8">
+  <vx-row :gap="0.3">
+    <ServiceNode v-for="service in services" :key="service.id" :service="service" />
+  </vx-row>
+  <DatabaseNode :database="primaryDatabase" />
+</vx-layer>
+```
+
 ## Start at the ground plane
 
 Vuetrex uses Three.js's Y-up coordinate system. The visible floor is exactly at world `Y = 0`, and the standard

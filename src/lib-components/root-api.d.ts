@@ -1,6 +1,7 @@
 import type { ElementRegistry } from './nodes/types.js'
 import type { VxStage } from './three/stage.js'
 import type { VxCameraView } from './three/cameraController.js'
+import type { VxColorScheme, VxStyleSheetDefinition } from './styling/stylesheets.js'
 
 /** Root scene container. Import Vuetrex and place the scene in its default slot. */
 export interface VuetrexProps {
@@ -24,6 +25,10 @@ export interface VuetrexProps {
      * @default false
      */
     stopped?: boolean
+    /** Ordered style definitions for this scene. Overrides sheets inherited from a `vx-stylesheet` provider; changes apply reactively. */
+    sheets?: readonly VxStyleSheetDefinition[]
+    /** Color scheme for this scene. Overrides the scheme inherited from a `vx-stylesheet` provider; `system` follows the browser preference. */
+    scheme?: VxColorScheme
     /** Node name/ID, "scene" for automatic fitting, or { orbit } for an explicit initial pose. Applied before ready; reactive changes replace camera animation.
      * @default "scene"
      */

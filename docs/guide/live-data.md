@@ -30,6 +30,8 @@ eventSource.addEventListener('snapshot', event => {
 Vuetrex does not require a special store or stream format. WebSockets, server-sent events, Pinia, computed values, and
 plain refs all work because the scene starts as a Vue render tree.
 
+![A new service snapshot passes through a keyed Vue component into a measured scene; the degraded service changes color while retaining its identity.](/images/scene-from-state.svg)
+
 ## Give one service a visual vocabulary
 
 ```vue
@@ -104,6 +106,16 @@ parts of identity:
 | `:name="service.id"` | Lets cameras and connectors address the scene node |
 
 Use domain IDs for both. Array indexes make focus and animation jump to the wrong resource after insertion or sorting.
+
+Imagine the next snapshot inserts `checkout` before `orders`:
+
+| Snapshot | Services in array order | Node named `orders` |
+|---|---|---|
+| Before | `gateway`, `orders` | Second item, healthy |
+| After | `gateway`, `checkout`, `orders` | Third item, degraded |
+
+With `:key="service.id"`, Vue updates the existing `orders` component even though its array position changes. Its
+`:name="service.id"` still lets a camera or connector target `orders`. The new `checkout` node is the only new identity.
 
 ## Keep state transitions declarative
 

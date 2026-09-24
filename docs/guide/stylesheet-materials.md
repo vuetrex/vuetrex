@@ -32,7 +32,7 @@ Open **Source** for the complete example, with commented sections for controls, 
 </ClientOnly>
 
 The geometry graph is created once. Its `.material('circuits')` calls assign **procedural channel keys**.
-The surrounding `VxStyleSheet` supplies matching named materials. Explicit `:materials` bindings on `vx-geometry`
+The `Vuetrex` scene's sheets supply matching named materials. Explicit `:materials` bindings on `vx-geometry`
 can override or remap individual channels. Palette and finish changes update materials without recompiling geometry.
 
 | Surface | Material techniques |
@@ -127,18 +127,32 @@ const sheet = defineVxStyleSheet({
 ```
 
 ```vue
-<VxStyleSheet :sheets="[sheet]" scheme="dark">
-  <Vuetrex>
-    <vx-box material="trim" />
-    <vx-box :material="{ preset: 'trim', roughness: 0.4 }" />
-    <vx-geometry :graph="graph" :materials="{ rail: 'trim' }" />
-  </Vuetrex>
-</VxStyleSheet>
+<Vuetrex :sheets="[sheet]" scheme="dark">
+  <vx-box material="trim" />
+  <vx-box :material="{ preset: 'trim', roughness: 0.4 }" />
+  <vx-geometry :graph="graph" :materials="{ rail: 'trim' }" />
+</Vuetrex>
 ```
 
-Import `VxStyleSheet` as a Vue component. It provides styles to one or more descendant `Vuetrex` scenes without a DOM
-wrapper. The nearest provider supplies a scene's styles. `scheme` accepts `light` (default), `dark`, or `system`;
-`system` responds to the browser color preference. Each sheet's `common` layer is applied before its selected scheme;
+`sheets` and `scheme` update the scene reactively. `scheme` accepts `light` (default), `dark`, or `system`;
+`system` responds to the browser color preference. For several scenes sharing one theme, use the optional provider:
+
+```vue
+<script setup lang="ts">
+import { Vuetrex, VxStylesheet } from '@exceeder/vuetrex'
+</script>
+
+<template>
+  <vx-stylesheet :sheets="[sheet]" scheme="system">
+    <Vuetrex><vx-box material="trim" /></Vuetrex>
+    <Vuetrex><vx-box material="trim" /></Vuetrex>
+  </vx-stylesheet>
+</template>
+```
+
+This provider adds no DOM element. A scene's
+explicit `sheets` or `scheme` prop overrides the corresponding inherited value independently. The nearest provider
+supplies values for omitted props. Each sheet's `common` layer is applied before its selected scheme;
 later sheets win field by field. Removed definitions and fields are resolved afresh. Unknown names and inheritance
 cycles report errors rather than silently changing appearance.
 

@@ -199,7 +199,7 @@ Keys must be unique per scope. Host `scope` defaults to a generated identity; gi
 | `vx-port` | `name`, `position` + `normal`, or `face` + optional `at`; `override`, `disabled`, `direction` | Direct owner must have explicit ID; one base and one override per name |
 
 Presentation props are `appearance`, `route-strategy`, `clearance`, `elevation`, `stroke-color`, `stroke-width`,
-`stroke-opacity`, `marker-start`, and `marker-end`. `VxStyleSheet` definitions support a separate `connectors` registry
+`stroke-opacity`, `marker-start`, and `marker-end`. Stylesheet definitions support a separate `connectors` registry
 in each common/light/dark scheme. Backend defaults, named appearance, host props, then edge props or explicit graph
 fields determine the final values. `null`/`undefined` template props restore inheritance.
 
@@ -379,9 +379,10 @@ stage-specific defaults. The resolved value is intended for material realization
 
 `VxMaterialBinding` accepts an inline descriptor, a style name, or `{ preset: name, ...inlineOverrides }`.
 `defineVxStyleSheet()` freezes the structure of `common`/`light`/`dark` material definitions without freezing textures.
-`VxStyleSheet` takes `sheets` and `scheme` (`light`, `dark`, `system`). Styles support `extends`, `base`, and `hover`.
+`Vuetrex` takes reactive `sheets` and `scheme` (`light`, `dark`, `system`) props. The optional `VxStylesheet`
+component (`<vx-stylesheet>`) supplies both to descendant scenes. Styles support `extends`, `base`, and `hover`.
 Unknown names and inheritance cycles are errors. Later sheets override fields; undefined fields fall through.
-The nearest provider supplies scene styles. Named hover is used by fixed shapes and panels only.
+The nearest provider supplies omitted scene props; explicit scene props take precedence. Named hover is used by fixed shapes and panels only.
 
 `finishes.satinMetal()`, `polishedMetal()`, `matteCeramic()`, `glazedCeramic()`, and `tintedGlass()` return plain
 `VxMaterialProps` values and accept overrides. They allocate no GPU resources.

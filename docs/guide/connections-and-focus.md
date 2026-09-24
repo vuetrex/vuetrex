@@ -301,7 +301,7 @@ record fields. Removing a prop restores inherited values. Color and width change
 
 ```vue
 <script setup lang="ts">
-import { VxStyleSheet, defineVxStyleSheet } from '@exceeder/vuetrex'
+import { Vuetrex, defineVxStyleSheet } from '@exceeder/vuetrex'
 const styles = defineVxStyleSheet({
   common: { connectors: { primary: {
     routeStrategy: 'orthogonal', clearance: 0.3,
@@ -311,12 +311,10 @@ const styles = defineVxStyleSheet({
 })
 </script>
 <template>
-  <VxStyleSheet :sheets="[styles]" scheme="dark">
-    <Vuetrex>
-      <!-- endpoint nodes -->
-      <vx-connectors scope="links" :graph="dependencyGraph" appearance="primary" />
-    </Vuetrex>
-  </VxStyleSheet>
+  <Vuetrex :sheets="[styles]" scheme="dark">
+    <!-- endpoint nodes -->
+    <vx-connectors scope="links" :graph="dependencyGraph" appearance="primary" />
+  </Vuetrex>
 </template>
 ```
 

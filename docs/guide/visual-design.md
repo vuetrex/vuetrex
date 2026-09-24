@@ -11,6 +11,11 @@ location and scale; live state, relationships, and anomalies carry the story.
 These are design guidelines, not renderer constraints. Break them deliberately when the domain needs a different
 visual language.
 
+![Two versions of the same service scene: when everything glows, the alert is lost; quiet context makes one coral degraded service immediately visible.](/images/visual-hierarchy.svg)
+
+In the right-hand scene, neutral infrastructure sets the scale, blue-green services show normal operation, and a
+single coral service calls for attention. The palette is small enough that color has a predictable meaning.
+
 ## Layer by luminance
 
 Keep environmental geometry darker, softer, or less saturated than live data. Reserve the brightest values, emissive
@@ -37,6 +42,47 @@ Tints, shades, opacity, and emission strength can create depth without inventing
 colour is introduced, give it one stable meaning across the whole stage.
 
 Do not use the alert accent as general decoration. Its scarcity is what makes it effective.
+
+Here is that rule applied to a small Vue scene. Click the button to change one service's health; the floor and normal
+service stay quiet.
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { Vuetrex } from '@exceeder/vuetrex'
+
+const services = ref([
+  { id: 'gateway', status: 'healthy' },
+  { id: 'orders', status: 'healthy' },
+])
+
+function toggleOrders() {
+  const orders = services.value.find(service => service.id === 'orders')!
+  orders.status = orders.status === 'healthy' ? 'degraded' : 'healthy'
+}
+</script>
+
+<template>
+  <button @click="toggleOrders">Toggle orders health</button>
+  <Vuetrex height="420px">
+    <vx-floor finish="matte" :color="0x263f49" />
+    <vx-row :gap="0.35">
+      <vx-box
+        v-for="service in services"
+        :key="service.id"
+        :id="service.id" :name="service.id"
+        :text="service.id"
+        :material="{
+          color: service.status === 'degraded' ? 0xd8765d : 0x317f91,
+          roughness: 0.55,
+        }"
+      />
+    </vx-row>
+  </Vuetrex>
+</template>
+```
+
+Keep a text label or another shape cue for degraded state too; color alone should not carry the status.
 
 ## Establish spatial hierarchy
 

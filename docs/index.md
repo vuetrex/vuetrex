@@ -12,6 +12,11 @@ camera framing, and a second scene lifecycle.
 
 Vuetrex takes a narrower approach: **describe the scene with Vue components and let live Vue state update it**.
 
+![A service status update flows through a keyed Vue component into the measured 3D scene. The service keeps its identity while its appearance changes.](/images/scene-from-state.svg)
+
+The service named `orders` can change status without becoming a different object. Its component keeps the same key;
+Vuetrex updates its material while layout, focus, and connections continue to refer to the same ID.
+
 <script setup>
 import Hello from './examples/src/Visuals.vue'
 </script>

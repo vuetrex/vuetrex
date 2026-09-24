@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="300" viewBox="0 0 880 300" role="img" aria-labelledby="title desc">
+  <title id="title">A miniature city block made of simple boxes</title>
+  <desc id="desc">Isometric illustration of six blue and teal buildings around a loop road, with three coral cars. Building heights and cars change in the live example.</desc>
+  <rect width="880" height="300" rx="18" fill="#edf5f6"/>
+  <g font-family="Inter, ui-sans-serif, system-ui, sans-serif" fill="#193b47"><text x="27" y="36" font-size="13" font-weight="700" letter-spacing="2">SCENE NOTEBOOK / 01</text><text x="29" y="76" font-size="30" font-weight="700">A block in motion</text><text x="30" y="109" font-size="15" fill="#52727c">Six buildings · one road · ordinary Vue state</text><text x="30" y="264" font-size="14" fill="#52727c">Tune the skyline and traffic in the live example.</text></g>
+  <path d="M370 212 583 114 839 191 620 285Z" fill="#b7cdd0"/><path d="M410 208 590 129 798 194 619 268Z" fill="#506870"/><path d="M447 207 594 143 763 196 617 255Z" fill="#dbe7e5"/><path d="M483 204 599 157 726 198 615 241Z" fill="#6a858b"/><path d="M503 203 601 165 705 199 613 233Z" fill="#dbe7e5"/>
+  <g stroke="#173f4d" stroke-width="1.5">
+    <path d="M462 146 492 134 521 144 491 157Z" fill="#5ca9ad"/><path d="M462 146v53l29 10v-52Z" fill="#307887"/><path d="M491 157v52l30-13v-52Z" fill="#215d70"/>
+    <path d="M533 133 562 121 591 130 562 143Z" fill="#6ab7b5"/><path d="M533 133v54l29 11v-55Z" fill="#347d89"/><path d="M562 143v55l29-12v-56Z" fill="#246577"/>
+    <path d="M612 104 644 91 676 101 644 115Z" fill="#77c2bd"/><path d="M612 104v80l32 12v-81Z" fill="#347f89"/><path d="M644 115v81l32-14v-81Z" fill="#236577"/>
+    <path d="M693 145 719 134 746 143 720 155Z" fill="#5ca9ad"/><path d="M693 145v53l27 10v-53Z" fill="#307887"/><path d="M720 155v53l26-12v-53Z" fill="#215d70"/>
+    <path d="M541 188 566 178 591 186 566 197Z" fill="#6ab7b5"/><path d="M541 188v26l25 9v-26Z" fill="#347d89"/><path d="M566 197v26l25-10v-27Z" fill="#246577"/>
+    <path d="M639 183 663 173 688 181 663 192Z" fill="#77c2bd"/><path d="M639 183v36l24 9v-36Z" fill="#347f89"/><path d="M663 192v36l25-11v-36Z" fill="#236577"/>
+  </g>
+  <g fill="#dd765d" stroke="#9b493a" stroke-width="1.5"><path d="M572 240 590 232 607 237 589 245Z"/><path d="M708 223 725 216 741 221 725 229Z"/><path d="M783 188 798 182 814 187 798 194Z"/></g>
+</svg>

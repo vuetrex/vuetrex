@@ -42,11 +42,13 @@ function onReady(stage: VxStage) {
 | `height` | `string` | `"50vh"` | Wrapper CSS height, including units (for example "520px" or "70vh"). |
 | `width` | `string` | `"100%"` | Wrapper CSS width, including units. The wrapper has a 4096px maximum width. |
 | `stopped` | `boolean` | `false` | Pause rendering and stage animations. Changes take effect reactively. |
+| `sheets` | `readonly VxStyleSheetDefinition[]` | `—` | Ordered style definitions for this scene. Overrides sheets inherited from a `vx-stylesheet` provider; changes apply reactively. |
+| `scheme` | `VxColorScheme` | `—` | Color scheme for this scene. Overrides the scheme inherited from a `vx-stylesheet` provider; `system` follows the browser preference. |
 | `camera` | `VxCameraView` | `"scene"` | Node name/ID, "scene" for automatic fitting, or { orbit } for an explicit initial pose. Applied before ready; reactive changes replace camera animation. |
 | `items` | `unknown[]` | `[]` | Currently unused by the renderer. Supply scene content through the default slot. |
 | `elements` | `ElementRegistry` | `{}` | Custom host constructors registered for this scene. Read once at mount. |
 
-CSS dimensions and positioning, `camera`, and `stopped` respond to changes. `settings` and `elements` are
+CSS dimensions and positioning, `camera`, `stopped`, `sheets`, and `scheme` respond to changes. `settings` and `elements` are
 read at mount. To replace initial configuration, change the component's Vue `key` to remount it.
 Standard Vue `class` and `style` attributes fall through to the wrapper.
 

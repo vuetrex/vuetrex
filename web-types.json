@@ -13,7 +13,7 @@
           "description": "Root scene container. Import Vuetrex and place the scene in its default slot.",
           "source": {
             "file": "dist_types/src/lib-components/root-api.d.ts",
-            "offset": 271
+            "offset": 357
           },
           "attributes": [
             {
@@ -22,7 +22,7 @@
               "default": "{}",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 418
+                "offset": 504
               },
               "required": false,
               "value": {
@@ -42,7 +42,7 @@
               "default": "\"static\"",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 515
+                "offset": 601
               },
               "required": false,
               "value": {
@@ -56,7 +56,7 @@
               "default": "\"50vh\"",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 645
+                "offset": 731
               },
               "required": false,
               "value": {
@@ -70,7 +70,7 @@
               "default": "\"100%\"",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 780
+                "offset": 866
               },
               "required": false,
               "value": {
@@ -84,7 +84,7 @@
               "default": "false",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 907
+                "offset": 993
               },
               "required": false,
               "value": {
@@ -93,12 +93,41 @@
               }
             },
             {
+              "name": "sheets",
+              "description": "Ordered style definitions for this scene. Overrides sheets inherited from a `vx-stylesheet` provider; changes apply reactively.",
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 1154
+              },
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "readonly VxStyleSheetDefinition[]"
+              }
+            },
+            {
+              "name": "scheme",
+              "description": "Color scheme for this scene. Overrides the scheme inherited from a `vx-stylesheet` provider; `system` follows the browser preference.",
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 1346
+              },
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxColorScheme"
+                }
+              }
+            },
+            {
               "name": "camera",
               "description": "Node name/ID, \"scene\" for automatic fitting, or { orbit } for an explicit initial pose. Applied before ready; reactive changes replace camera animation.",
               "default": "\"scene\"",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1122
+                "offset": 1566
               },
               "required": false,
               "value": {
@@ -115,7 +144,7 @@
               "default": "[]",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1264
+                "offset": 1708
               },
               "required": false,
               "value": {
@@ -129,7 +158,7 @@
               "default": "{}",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1393
+                "offset": 1837
               },
               "required": false,
               "value": {
@@ -147,7 +176,7 @@
               "description": "Emitted once after stage mounting, before the inner scene tree mounts on the next Vue tick.\nThe payload provides the public stage controls; content bounds are not ready yet.",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1702
+                "offset": 2146
               },
               "arguments": [
                 {

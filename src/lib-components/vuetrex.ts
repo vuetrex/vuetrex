@@ -1,8 +1,8 @@
 import type { VuetrexProps, VuetrexEvents, VxSettings } from './root-api.js';
 import type { ComponentObjectPropsOptions } from 'vue';
-import { materialStylesKey, connectorAppearancesKey } from './styling/stylesheets.js';
+import { mergeConnectorAppearances, mergeStyleSheets, styleSheetContextKey, useResolvedColorScheme, type VxColorScheme, type VxStyleSheetDefinition } from './styling/stylesheets.js';
 import { createRendererForStage } from '@/lib-components/renderer.js';
-import { defineComponent, Fragment, getCurrentInstance, nextTick, h, onMounted, onUnmounted, ref, PropType, watch, inject } from 'vue';
+import { computed, defineComponent, Fragment, getCurrentInstance, nextTick, h, onMounted, onUnmounted, ref, PropType, watch, inject } from 'vue';
 import { Root } from '@/lib-components/nodes/Root.js';
 import { VuetrexStage, VxStage as _VxStage, VxMouseEvent as _VxMouseEvent } from '@/lib-components/three/stage.js';
 import { ElementRegistry } from '@/lib-components/nodes/types.js';
@@ -19,6 +19,8 @@ export default defineComponent({
         height: { type: String, default: "50vh" },
         width: { type: String, default: "100%" },
         stopped: { type: Boolean, default: false },
+        sheets: { type: Array as PropType<readonly VxStyleSheetDefinition[]>, default: undefined },
+        scheme: { type: String as PropType<VxColorScheme>, default: undefined },
         camera: {type: [String, Object] as PropType<VuetrexProps['camera']>, default: "scene"},
         items: { type: Array, default: () => [] },
         elements: { type: Object as PropType<ElementRegistry>, default: () => ({}) }
@@ -28,8 +30,15 @@ export default defineComponent({
         ready: (..._args: VuetrexEvents['ready']) => true,
     },
     setup(props, {slots, emit}) {
-        const connectorAppearances = inject(connectorAppearancesKey, undefined);
-        const materialStyles = inject(materialStylesKey, undefined);
+        const inheritedStyles = inject(styleSheetContextKey, undefined);
+        const sheets = computed(() => props.sheets ?? inheritedStyles?.sheets.value ?? []);
+        const sceneScheme = computed(() => props.scheme ?? 'light');
+        const sceneResolvedScheme = useResolvedColorScheme(sceneScheme);
+        const resolvedScheme = computed(() => props.scheme === undefined
+            ? inheritedStyles?.resolvedScheme.value ?? 'light'
+            : sceneResolvedScheme.value);
+        const connectorAppearances = computed(() => mergeConnectorAppearances(sheets.value, resolvedScheme.value));
+        const materialStyles = computed(() => mergeStyleSheets(sheets.value, resolvedScheme.value));
         const elRef = ref(null);
         const maxWidth = ref(4096);
         const maxHeight = ref(4096);

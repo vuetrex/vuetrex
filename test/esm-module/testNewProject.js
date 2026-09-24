@@ -61,9 +61,9 @@ try {
     ].join('\n'))
 
     await writeFile(join(projectRoot, 'consumer.ts'), [
-        "import { Vuetrex, VxStyleSheet, defineVxStyleSheet, finishes, useCanvasTexture, type VuetrexProps, type VuetrexEvents, type VxSettings, type VxMaterialBinding, type VxEnvironmentProps, type VxCameraProps, type VxFloorProps, type ConnectorHandle, type ConnectorPortDeclarationRecord, type ConnectorHostProps } from '@exceeder/vuetrex'",
+        "import { Vuetrex, VxStylesheet, VxStyleSheet, defineVxStyleSheet, finishes, useCanvasTexture, type VuetrexProps, type VuetrexEvents, type VxSettings, type VxMaterialBinding, type VxEnvironmentProps, type VxCameraProps, type VxFloorProps, type ConnectorHandle, type ConnectorPortDeclarationRecord, type ConnectorHostProps } from '@exceeder/vuetrex'",
         "const settings = { fog: { near: 20 }, diagnostics: { footprints: true }, floorFadeStart: 20 } satisfies VxSettings",
-        "const root: VuetrexProps = { settings, height: '520px', stopped: false }",
+        "const root: VuetrexProps = { settings, height: '520px', stopped: false, scheme: 'system' }",
         "type Props = InstanceType<typeof Vuetrex>['$props']",
         "const liveRoot: Props = { ...root, camera: { orbit: { target: [0, 0, 0], height: 9, radius: 24, azimuth: -30 } }, onReady: stage => { stage.camera.timeline({ repeat: -1, yoyo: true }).to({ azimuth: 30 }, { duration: 60, ease: 'none' }) } }",
         "type Assert<T extends true> = T",
@@ -84,7 +84,7 @@ try {
         "const camera: VxCameraProps = { direction: [8, 6, 11], fit: 'content' }",
         "const floor: VxFloorProps = { finish: 'mirror', reflection: 0.6, fadeStart: 20, fadeEnd: 50 }",
         "const heightTexture = () => useCanvasTexture(() => {}, { purpose: 'bump' })",
-        "void [heightTexture, sheet, binding, environment, camera, floor, VxStyleSheet, useCanvasTexture]",
+        "void [heightTexture, sheet, binding, environment, camera, floor, VxStylesheet, VxStyleSheet, useCanvasTexture]",
     ].join('\n'))
     await writeFile(join(projectRoot, 'tsconfig.json'), JSON.stringify({ compilerOptions: {
         target: 'ES2022', module: 'NodeNext', moduleResolution: 'NodeNext', strict: true, noEmit: true,
@@ -93,8 +93,8 @@ try {
     execFileSync(process.execPath, [join(repositoryRoot, 'node_modules', 'typescript', 'bin', 'tsc'), '-p', join(projectRoot, 'tsconfig.json')], { stdio: 'inherit' })
 
     // Exercise actual template inference as well as TypeScript object assignments.
-    const template = (attributes) => `<script setup lang="ts">\nimport { Vuetrex } from '@exceeder/vuetrex'\n</script>\n<template><Vuetrex ${attributes} /></template>`
-    await writeFile(join(projectRoot, 'Root.vue'), template(':camera="{ orbit: { target: [0, 0, 0], height: 9, radius: 24, azimuth: -30 } }" :settings="{ fog: { near: 20 } }" :stopped="false" @ready="stage => stage.camera.timeline({ yoyo: true }).to({ azimuth: 30 }, { duration: 60 })"'))
+    const template = (attributes) => `<script setup lang="ts">\nimport { Vuetrex, VxStylesheet, defineVxStyleSheet } from '@exceeder/vuetrex'\nconst sheet = defineVxStyleSheet({ common: { materials: { accent: { base: { color: 'red' } } } } })\n</script>\n<template><vx-stylesheet :sheets="[sheet]"><Vuetrex ${attributes} /></vx-stylesheet></template>`
+    await writeFile(join(projectRoot, 'Root.vue'), template(':camera="{ orbit: { target: [0, 0, 0], height: 9, radius: 24, azimuth: -30 } }" :settings="{ fog: { near: 20 } }" :sheets="[sheet]" scheme="system" :stopped="false" @ready="stage => stage.camera.timeline({ yoyo: true }).to({ azimuth: 30 }, { duration: 60 })"'))
     await writeFile(join(projectRoot, 'vue-tsconfig.json'), JSON.stringify({
         extends: './tsconfig.json', include: ['Root.vue'], vueCompilerOptions: { strictTemplates: true },
     }))

@@ -224,7 +224,7 @@ export type { ConnectorGraphHostEvents } from '@/lib-components/nodes/ConnectorG
 export { StageDeclaration } from '@/lib-components/nodes/StageDeclaration.js';
 export type { VuetrexStage } from '@/lib-components/three/stage.js';
 
-export { VxStyleSheet, defineVxStyleSheet } from './styling/stylesheets.js';
+export { VxStylesheet, VxStyleSheet, defineVxStyleSheet } from './styling/stylesheets.js';
 export type { VxMaterialBinding, VxMaterialStyle, VxStyleSheetDefinition, VxStyleScheme, VxColorScheme } from './styling/stylesheets.js';
 export { finishes } from './styling/finishes.js';
 export { useCanvasTexture } from './styling/textures.js';

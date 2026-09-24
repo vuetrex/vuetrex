@@ -17,7 +17,7 @@ describe('root component editor contract', () => {
         expect(root.attributes.map((attr: { name: string }) => attr.name).sort()).toEqual(Object.keys(props).sort())
         for (const attr of root.attributes) {
             const value = props[attr.name].default
-            expect(JSON.parse(attr.default)).toEqual(typeof value === 'function' ? value() : value)
+            expect(attr.default === undefined ? undefined : JSON.parse(attr.default)).toEqual(typeof value === 'function' ? value() : value)
             const contract = readFileSync(attr.source.file.replace(/^dist_types\//, ''), 'utf8')
             expect(contract.slice(attr.source.offset)).toMatch(new RegExp(`^${attr.name}\\?`))
             expect(attr.description).not.toBe('')

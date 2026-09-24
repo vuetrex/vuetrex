@@ -1,8 +1,7 @@
 <template>
   <h1>Workshop 1</h1>
   <section>
-    <VxStyleSheet :sheets="[styles]">
-    <vuetrex height="79vh" width="100%" :settings="settings" :camera="{ orbit }" @ready="initStage">
+    <vuetrex height="79vh" width="100%" :settings="settings" :camera="{ orbit }" :sheets="[styles]" @ready="initStage">
       <vx-layer elevation="0.1">
         <vx-row>
           <VNode :body="text" header="Camera" :footer="footer1" id="node1">
@@ -25,13 +24,12 @@
         <vx-edge key="c-n2" from="c1" to="node2" to-port="input" />
       </vx-connectors>
     </vuetrex>
-    </VxStyleSheet>
   </section>
 </template>
 
 <script setup lang="ts">
 import {Vuetrex, type VxSettings, type VxStage, type VxCameraOrbit} from '@/lib-components'
-import {particles, VxStyleSheet, defineVxStyleSheet} from "@/lib-components";
+import {particles, defineVxStyleSheet} from "@/lib-components";
 import VColumns from './things/VColumns.vue'
 import VNode from './things/VNode.vue'
 import {ref, reactive, computed} from 'vue';

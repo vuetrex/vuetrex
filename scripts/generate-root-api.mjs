@@ -37,7 +37,7 @@ const webTypes = {
             ...prop,
             type: undefined,
             required: false,
-            value: { kind: 'expression', type: ['VxSettings', 'ElementRegistry', 'VxCameraView'].includes(prop.type)
+            value: { kind: 'expression', type: ['VxSettings', 'ElementRegistry', 'VxCameraView', 'VxColorScheme'].includes(prop.type)
                 ? { module: pkg.name, name: prop.type } : prop.type },
             ...(prop.name === 'settings' ? { 'description-sections': { 'All settings': table(settings) } } : {}),
         })),
@@ -107,7 +107,7 @@ function onReady(stage: VxStage) {
 
 ${table(props)}
 
-CSS dimensions and positioning, \`camera\`, and \`stopped\` respond to changes. \`settings\` and \`elements\` are
+CSS dimensions and positioning, \`camera\`, \`stopped\`, \`sheets\`, and \`scheme\` respond to changes. \`settings\` and \`elements\` are
 read at mount. To replace initial configuration, change the component's Vue \`key\` to remount it.
 Standard Vue \`class\` and \`style\` attributes fall through to the wrapper.
 

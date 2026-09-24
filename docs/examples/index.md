@@ -13,6 +13,8 @@ follow the idea from data to geometry. These are intentionally small experiments
 
 ## 01 · A block in motion
 
+![Isometric sketch of six box-built buildings beside a loop road with toy cars.](/images/city-block.svg)
+
 Six buildings. One looping street. A handful of toy cars.
 
 Change the skyline, fill the road, or pause everything to inspect the scene. The model uses boxes throughout; its

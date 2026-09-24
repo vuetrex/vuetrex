@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="300" viewBox="0 0 880 300" role="img" aria-labelledby="title desc">
+  <title id="title">Four Vuetrex layout relationships</title>
+  <desc id="desc">Row places objects along X, layer places them along Z, stack places them upward on Y, and ring arranges them around an XZ circle.</desc>
+  <defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#d9e7e9" stroke-width="1"/></pattern><marker id="axis" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0 0 6 3 0 6Z" fill="#668891"/></marker></defs>
+  <rect width="880" height="300" rx="18" fill="#edf5f6"/>
+  <g font-family="Inter, ui-sans-serif, system-ui, sans-serif" fill="#193b47">
+    <text x="26" y="32" font-size="13" font-weight="700" letter-spacing="2">CHOOSE THE RELATIONSHIP</text>
+    <g fill="#fff" stroke="#ccdee1"><rect x="23" y="53" width="199" height="215" rx="13"/><rect x="234" y="53" width="199" height="215" rx="13"/><rect x="445" y="53" width="199" height="215" rx="13"/><rect x="656" y="53" width="201" height="215" rx="13"/></g>
+    <g font-size="17" font-weight="700"><text x="42" y="83">vx-row</text><text x="253" y="83">vx-layer</text><text x="464" y="83">vx-stack</text><text x="675" y="83">vx-ring</text></g>
+    <g font-size="12" fill="#607983"><text x="42" y="249">across X</text><text x="253" y="249">into depth Z</text><text x="464" y="249">upward Y</text><text x="675" y="249">around the XZ plane</text></g>
+    <g fill="url(#grid)"><rect x="40" y="102" width="164" height="128" rx="8"/><rect x="251" y="102" width="164" height="128" rx="8"/><rect x="462" y="102" width="164" height="128" rx="8"/><rect x="673" y="102" width="166" height="128" rx="8"/></g>
+    <g stroke="#7aa0a7" stroke-width="2" fill="none" marker-end="url(#axis)"><path d="M58 213h132"/><path d="M260 205l133-86"/><path d="M477 215V115"/></g>
+    <g fill="#276f83" stroke="#184f61" stroke-width="1.5"><rect x="53" y="145" width="34" height="34" rx="6"/><rect x="102" y="145" width="34" height="34" rx="6"/><rect x="151" y="145" width="34" height="34" rx="6"/><rect x="270" y="178" width="35" height="25" rx="5"/><rect x="310" y="150" width="35" height="25" rx="5"/><rect x="350" y="122" width="35" height="25" rx="5"/><rect x="531" y="181" width="49" height="28" rx="5"/><rect x="531" y="152" width="49" height="28" rx="5"/><rect x="531" y="123" width="49" height="28" rx="5"/></g>
+    <circle cx="756" cy="165" r="51" fill="none" stroke="#91b5b9" stroke-width="2" stroke-dasharray="4 5"/>
+    <g fill="#276f83" stroke="#184f61" stroke-width="1.5"><circle cx="756" cy="114" r="13"/><circle cx="807" cy="165" r="13"/><circle cx="756" cy="216" r="13"/><circle cx="705" cy="165" r="13"/></g>
+    <g font-size="11" font-weight="700" fill="#668891"><text x="191" y="218">X</text><text x="392" y="119">Z</text><text x="483" y="115">Y</text></g>
+  </g>
+</svg>

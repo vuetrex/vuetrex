@@ -1,12 +1,13 @@
 import { defineComponent, h, nextTick, onBeforeUnmount, onUnmounted, ref } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Base } from '@/lib-components/nodes/Base.js'
+import { VxStylesheet, type VxStyleSheetDefinition } from '@/lib-components/styling/stylesheets.js'
 import type { ClassComponent } from '@/lib-components/nodes/types.js'
 
 const stageMock = vi.hoisted(() => ({
     events: [] as string[],
-    instances: [] as Array<{ destroy: ReturnType<typeof vi.fn> }>,
+    instances: [] as Array<{ destroy: ReturnType<typeof vi.fn>; materialStyles?: { value: Record<string, unknown> }; connectorAppearances?: { value: Record<string, unknown> } }>,
 }))
 
 vi.mock('@/lib-components/three/stage.js', () => ({
@@ -33,6 +34,7 @@ class TestElement extends Base {
 (TestElement.prototype as any).__v_skip = true
 
 describe('Vuetrex custom-renderer lifecycle', () => {
+    afterEach(() => vi.unstubAllGlobals())
     beforeEach(() => {
         stageMock.events.length = 0
         stageMock.instances.length = 0
@@ -78,5 +80,48 @@ describe('Vuetrex custom-renderer lifecycle', () => {
         store.value++
         await nextTick()
         expect(renderCount).toBe(1)
+    })
+
+    it('resolves reactive scene props over independently inherited stylesheet values', async () => {
+        let onSchemeChange: (() => void) | undefined
+        const media = { matches: true, addEventListener: (_: string, listener: () => void) => { onSchemeChange = listener },
+            removeEventListener: vi.fn() }
+        vi.stubGlobal('matchMedia', vi.fn(() => media))
+        const parentSheet: VxStyleSheetDefinition = { common: { materials: { shared: { base: { color: 'red' } } },
+            connectors: { shared: { strokeColor: '#ff0000' } } },
+            dark: { materials: { dark: { base: { color: 'black' } } } } }
+        const localSheet: VxStyleSheetDefinition = { common: { materials: { local: { base: { color: 'blue' } } },
+            connectors: { local: { strokeColor: '#0000ff' } } },
+            dark: { materials: { localDark: { base: { color: 'black' } } } } }
+        const sceneSheets = ref<readonly VxStyleSheetDefinition[] | undefined>([localSheet])
+        const sceneScheme = ref<'light' | 'dark' | undefined>(undefined)
+        const Parent = defineComponent({
+            setup() { return () => h(VxStylesheet, { sheets: [parentSheet], scheme: 'dark' }, () =>
+                h(Vuetrex, { stopped: true, sheets: sceneSheets.value, scheme: sceneScheme.value }, () => [])) },
+        })
+        const wrapper = mount(Parent)
+        await nextTick()
+        const stage = stageMock.instances[0]
+        expect(Object.keys(stage.materialStyles!.value).sort()).toEqual(['local', 'localDark'])
+        expect(Object.keys(stage.connectorAppearances!.value)).toEqual(['local'])
+
+        sceneSheets.value = undefined
+        sceneScheme.value = 'light'
+        await nextTick()
+        expect(Object.keys(stage.materialStyles!.value)).toEqual(['shared'])
+        expect(Object.keys(stage.connectorAppearances!.value)).toEqual(['shared'])
+        sceneSheets.value = [localSheet]
+        sceneScheme.value = undefined
+        await nextTick()
+        expect(Object.keys(stage.materialStyles!.value).sort()).toEqual(['local', 'localDark'])
+        sceneScheme.value = 'system'
+        await nextTick()
+        expect(Object.keys(stage.materialStyles!.value).sort()).toEqual(['local', 'localDark'])
+        media.matches = false
+        onSchemeChange?.()
+        await nextTick()
+        expect(Object.keys(stage.materialStyles!.value)).toEqual(['local'])
+        wrapper.unmount()
+        expect(media.removeEventListener).toHaveBeenCalledOnce()
     })
 })

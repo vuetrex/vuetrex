@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { DoubleSide } from 'three'
-import { Vuetrex, VxStyleSheet, defineVxStyleSheet, defineGeometry, geo, finishes, useCanvasTexture } from '@exceeder/vuetrex'
+import { Vuetrex, defineVxStyleSheet, defineGeometry, geo, finishes, useCanvasTexture } from '@exceeder/vuetrex'
 
 // — Controls and palettes —
 const palettes = {
@@ -168,14 +168,12 @@ const settings = {
 <template>
   <div class="foundry">
     <div class="heading"><div><span class="eyebrow">MATERIAL LAB / 01</span><strong>Precision foundry</strong></div><span class="badge">10 material channels</span></div>
-    <VxStyleSheet :sheets="[sheet]">
-      <Vuetrex height="460px" :settings="settings">
-        <vx-environment preset="studio" :enabled="studioReflections" :intensity="0.25" />
-        <vx-camera :direction="[8, 6, 11]" fit="content" />
-        <vx-floor finish="mirror" :color="0x646b70" :reflection="0.4" />
-        <vx-geometry :graph="graph" anchor="origin" />
-      </Vuetrex>
-    </VxStyleSheet>
+    <Vuetrex height="460px" :sheets="[sheet]" :settings="settings">
+      <vx-environment preset="studio" :enabled="studioReflections" :intensity="0.25" />
+      <vx-camera :direction="[8, 6, 11]" fit="content" />
+      <vx-floor finish="mirror" :color="0x646b70" :reflection="0.4" />
+      <vx-geometry :graph="graph" anchor="origin" />
+    </Vuetrex>
     <div class="controls">
       <label>Palette<select v-model="palette"><option v-for="(value, key) in palettes" :key="key" :value="key">{{ value.name }}</option></select></label>
       <label>Surface relief <output>{{ surfaceRelief.toFixed(2) }}</output><input v-model.number="surfaceRelief" aria-label="Platform surface relief" type="range" min="0" max="1" step="0.05" /></label>

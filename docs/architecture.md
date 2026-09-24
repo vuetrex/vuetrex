@@ -201,7 +201,7 @@ Connector output is tagged for owner-level picking without creating one semantic
 - Instance and procedural base/channel materials use the same controller with immutable construction defaults.
   Channel program changes are compared before application; no live-material copy erases the previous shader state.
   Per-record color multiplication and keyed batches remain independent of material updates.
-- `VxStyleSheet` provides a computed named-material registry to descendant scenes. Styles merge common/scheme layers,
+- `Vuetrex` resolves reactive scene sheets and schemes; optional `VxStylesheet` provides shared values to descendant scenes. Styles merge common/scheme layers,
   resolve inheritance before inline values, and supply hover to fixed shapes/panels. Geometry channels can use names
   directly or explicit local mappings. Lookup is separate from the pure value resolver; there is no material cache.
 - `useCanvasTexture` creates one component-owned texture on mount, redraws in place from reactive paint dependencies,

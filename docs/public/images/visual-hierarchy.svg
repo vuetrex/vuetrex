@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="330" viewBox="0 0 880 330" role="img" aria-labelledby="title desc">
+  <title id="title">Visual hierarchy makes the alert easy to find</title>
+  <desc id="desc">Two versions of the same service diagram. On the left every service, route and label glows brightly. On the right quiet blue-gray context and one coral degraded service make the alert stand out.</desc>
+  <defs><filter id="glow"><feGaussianBlur stdDeviation="7"/></filter></defs>
+  <rect width="880" height="330" rx="18" fill="#edf5f6"/>
+  <g font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+    <text x="26" y="33" fill="#193b47" font-size="13" font-weight="700" letter-spacing="2">LET THE DATA SET THE BRIGHTNESS</text>
+    <text x="32" y="68" fill="#193b47" font-size="17" font-weight="700">Everything demands attention</text>
+    <text x="469" y="68" fill="#193b47" font-size="17" font-weight="700">One signal leads the eye</text>
+    <rect x="24" y="83" width="412" height="204" rx="13" fill="#173b47"/><rect x="448" y="83" width="408" height="204" rx="13" fill="#173b47"/>
+    <g stroke="#62dae7" stroke-width="12" opacity=".65" filter="url(#glow)"><path d="M90 170H204l72-34h100M205 170l69 53h100"/></g>
+    <g stroke="#69dbe8" stroke-width="4" fill="none"><path d="M90 170H204l72-34h100M205 170l69 53h100"/></g>
+    <g fill="#41cce2"><rect x="63" y="145" width="59" height="52" rx="7"/><rect x="176" y="145" width="59" height="52" rx="7"/><rect x="272" y="110" width="59" height="52" rx="7"/><rect x="340" y="145" width="59" height="52" rx="7"/><rect x="272" y="197" width="59" height="52" rx="7"/></g>
+    <g stroke="#648b94" stroke-width="3" fill="none"><path d="M516 170H628l69-34h100M628 170l69 53h100"/></g>
+    <g fill="#2e6673"><rect x="489" y="145" width="58" height="52" rx="7"/><rect x="599" y="145" width="58" height="52" rx="7"/><rect x="689" y="110" width="58" height="52" rx="7"/><rect x="763" y="145" width="58" height="52" rx="7"/></g>
+    <rect x="689" y="197" width="58" height="52" rx="7" fill="#e78970"/>
+    <circle cx="718" cy="223" r="39" fill="#e78970" opacity=".34" filter="url(#glow)"/>
+    <text x="690" y="230" fill="#fff" font-size="12" font-weight="700">ALERT</text>
+    <g fill="#d5f3f3" font-size="10" font-weight="700"><text x="67" y="177">GATE</text><text x="179" y="177">API</text><text x="279" y="142">CACHE</text><text x="345" y="177">DB</text><text x="276" y="230">QUEUE</text></g>
+    <text x="33" y="312" fill="#41616b" font-size="13">Color and glow carry meaning when normal infrastructure stays quiet.</text>
+  </g>
+</svg>

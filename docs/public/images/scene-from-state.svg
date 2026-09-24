@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="310" viewBox="0 0 880 310" role="img" aria-labelledby="title desc">
+  <title id="title">One state change flows from Vue data into a Vuetrex scene</title>
+  <desc id="desc">A service record changes from healthy to degraded. Its stable ID passes through a keyed ServiceNode component into a measured 3D layout, where only the corresponding service turns coral.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#f3faf9"/><stop offset="1" stop-color="#e5f0f3"/></linearGradient>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 8 4 0 8Z" fill="#4e8792"/></marker>
+  </defs>
+  <rect width="880" height="310" rx="18" fill="url(#bg)"/>
+  <g font-family="Inter, ui-sans-serif, system-ui, sans-serif" fill="#193b47">
+    <text x="27" y="33" font-size="13" font-weight="700" letter-spacing="2">ONE CHANGE, ONE SCENE</text>
+    <text x="31" y="73" font-size="18" font-weight="700">Vue state</text>
+    <text x="320" y="73" font-size="18" font-weight="700">Keyed component</text>
+    <text x="634" y="73" font-size="18" font-weight="700">Measured scene</text>
+    <rect x="26" y="91" width="235" height="156" rx="13" fill="#fff" stroke="#c7dce0"/>
+    <text x="45" y="121" font-size="14" font-family="ui-monospace, SFMono-Regular, monospace" fill="#41616b">id: "orders"</text>
+    <text x="45" y="151" font-size="14" font-family="ui-monospace, SFMono-Regular, monospace" fill="#41616b">status:</text>
+    <rect x="109" y="133" width="130" height="27" rx="7" fill="#fdeae5"/>
+    <text x="119" y="151" font-size="14" font-weight="700" fill="#a34c3c">"degraded"</text>
+    <text x="45" y="224" font-size="13" fill="#607983">New snapshot arrives</text>
+    <path d="M270 165h37" stroke="#4e8792" stroke-width="2.5" marker-end="url(#arrow)"/>
+    <rect x="320" y="91" width="226" height="156" rx="13" fill="#fff" stroke="#c7dce0"/>
+    <rect x="337" y="110" width="192" height="48" rx="9" fill="#e9f3f4"/>
+    <text x="352" y="139" font-size="15" font-weight="700">&lt;ServiceNode /&gt;</text>
+    <text x="339" y="192" font-size="13" font-family="ui-monospace, SFMono-Regular, monospace" fill="#41616b">:key="service.id"</text>
+    <text x="339" y="219" font-size="13" fill="#607983">Same ID, updated props</text>
+    <path d="M555 165h51" stroke="#4e8792" stroke-width="2.5" marker-end="url(#arrow)"/>
+    <rect x="619" y="91" width="235" height="156" rx="13" fill="#173b47"/>
+    <path d="M641 212h191M641 213l44 18m147-18-42 18" stroke="#54727b" stroke-width="1.5"/>
+    <path d="M655 168l42-20 42 20-42 21Z" fill="#2b8092"/><path d="M655 168v25l42 22v-26Zm42 21v26l42-22v-25Z" fill="#20657a"/>
+    <path d="M739 150l36-18 36 18-36 18Z" fill="#e7886e"/><path d="M739 150v28l36 18v-28Zm36 18v28l36-18v-28Z" fill="#be5b49"/>
+    <text x="647" y="120" font-size="13" fill="#c6e3e7">gateway</text>
+    <text x="760" y="120" font-size="13" fill="#ffd3c6">orders</text>
+    <text x="28" y="283" font-size="13" fill="#41616b">Data changes color; stable identity keeps focus, links, and layout attached to the right service.</text>
+  </g>
+</svg>
