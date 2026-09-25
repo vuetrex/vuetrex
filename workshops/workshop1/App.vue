@@ -1,5 +1,6 @@
 <template>
   <h1>Workshop 1</h1>
+  <a href="/">back</a>
   <section>
     <vuetrex height="79vh" width="100%" :settings="settings" :camera="{ orbit }" :sheets="[styles]" @ready="initStage">
       <vx-layer elevation="0.1">
