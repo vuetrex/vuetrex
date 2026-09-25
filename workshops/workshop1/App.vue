@@ -5,23 +5,26 @@
       <vx-layer elevation="0.1">
         <vx-row>
           <VNode :body="text" header="Camera" :footer="footer1" id="node1">
-            <template #ports>
-              <vx-port name="trigger" face="front" :at="[0.5, 0.8]" />
-            </template>
-            <template #connections>
-              <vx-edge key="n1-n2" to="node2" from-port="output" to-port="input" appearance="primary" />
-            </template>
+              <vx-port name="trigger" face="front" :at="[0.5, 0.1]" />
+              <vx-edge key="n1-n2" from="node1.output" to="node2.input" appearance="primary" />
           </VNode>
-          <VNode body="" header="Config" :footer="footer2" id="node2"/>
+          <VNode body="" header="Config" :footer="footer2" id="node2">
+              <vx-port name="trigger" face="front" :at="[0.5, 0.1]" />
+          </VNode>
+          <VNode body="" header="Composer" id="node3"/>
         </vx-row>
         <vx-row :gap="1.4">
-          <VColumns id="c1"/>
+          <VColumns id="c1">
+              <vx-port name="left" face="left" :at="[0.5, 0.1]" />
+              <vx-port name="back" face="back" :at="[0.5, 0.1]" />
+              <vx-particles :graph="torusParticles" anchor="origin" :participates-in-layout="false"/>
+          </VColumns>
         </vx-row>
-        <vx-particles :graph="fireflies" anchor="origin" :participates-in-layout="false"/>
+
       </vx-layer>
       <vx-connectors scope="workshop" appearance="secondary">
-        <vx-edge key="c-n1" from="c1" to="node1" to-port="trigger" />
-        <vx-edge key="c-n2" from="c1" to="node2" to-port="input" />
+        <vx-edge key="c-n1" from="c1.left" to="node1.trigger" />
+        <vx-edge key="c-n2" from="c1.back" to="node2.trigger" />
       </vx-connectors>
     </vuetrex>
   </section>
@@ -91,12 +94,14 @@ function initStage(stage: VxStage) {
   })
 }
 
+//--------- particles --------------
+
 const fireflies = computed(() =>
-    particles.cloud('fireflies', {count: 4096, radius: 1.5, distribution: 'surface', seed: 42,})
+    particles.cloud([0, 0.5, 0], {count: 8192, radius: 2.0, distribution: 'surface', seed: 42,})
     .appearance({
       color: ({random}) => random > 0.78 ? 0x8989d9 : 0x272d84,
-      size: ({random}) => 0.02 + random * 0.1,
-      opacity: ({random}) => 0.5 + random * 0.18, blending: 'additive'
+      size: ({random}) => 0.01 + random * 0.09,
+      opacity: ({random}) => 0.3 + random * 0.5, blending: 'additive'
     })
     .motion({
       turbulence: ({random}) => 0.025 + random * 0.04,
@@ -105,6 +110,28 @@ const fireflies = computed(() =>
     })
     .named('plant-fireflies'),
 )
+
+const ringPoints = (radius: number, tilt = -0.11): [number, number, number][] =>
+    Array.from({ length: 32 }, (_, i) => {
+      const angle = 2 * Math.PI * i / 32
+      const x = radius * Math.cos(angle)
+      const z = radius * Math.sin(angle)
+      return [x, 1.5 + z * Math.sin(tilt), z * Math.cos(tilt)]
+    })
+
+const saturnRings = particles.paths([1.15, 1.35, 1.75].map((radius, i) => ({
+      key: `ring-${i}`,
+      points: ringPoints(radius),
+      closed: true,
+    })),
+    { count: 1024, spread: 0.145, distribution: 'random', seed: 42 },
+);
+
+const torusParticles = particles.path(ringPoints(1.3), { closed: true, count: 10000, spread: 0.22 })
+    .appearance({ color: 0xa9b5e8, size: 0.025, opacity: 0.7 })
+    .motion({ speed: 0.25 })
+
+//--------- nodes -------
 
 const footer1 = ref("")
 const footer2 = ref("")

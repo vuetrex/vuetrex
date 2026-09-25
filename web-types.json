@@ -378,7 +378,7 @@
         },
         {
           "name": "vx-edge",
-          "description": "Keyed relationship. A direct spatial parent supplies from and scope; central edges require from and to.",
+          "description": "Keyed relationship. Literal endpoints use node or node.port; bind structured endpoints for dotted IDs. A direct spatial parent supplies the source node and scope.",
           "attributes": [
             {
               "name": "key",
@@ -389,7 +389,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 813
+                "offset": 1032
               }
             },
             {
@@ -397,11 +397,11 @@
               "required": false,
               "value": {
                 "kind": "expression",
-                "type": "string"
+                "type": "ConnectorTemplateEndpoint"
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 829
+                "offset": 1048
               }
             },
             {
@@ -409,35 +409,11 @@
               "required": true,
               "value": {
                 "kind": "expression",
-                "type": "string"
+                "type": "ConnectorTemplateEndpoint"
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 847
-              }
-            },
-            {
-              "name": "from-port",
-              "required": false,
-              "value": {
-                "kind": "expression",
-                "type": "string"
-              },
-              "source": {
-                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 862
-              }
-            },
-            {
-              "name": "to-port",
-              "required": false,
-              "value": {
-                "kind": "expression",
-                "type": "string"
-              },
-              "source": {
-                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 884
+                "offset": 1085
               }
             },
             {
@@ -449,7 +425,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 904
+                "offset": 1119
               }
             },
             {
@@ -593,7 +569,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 982
+                "offset": 1197
               }
             },
             {
@@ -605,7 +581,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 999
+                "offset": 1214
               }
             },
             {
@@ -617,7 +593,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1036
+                "offset": 1251
               }
             },
             {
@@ -629,7 +605,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1071
+                "offset": 1286
               }
             },
             {
@@ -641,7 +617,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1128
+                "offset": 1343
               }
             },
             {
@@ -653,7 +629,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1163
+                "offset": 1378
               }
             },
             {
@@ -665,7 +641,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1186
+                "offset": 1401
               }
             },
             {
@@ -677,7 +653,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1209
+                "offset": 1424
               }
             }
           ]

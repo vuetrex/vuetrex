@@ -31,7 +31,7 @@ const styles = defineVxStyleSheet({ common: { connectors: {
             <vx-port name="delivery" face="front" :at="[0.8, 0.2]" />
           </template>
           <template #connections>
-            <vx-edge key="internet" to="router" from-port="internet" appearance="network" />
+            <vx-edge key="internet" from="cafe.internet" to="router" appearance="network" />
           </template>
         </Cafe3D>
       </vx-group>
@@ -40,8 +40,8 @@ const styles = defineVxStyleSheet({ common: { connectors: {
         <vx-box id="pump" text="Water" :height="0.5" :size="0.8" :material="{ color: '#4167a0' }" />
       </vx-layer>
       <vx-connectors scope="utilities" appearance="water">
-        <vx-edge key="water-cafe" from="pump" to="cafe" to-port="waterMain" />
-        <vx-edge key="delivery-cafe" from="router" to="cafe" to-port="delivery" stroke-color="#e8b77d" />
+        <vx-edge key="water-cafe" from="pump" to="cafe.waterMain" />
+        <vx-edge key="delivery-cafe" from="router" to="cafe.delivery" stroke-color="#e8b77d" />
       </vx-connectors>
     </Vuetrex>
   </div>

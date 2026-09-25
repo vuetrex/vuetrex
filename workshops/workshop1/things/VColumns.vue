@@ -5,6 +5,7 @@
 -->
 <template>
   <vx-stack :gap="0">
+    <slot />
     <vx-box
       text="databases"
       :size="2.4"

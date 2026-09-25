@@ -64,14 +64,52 @@ function harness() {
 
 describe('connector template declarations', () => {
     it('lowers local, central, and graph edges into equivalent frozen records', () => {
-        const record = { key: 'a-b', to: 'b', fromPort: 'output', toPort: 'input' }
+        const record = { key: 'a-b', from: 'a.output', to: 'b.input' }
         const local = compileEdge(record, 'a')
-        const central = compileEdge({ ...record, from: 'a' })
+        const central = compileEdge(record)
         const graph = compileConnectors(connectors.edge({ node: 'a', port: { name: 'output' } }, { node: 'b', port: { name: 'input' } }, { key: 'a-b' }))
         expect(local).toEqual(central); expect(local).toEqual(graph)
         expect(Object.isFrozen(local.records[0])).toBe(true)
         expect(() => lowerEdge({ ...record, key: '' }, 'a')).toThrow('stable Vue key')
         expect(() => lowerEdge({ ...record, from: 'wrong' }, 'a')).toThrow('direct spatial parent')
+    })
+
+    it('parses template endpoints without changing graph endpoint semantics', () => {
+        const literal = compileEdge({ key: 'link', from: 'node1.output', to: 'node2.input' })
+        const bound = compileEdge({ key: 'link', from: { node: 'node1', port: { name: 'output' } }, to: { node: 'node2', port: { name: 'input' } } })
+        const graph = compileConnectors(connectors.edge({ node: 'node1', port: { name: 'output' } }, { node: 'node2', port: { name: 'input' } }, { key: 'link' }))
+        expect(literal).toEqual(bound)
+        expect(literal).toEqual(graph)
+        const bare = compileEdge({ key: 'bare', from: 'node1', to: 'node2' })
+        expect(bare.records[0].from).toBe('node1')
+        expect(bare.records[0].to).toEqual(['node2'])
+        expect(bare.records[0].routing.fromPort).toBe('auto')
+        expect(bare.records[0].routing.toPort).toBe('auto')
+        const dotted = compileEdge({ key: 'dotted', from: { node: 'district.node1', port: { name: 'data.out' } }, to: { node: 'district.node2', port: { name: 'input' } } }, 'district.node1')
+        expect(dotted.records[0].from).toEqual({ node: 'district.node1', port: { name: 'data.out' } })
+        expect(dotted.records[0].to).toEqual([{ node: 'district.node2', port: { name: 'input' } }])
+        expect(() => lowerEdge({ key: 'bad', from: 'district.node1.output', to: 'b' })).toThrow('containing a dot')
+        for (const from of ['', '.output', 'node.', 'node..output']) {
+            expect(() => lowerEdge({ key: 'bad', from, to: 'b' })).toThrow('vx-edge from')
+        }
+        expect(() => lowerEdge({ key: 'bad', from: 'a', to: 'b.' })).toThrow('vx-edge to')
+        expect(() => lowerEdge({ key: 'bad', from: 'a', to: { node: 'b', port: { name: '' } } })).toThrow('vx-edge to')
+        expect(() => lowerEdge({ key: 'bad', from: { node: 'other', port: { name: 'output' } }, to: 'b' }, 'a')).toThrow('direct spatial parent')
+    })
+
+    it('keeps bare-node automatic routing distinct from a declared port', async () => {
+        const { stage, endpoint, port, edge } = harness()
+        const a = endpoint('a'), b = endpoint('b', 8)
+        port(b, 'input', { face: 'top' })
+        const bare = edge(a, 'bare', { to: 'b' })
+        const named = edge(a, 'named', { to: 'b.input' })
+        await nextTick()
+        const automatic = stage.connectors.getResolvedNetwork(bare.ownerId, 'bare')!
+        const selected = stage.connectors.getResolvedNetwork(named.ownerId, 'named')!
+        expect(automatic.to[0].normal.x).toBe(-1)
+        expect(selected.to[0].normal.y).toBe(1)
+        expect(() => named.setStateValue('to-port', 'input')).toThrow('no longer accepts')
+        expect(() => named.setStateValue('to', 'b.')).toThrow('vx-edge to')
     })
 
     it('mounts declarations through component and wrapper slots, preserving public handles across reorder', async () => {
@@ -82,10 +120,10 @@ describe('connector template declarations', () => {
         const NoPorts = defineComponent({ inheritAttrs: false, setup: (_, { attrs }) => () => h('test-node', attrs) })
         const Wrapper = defineComponent({ inheritAttrs: false, setup: (_, { attrs, slots }) => () => h(Component, attrs, slots) })
         const App = defineComponent({ setup: () => () => h('test-node', { id: 'assembly' }, [
-            h(Wrapper, { id: 'a.with.period' }, { ports: () => h('vx-port', { name: 'extra', face: 'front' }), connections: () => h('vx-edge', { key: 'local', to: 'b', fromPort: 'extra' }) }),
+            h(Wrapper, { id: 'a.with.period' }, { ports: () => h('vx-port', { name: 'extra', face: 'front' }), connections: () => h('vx-edge', { key: 'local', from: { node: 'a.with.period', port: { name: 'extra' } }, to: 'b' }) }),
             h('test-node', { id: 'b' }),
             h(NoPorts, { id: 'closed' }, { ports: () => h('vx-port', { name: 'hidden', face: 'right' }) }),
-            h('vx-connectors', { scope: 'diagram' }, show.value ? order.value.map(key => h('vx-edge', { key, from: 'a.with.period', to: 'b', fromPort: 'output' })) : []),
+            h('vx-connectors', { scope: 'diagram' }, show.value ? order.value.map(key => h('vx-edge', { key, from: { node: 'a.with.period', port: { name: 'output' } }, to: 'b' })) : []),
         ]) })
         render(h(App), root); await nextTick()
         expect(stage.connectors.list()).toHaveLength(3)
@@ -125,7 +163,7 @@ describe('connector template declarations', () => {
         group.appendChild(new DeferredMesh())
         endpoint('target', 10)
         port(group, 'output', { face: 'right' })
-        edge(group, 'connection', { to: 'target', fromPort: 'output' })
+        edge(group, 'connection', { from: 'assembly.output', to: 'target' })
         await nextTick()
         expect(stage.connectors.get({ scope: 'assembly', key: 'connection' })!.unresolved).toEqual([])
     })
@@ -136,8 +174,8 @@ describe('connector template declarations', () => {
         const ancestor = new THREE.Group(); stage.getScene().add(ancestor); ancestor.add(owner.element.mesh!)
         ancestor.position.set(2, 3, 4); ancestor.rotation.set(0.2, 0.7, -0.3); ancestor.scale.set(2, 3, 0.5)
         const faces = ['left', 'right', 'front', 'back', 'top', 'bottom']
-        faces.forEach(face => { port(owner, face, { face, at: [0.25, 0.75] }); edge(owner, face, { to: 'target', fromPort: face, routeStrategy: 'direct' }) })
-        port(owner, 'exact', { position: [2, 1, 4], normal: [1, 2, 3] }); edge(owner, 'exact', { to: 'target', fromPort: 'exact' })
+        faces.forEach(face => { port(owner, face, { face, at: [0.25, 0.75] }); edge(owner, face, { from: `cafe.${face}`, to: 'target', routeStrategy: 'direct' }) })
+        port(owner, 'exact', { position: [2, 1, 4], normal: [1, 2, 3] }); edge(owner, 'exact', { from: 'cafe.exact', to: 'target' })
         await nextTick()
         const expected = [[-1, 1, -1.5], [1, 1, -1.5], [-0.5, 1, 3], [-0.5, 1, -3], [-0.5, 2, 1.5], [-0.5, -2, 1.5]]
         const normals = [[-1,0,0], [1,0,0], [0,0,1], [0,0,-1], [0,1,0], [0,-1,0]]
@@ -162,7 +200,7 @@ describe('connector template declarations', () => {
     it('resolves late ports, deterministic overrides, disabled diagnostics and fallback after removal', async () => {
         const { stage, endpoint, port, edge } = harness()
         const a = endpoint('a'); endpoint('b', 10)
-        const relationship = edge(a, 'edge', { to: 'b', fromPort: 'signal' })
+        const relationship = edge(a, 'edge', { from: 'a.signal', to: 'b' })
         await nextTick()
         expect(stage.connectors.get({ scope: 'a', key: 'edge' })!.unresolved).toEqual(['missing port: a/signal'])
         const base = port(a, 'signal', { face: 'left' })
@@ -219,7 +257,7 @@ describe('connector template declarations', () => {
         const a = endpoint('a'); endpoint('b', 8)
         port(a, 'socket', { face: 'right' })
         const click = vi.fn()
-        const local = edge(a, 'link', { to: 'b', fromPort: 'socket', onClick: click })
+        const local = edge(a, 'link', { from: 'a.socket', to: 'b', onClick: click })
         await nextTick()
         const object = (stage.connectors as any).strokeBackend.objectFor(`${local.ownerId}:link:stroke:shaft`) as THREE.Mesh
         const disposeGeometry = vi.fn(), disposeMaterial = vi.fn()
@@ -247,8 +285,8 @@ describe('connector template declarations', () => {
         const a = endpoint('a'), b = endpoint('b', 10)
         const signal = port(a, 'signal', { face: 'right' })
         port(a, 'untouched', { face: 'top' })
-        const dependent = edge(a, 'signal', { to: 'b', fromPort: 'signal' })
-        const unaffected = edge(a, 'untouched', { to: 'b', fromPort: 'untouched' })
+        const dependent = edge(a, 'signal', { from: 'a.signal', to: 'b' })
+        const unaffected = edge(a, 'untouched', { from: 'a.untouched', to: 'b' })
         await nextTick()
         const before = stage.connectors.getResolvedNetwork(unaffected.ownerId, 'untouched')
         const resolve = vi.spyOn(stage.connectors as any, 'resolveOwner')
@@ -259,7 +297,11 @@ describe('connector template declarations', () => {
         expect(stage.connectors.portsOf('a').map(p => p.name)).toEqual(['untouched'])
         expect(stage.connectors.portsOf('b').map(p => p.name)).toEqual(['signal'])
         expect(stage.connectors.get({ scope: 'a', key: 'signal' })!.unresolved).toEqual(['missing port: a/signal'])
-        dependent.setStateValue('to', 'a'); b.appendChild(dependent); await nextTick()
+        dependent.setStateValue('to', 'a')
+        dependent.setStateValue('from', undefined)
+        b.appendChild(dependent)
+        dependent.setStateValue('from', 'b.signal')
+        await nextTick()
         expect(stage.connectors.get({ scope: 'a', key: 'signal' })).toBeUndefined()
         expect(stage.connectors.get({ scope: 'b', key: 'signal' })!.unresolved).toEqual([])
     })

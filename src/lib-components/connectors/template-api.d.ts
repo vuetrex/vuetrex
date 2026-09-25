@@ -18,12 +18,12 @@ export interface ConnectorHostProps extends ConnectorPresentation {
     scope?: string
     interactive?: boolean
 }
+/** A template endpoint. Literal strings use node or node.port; bound objects allow dots in either name. */
+export type ConnectorTemplateEndpoint = string | Readonly<{ node: string; port?: Readonly<{ name: string }> }>
 export interface ConnectorEdgeDeclarationRecord extends ConnectorPresentation {
     key: string
-    from?: string
-    to: string
-    fromPort?: string
-    toPort?: string
+    from?: ConnectorTemplateEndpoint
+    to: ConnectorTemplateEndpoint
     interactive?: boolean
 }
 export interface ConnectorPortDeclarationRecord {

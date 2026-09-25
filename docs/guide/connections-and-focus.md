@@ -45,14 +45,15 @@ All three forms use the same compiler, routes, and appearance backends:
 | `vx-connectors` with `vx-edge` children | A small wiring diagram | `(host scope, key)` |
 | `vx-connectors :graph="source"` | Data collections and reusable graph modules | `(host scope, record key)` |
 
-Give endpoints explicit semantic IDs and each template edge a stable Vue `key`. Local edges inherit `from` from
-their **direct spatial parent**. An explicit `from` must match that ID. Central edges require both `from` and `to`.
-Periods in IDs have no special meaning: node IDs and port names are always separate attributes.
+Give endpoints explicit semantic IDs and each template edge a stable Vue `key`. Local edges inherit the source node
+from their **direct spatial parent**. An explicit `from` must address that node. Central edges require both `from`
+and `to`. A literal endpoint is `nodeId` for the automatic node port or `nodeId.portName` for a named or built-in
+port. Even when a node has one declared port, bare `nodeId` still means its automatic port.
 
 ```vue
 <!-- Local -->
 <vx-box id="gateway">
-  <vx-edge key="gateway-orders" to="orders" from-port="right" to-port="left"
+  <vx-edge key="gateway-orders" from="gateway.right" to="orders.left"
            stroke-color="#73cad1" :stroke-width="0.025" />
 </vx-box>
 <vx-box id="orders" />
@@ -70,6 +71,18 @@ Periods in IDs have no special meaning: node IDs and port names are always separ
 A host accepts **either** `graph` **or** edge children; combining them is an error. Keyed `v-for` and `v-if` children
 are supported. Duplicate `(scope, key)` handles fail even across hosts. Always supply `scope` when a handle needs to
 survive host remounts; an omitted scope uses a renderer-generated owner identity.
+
+Use a bound object when an ID or port name contains a dot, or when either value is dynamic:
+
+```vue
+<vx-edge key="district-feed"
+         :from="{ node: sourceId, port: { name: sourcePort } }"
+         :to="{ node: 'district.node2', port: { name: 'input' } }" />
+```
+
+Literal endpoints can contain at most one dot, with a nonempty node and port name. Malformed literals fail during
+declaration validation. `from-port` and `to-port` are not template props; graph `.route()` options still support
+`fromPort` and `toPort` for data-driven routing.
 
 Ports and edges are lifecycle declarations. They do not affect layout, measured size, focus bounds, or Three.js
 children. Fixed meshes, `vx-geometry`, and `vx-instances` accept declarations but reject spatial children; use a
@@ -226,7 +239,7 @@ Callers add a new name or explicitly override a built-in name:
     <vx-port name="sewer" override disabled />
   </template>
   <template #connections>
-    <vx-edge key="cafe-router" to="router" from-port="internet" />
+    <vx-edge key="cafe-router" from="cafe.internet" to="router" />
   </template>
 </Cafe3D>
 ```
@@ -280,12 +293,12 @@ publishes `input` on its left face and `output` on its right face, and forwards 
 <VNode id="camera" header="Camera" body="Ready" footer="Online">
   <template #ports><vx-port name="trigger" face="front" :at="[0.5, 0.8]" /></template>
   <template #connections>
-    <vx-edge key="camera-config" to="config" from-port="output" to-port="input" />
+    <vx-edge key="camera-config" from="camera.output" to="config.input" />
   </template>
 </VNode>
 <VNode id="config" header="Config" />
 <vx-connectors scope="workshop" route-strategy="orthogonal">
-  <vx-edge key="config-camera" from="config" to="camera" to-port="trigger" />
+  <vx-edge key="config-camera" from="config.output" to="camera.trigger" />
 </vx-connectors>
 ```
 

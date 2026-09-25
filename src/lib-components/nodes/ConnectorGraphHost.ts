@@ -8,7 +8,7 @@ import type {
 } from '@/lib-components/connectors/types.js'
 import { Node } from './Node.js'
 import { Base } from './Base.js'
-import { compileEdge, mergePresentation, namedPresentation, presentationKeys, presentPlan, type ConnectorPresentation, type ConnectorEdgeDeclarationRecord } from '../connectors/declarations.js'
+import { compileEdge, mergePresentation, namedPresentation, presentationKeys, presentPlan, templateEndpoint, type ConnectorPresentation, type ConnectorEdgeDeclarationRecord, type ConnectorTemplateEndpoint } from '../connectors/declarations.js'
 import type { AuthoredConnectorPlan } from '../connectors/compiler/types.js'
 import { StageDeclaration } from '@/lib-components/nodes/StageDeclaration.js'
 import type { VuetrexStage } from '@/lib-components/three/stage.js'
@@ -17,10 +17,8 @@ type ConnectorEventListener = (hit: ConnectorHit, event: MouseEvent) => void
 
 interface ConnectorGraphHostState extends ConnectorPresentation {
     scope?: string
-    from?: string
-    to?: string
-    fromPort?: string
-    toPort?: string
+    from?: ConnectorTemplateEndpoint
+    to?: ConnectorTemplateEndpoint
     graph?: ConnectorSource
     parameters: ConnectorParameterValues
     interactive: boolean
@@ -53,10 +51,16 @@ export class ConnectorGraphHost extends StageDeclaration {
         const normalized = key.indexOf('-') >= 0
             ? key.replace(/-([a-z])/g, (_, character) => character.toUpperCase())
             : key
-        if ([...presentationKeys, 'scope', 'from', 'to', 'fromPort', 'toPort'].includes(normalized as any)) {
+        if (normalized === 'fromPort' || normalized === 'toPort') {
+            throw new Error(`vx-edge no longer accepts ${key}; use from="node.port" / to="node.port" or bind a structured endpoint.`)
+        }
+        if ([...presentationKeys, 'scope', 'from', 'to'].includes(normalized as any)) {
             if (value != null && ['clearance', 'elevation', 'strokeWidth', 'strokeOpacity'].includes(normalized)) {
                 value = Number(value)
                 if (!Number.isFinite(value) || (value as number) < 0 || (normalized === 'strokeOpacity' && (value as number) > 1)) throw new Error(`Invalid connector ${key}.`)
+            }
+            if (this.isEdgeDeclaration && (normalized === 'from' || normalized === 'to') && value != null) {
+                templateEndpoint(value as ConnectorTemplateEndpoint, normalized)
             }
             (this.state as any)[normalized] = value ?? undefined
             return

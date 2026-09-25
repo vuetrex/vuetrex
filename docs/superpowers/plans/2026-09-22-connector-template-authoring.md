@@ -28,12 +28,12 @@ These are alternative inputs to the same compiler. `vx-edge` is a lifecycle-only
 
 ```vue
 <vx-box id="source">
-  <vx-edge key="source-target" to="target" from-port="right" to-port="left" />
+  <vx-edge key="source-target" from="source.right" to="target.left" />
 </vx-box>
 <vx-box id="target" />
 ```
 
-The nearest **direct spatial parent** supplies `from="source"`. That node must have an explicit semantic `id`; generated renderer IDs are not a stable public address. The declaration may specify `from` only when it equals the parent ID; a mismatch is an error. The edge's `key` is required. Its lifetime follows its declaration: removing the box removes the local edge.
+The nearest **direct spatial parent** supplies the source node when `from` is omitted. That node must have an explicit semantic `id`; generated renderer IDs are not a stable public address. To select one of its named ports, write the full endpoint, such as `from="source.right"`. An explicit `from` on a local edge must address its parent node; a mismatch is an error. The edge's `key` is required. Its lifetime follows its declaration: removing the box removes the local edge.
 
 `vx-edge` may be a direct child of a fixed `MeshNode`, including `vx-box`, or of a `GroupNode`. Fixed mesh nodes accept declaration children, including ports and edges, but still reject spatial/visual children. Use a `vx-group`, `vx-stack`, or another spatial container for actual geometry nesting. Neither a port nor an edge enters `elements`, changes layout, contributes to bounds, or becomes a Three.js child.
 
@@ -44,10 +44,8 @@ The same declaration-child rule applies to other addressable spatial hosts such 
 ```vue
 <vx-connectors scope="utilities" appearance="utility-line"
                route-strategy="orthogonal" :clearance="0.25">
-  <vx-edge key="cafe-water" from="cafe" from-port="waterMain"
-           to="pump" to-port="outlet" />
-  <vx-edge key="cafe-power" from="substation" from-port="feed"
-           to="cafe" to-port="electrical" />
+  <vx-edge key="cafe-water" from="cafe.waterMain" to="pump.outlet" />
+  <vx-edge key="cafe-power" from="substation.feed" to="cafe.electrical" />
 </vx-connectors>
 ```
 
@@ -76,7 +74,9 @@ A host accepts **either** `:graph` **or** `<vx-edge>` children. Supplying both i
 
 ## Ports belong to spatial nodes
 
-Every `vx-port` is a declaration attached to one spatial owner. A component's Vue instance is not an endpoint: its root spatial node is. The owner has an explicit semantic ID, and each port has a unique name within that owner. An endpoint is the unambiguous pair `{ node: 'cafe', port: { name: 'mainDoor' } }`. Template edges use separate `from`/`from-port` and `to`/`to-port` attributes; they do not parse `cafe.mainDoor`, because a node ID may itself contain a period.
+Every `vx-port` is a declaration attached to one spatial owner. A component's Vue instance is not an endpoint: its root spatial node is. The owner has an explicit semantic ID, and each port has a unique name within that owner. An endpoint is internally the unambiguous pair `{ node: 'cafe', port: { name: 'mainDoor' } }`.
+
+In a template, a literal `from` or `to` string uses `nodeId` for the existing node-level automatic port, or `nodeId.portName` for a specific named or built-in port. For example, `to="node2.input"` addresses exactly the `input` port on `node2`; `to="node2"` does **not** select `input` merely because that is the only declared port. An unknown or disabled named port leaves the edge unresolved with a diagnostic. A string endpoint may contain at most one dot, with nonempty parts on both sides; malformed strings fail during declaration validation. IDs and port names containing a dot cannot use this shorthand. Bind the structured endpoint instead: `:to="{ node: 'district.node2', port: { name: 'input' } }"`. Dynamic IDs and port names use the same bound form. The template API does not also provide `from-port` or `to-port`: two parallel spellings would create conflicting values and unnecessary precedence rules. Both forms lower to the same structured endpoint record; `ConnectorSource` keeps structured endpoints.
 
 Two placement modes cover common cases:
 
@@ -136,13 +136,13 @@ The scene author gives the component an ID and connects to its public ports:
     <vx-port name="delivery" :position="[1, 0.1, 1]" :normal="[0, 0, 1]" />
   </template>
   <template #connections>
-    <vx-edge key="cafe-router" to="router" from-port="internet" />
+    <vx-edge key="cafe-router" from="cafe.internet" to="router" />
   </template>
 </Cafe3D>
 
 <vx-connectors scope="service-lines" appearance="buried-utility">
-  <vx-edge key="water-to-cafe" from="pump" to="cafe" to-port="waterMain" />
-  <vx-edge key="network-to-cafe" from="router" to="cafe" to-port="internet" />
+  <vx-edge key="water-to-cafe" from="pump" to="cafe.waterMain" />
+  <vx-edge key="network-to-cafe" from="router" to="cafe.internet" />
 </vx-connectors>
 ```
 
@@ -211,13 +211,12 @@ The component should disable implicit attribute inheritance when it explicitly b
     <vx-port name="trigger" face="front" :at="[0.5, 0.8]" />
   </template>
   <template #connections>
-    <vx-edge key="camera-config" to="config" from-port="output" to-port="input" />
+    <vx-edge key="camera-config" from="camera.output" to="config.input" />
   </template>
 </VNode>
 <VNode id="config" header="Config" />
 <vx-connectors scope="workshop" appearance="secondary">
-  <vx-edge key="config-camera" from="config" from-port="output"
-           to="camera" to-port="trigger" />
+  <vx-edge key="config-camera" from="config.output" to="camera.trigger" />
 </vx-connectors>
 ```
 
@@ -278,6 +277,7 @@ The new contract may remove or rename legacy `vx-connector`, `vx-bus-connector`,
 - The six cafe ports follow translation, rotation, nonuniform scale, and geometry-prop changes. Normals still point outward. Scene-authored additions, overrides, and disabled ports behave deterministically.
 - A Vue component's `#ports` slot attaches to its documented root. A wrapper forwards the slot and ID; omitting that forwarding does not silently attach declarations to a different spatial node.
 - Local, central, and graph-authored versions of the same edge compile to equivalent topology and route records. Stable keys survive reorder and conditional rendering; duplicate `(scope, key)` pairs fail.
+- `node.port` literals and bound endpoint objects resolve to the same identity; a bare node uses its automatic port. Dotted IDs require bound objects, and local edges reject an explicit source outside their owner.
 - Missing and disabled ports keep edges authored but unresolved with distinct diagnostics. Late port insertion activates only dependent edges.
 - A styling-only change leaves topology and route revisions intact, updates the correct appearance allocations, and restores inherited values when removed.
 - Removing a local source, a central host, or the whole scene releases declarations and all derived GPU resources exactly once. No stale owner or port records remain.
@@ -288,6 +288,7 @@ The new contract may remove or rename legacy `vx-connector`, `vx-bus-connector`,
 The later connections guide should show the three authoring forms side by side, then teach these rules:
 
 - Give every public endpoint an explicit semantic ID; give every declarative edge a stable key. Use a graph host for collections.
+- Write `node.port` for literal template endpoints and bind an endpoint object for dynamic names or names containing dots. Do not add separate port attributes to an edge.
 - Give a reusable composite component one documented spatial root and semantic port names. Compute exact local ports from the same props as the model; include explicit normals.
 - Expose a named `#ports` slot when consumers should add or override ports, and a `#connections` slot only when local outgoing edges are part of the component's public API. Forward these slots through wrappers deliberately.
 - Put ports on the node whose identity callers should address. A wrapper's ports and an inner component's ports have different owners unless explicitly forwarded to the same root.

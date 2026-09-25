@@ -1,6 +1,6 @@
 <!--
   Vuetrex adaptation of 3-bar 3D display (header, body, footer)::
-  designed to look like a Blender-style node graph card.
+  designed to look like a node graph card.
 
   The middle slab renders its labels as SDF text on the +Z face via the shared
   `lines` prop on <vx-box>. See MeshNode's label watchEffect for the mechanism —
@@ -11,7 +11,7 @@
   <vx-stack v-bind="$attrs" :gap="0.02">
     <!-- footer -->
     <vx-box
-      :size="1.8"
+      :size="1.5"
       :depth="0.2"
       :height="0.5"
       :lines="footerLines"
@@ -25,8 +25,8 @@
 
     <!-- body -->
     <vx-box
-      :size="1.8"
-      :height="2.0"
+      :size="1.5"
+      :height="1.5"
       :depth="0.2"
       :lines="bodyLines"
       :label-color="0xd8d8d8"
@@ -39,7 +39,7 @@
 
     <!-- header -->
     <vx-box
-      :size="1.8"
+      :size="1.5"
       :depth="0.2"
       :height="0.5"
       :lines="headerLines"
@@ -51,8 +51,7 @@
     />
     <vx-port name="input" face="left" />
     <vx-port name="output" face="right" />
-    <slot name="ports" />
-    <slot name="connections" />
+    <slot />
   </vx-stack>
 </template>
 

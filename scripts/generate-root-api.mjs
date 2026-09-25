@@ -59,7 +59,7 @@ const declarationFields = name => declarationInterfaces.find(node => node.name.t
 const presentation = declarationFields('ConnectorPresentation')
 for (const [name, type, description] of [
     ['vx-connectors', 'ConnectorHostProps', 'Non-spatial connector host. Use either graph or keyed vx-edge children. Supply a scope for stable public handles.'],
-    ['vx-edge', 'ConnectorEdgeDeclarationRecord', 'Keyed relationship. A direct spatial parent supplies from and scope; central edges require from and to.'],
+    ['vx-edge', 'ConnectorEdgeDeclarationRecord', 'Keyed relationship. Literal endpoints use node or node.port; bind structured endpoints for dotted IDs. A direct spatial parent supplies the source node and scope.'],
     ['vx-port', 'ConnectorPortDeclarationRecord', 'Named local port on an explicit spatial owner ID. Use position/normal or face/at; overrides must reference a built-in name.'],
 ]) {
     webTypes.contributions.html.elements.push({ name, description,
