@@ -17,6 +17,20 @@ function fixture() {
 }
 
 describe('scene declarations', () => {
+    it('accepts template floor fade bindings, validates them, and resets removed values', async () => {
+        const { stage, parent } = fixture()
+        const floor = new FloorDeclaration(stage)
+        floor.setStateValue('fade-start', '11')
+        floor.setStateValue('fade-end', '18')
+        parent.appendChild(floor); floor.syncWithThree(); await nextTick()
+        expect(stage.applyFloorStyle).toHaveBeenLastCalledWith(expect.objectContaining({ fadeStart: 11, fadeEnd: 18 }))
+        expect(() => floor.setStateValue('fade-start', 'invalid')).toThrow('must be finite')
+        floor.setStateValue('fade-start', undefined)
+        floor.setStateValue('fade-end', undefined)
+        await nextTick()
+        expect(stage.applyFloorStyle).toHaveBeenLastCalledWith(expect.objectContaining({ fadeStart: undefined, fadeEnd: undefined }))
+        parent.removeChild(floor)
+    })
     it('preserves one generated environment across updates, borrows textures, and restores baseline exactly once', async () => {
         const { scene, stage, parent } = fixture()
         const baseline = new THREE.Texture(), borrowed = new THREE.Texture()

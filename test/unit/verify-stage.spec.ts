@@ -49,15 +49,16 @@ describe('The Vuetrex Stage object', () => {
         })
 
         scene.retargetCamera(new THREE.Vector3(), new THREE.Vector3(0, -4, 6), 1)
-        expect((scene as any).endCameraPos.y).toBe(0)
+        // Keep the camera above the floor by the existing 0.1-unit safety margin.
+        expect((scene as any).endCameraPos.y).toBe(0.1)
         scene.cameraAnimationFn()(500, 1)
         expect(camera.position.y).toBeGreaterThanOrEqual(0)
 
         scene.cameraBase.y = -3
         ;(scene as any).startTime = -1
         scene.cameraAnimationFn()(1000, 2)
-        expect(scene.cameraBase.y).toBe(0)
-        expect(camera.position.y).toBe(0)
+        expect(scene.cameraBase.y).toBe(0.1)
+        expect(camera.position.y).toBe(0.1)
     })
 
     it('paints the floor grid with an explicit color when there are no captions', () => {

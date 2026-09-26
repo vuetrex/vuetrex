@@ -95,6 +95,7 @@ export default {
                     {text: 'Stage API', link: '/api/stage'},
                     {text: 'Composition API', link: '/api/composition'},
                     {text: 'Architecture', link: '/architecture'},
+                    {text: 'Composer design (proposed)', link: '/design/composer-and-visual-styles'},
                 ]
             }
         ],

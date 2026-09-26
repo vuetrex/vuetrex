@@ -30,6 +30,7 @@ abstract class SceneDeclaration extends StageDeclaration {
         this.state = shallowReactive({ ...defaults })
     }
     override setStateValue(key: string, value: unknown): void {
+        key = key.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
         if (!Object.hasOwn(this.defaults, key)) throw new Error(`Unknown ${this.kind} property: ${key}`)
         const fallback = this.defaults[key]
         if (value == null) value = fallback
@@ -112,6 +113,7 @@ export class FloorDeclaration extends SceneDeclaration {
             fadeStart: undefined, fadeEnd: undefined })
     }
     override setStateValue(key: string, value: unknown): void {
+        key = key.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
         if ((key === 'fadeStart' || key === 'fadeEnd') && value != null) {
             value = Number(value)
             if (!Number.isFinite(value)) throw new TypeError(`vx-floor.${key} must be finite`)

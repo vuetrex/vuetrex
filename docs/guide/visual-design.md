@@ -150,6 +150,10 @@ Keep the mapping bounded and perceptually stable:
 
 ## Future focus treatment: depth of field
 
+The [composer and visual styles proposal](/design/composer-and-visual-styles) describes
+declarative bloom, ambient occlusion, output controls, aesthetic profiles, and a later
+focus-aware depth-of-field integration. These APIs are proposed, not yet available.
+
 ::: info Design target, not a current public capability
 Vuetrex's composer does not yet expose a supported depth-of-field focus effect. Treat this section as direction for a
 future API, not something current components guarantee.
