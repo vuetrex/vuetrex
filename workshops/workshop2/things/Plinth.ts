@@ -1,11 +1,10 @@
 import { ExtrudeGeometry, Mesh, Shape } from 'three'
-import { MeshNode } from '@/lib-components/nodes/MeshNode.js'
-import type { VuetrexStage } from '@/lib-components/three/stage.js'
+import { MeshNode, type MeshNodeStage } from '@/lib-components'
 
 /** A fixed presentation base; MeshNode owns replacement and disposal. */
 export class Plinth extends MeshNode {
   protected override readonly supportsDepth = true
-  constructor(stage: VuetrexStage) { super(stage) }
+  constructor(stage: MeshNodeStage) { super(stage) }
 
   modelGen() {
     const depth = this.state.depth

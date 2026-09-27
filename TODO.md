@@ -97,9 +97,9 @@ from implemented runtime features.
 
 ### 4. Reduce custom-shape and layout authoring friction
 
-- [ ] Provide a supported public fixed-shape extension entry point, including
-  `MeshNode`, ownership guidance, and a packaged-consumer example. Workshop2's
-  plinth currently needs an internal import.
+- [x] Provide a supported public fixed-shape extension entry point: `MeshNode`,
+  `MeshNodeStage`, and `MeshState`, with [ownership guidance](docs/guide/fixed-shape-extensions.md)
+  and a typechecked packaged-consumer example. Workshop2's plinth uses the public entry point.
 - [ ] Simplify/document runtime element registration together with Vue compiler
   custom-tag recognition; authors currently configure these in separate places.
 - [ ] Add a rounded platform primitive or configurable planar corner radius,

@@ -8,6 +8,11 @@ import { MaterialController } from '@/lib-components/styling/MaterialController.
 import { Mesh, MeshStandardMaterial, Vector3 } from 'three';
 import { Text } from 'troika-three-text';
 
+/** Constructor context for fixed-shape extensions. Pass it to super(stage).
+ * This alias does not make the stage's implementation methods extension hooks.
+ */
+export type MeshNodeStage = VuetrexStage;
+
 export interface MeshState {
     text: string;
     size: number;
@@ -132,6 +137,10 @@ export abstract class MeshNode extends Node {
         return new Vector3(0, this.state.height / 2, 0);
     }
 
+    /** Return one centered mesh with fresh, exclusively owned geometry and this.material.
+     * MeshNode disposes its geometry on replacement; textures remain caller-owned.
+     * Read reactive geometry inputs here or in the returned factory.
+     */
     abstract modelGen(): (height: number, size: number) => Mesh;
 
     setSize(size: number) { this.state.size = size; }

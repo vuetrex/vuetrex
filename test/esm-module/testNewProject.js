@@ -47,6 +47,7 @@ try {
         join(repositoryRoot, 'test', 'esm-module', 'TestApp.vue'),
         join(projectRoot, 'src', 'App.vue'),
     )
+    await cp(join(repositoryRoot, 'test', 'esm-module', 'CustomBrick.ts'), join(projectRoot, 'src', 'CustomBrick.ts'))
     await writeFile(join(projectRoot, 'package.json'), JSON.stringify({
         name: 'vuetrex-esm-consumer',
         private: true,
@@ -89,7 +90,7 @@ try {
     await writeFile(join(projectRoot, 'tsconfig.json'), JSON.stringify({ compilerOptions: {
         target: 'ES2022', module: 'NodeNext', moduleResolution: 'NodeNext', strict: true, noEmit: true,
         skipLibCheck: false, types: [], lib: ['ES2022', 'DOM', 'DOM.Iterable'],
-    }, include: ['consumer.ts'] }))
+    }, include: ['consumer.ts', 'src/CustomBrick.ts'] }))
     execFileSync(process.execPath, [join(repositoryRoot, 'node_modules', 'typescript', 'bin', 'tsc'), '-p', join(projectRoot, 'tsconfig.json')], { stdio: 'inherit' })
 
     // Exercise actual template inference as well as TypeScript object assignments.
@@ -119,7 +120,7 @@ try {
             vue({
                 template: {
                     compilerOptions: {
-                        isCustomElement: tag => /^vx-(group|layer|row|stack|ring|panel|instances|geometry|particles|box|cylinder|wedge|connectors|edge|port|environment|camera|floor)$/.test(tag),
+                        isCustomElement: tag => /^vx-(group|layer|row|stack|ring|panel|instances|geometry|particles|box|cylinder|wedge|connectors|edge|port|environment|camera|floor|custom-brick)$/.test(tag),
                     },
                 },
             }),

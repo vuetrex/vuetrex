@@ -43,8 +43,8 @@ bends reproduce an illustration rather than an automatically arranged diagram.
    canvas and a console exception. Show a useful development error in the scene.
 2. **A rounded platform primitive.** Box corner rounding is fixed and does not
    provide the wide planar corner radius in this reference. This extension
-   requires an internal `MeshNode` import plus a separate compiler tag entry.
-   A public extension entry point and one registration helper would simplify it.
+   uses the supported public `MeshNode` entry point. A separate compiler tag entry
+   is still required; a registration helper would simplify that step.
 3. **Clearer vertical alignment.** `start` shifts each child down by half its
    height; it does not mean “put the base on the floor.” Name or document this
    distinction prominently and show unequal-height bars in examples.

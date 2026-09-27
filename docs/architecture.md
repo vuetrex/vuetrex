@@ -107,8 +107,8 @@ from `nodes/layouts.ts`. Containers (`Row`, `Ring`, `Stack`, `Layer`) extend thi
 Extends `Node`. Base for all geometry nodes. Provides reactive `state` (`text`, `size`, `height`,
 `material`, `hover`), shared idempotent `syncWithThree()` lifecycle (geometry/material/caption watchEffects →
 `stage.renderMesh()` / `stage.reconcileConnections()`), and `onRemoved()` cleanup. Event wiring
-happens inside the geometry watchEffect after the mesh exists. **To add a new shape: extend `MeshNode`, implement
-`modelGen()`.**
+happens inside the geometry watchEffect after the mesh exists. **To add a new shape: extend the publicly exported `MeshNode`, implement
+`modelGen()`.** See [fixed-shape extensions](/guide/fixed-shape-extensions) for the supported hooks and ownership contract.
 
 ### `InstanceNode` (`nodes/InstanceNode.ts`)
 

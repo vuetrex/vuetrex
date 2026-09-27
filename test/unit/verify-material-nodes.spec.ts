@@ -8,7 +8,20 @@ import { Panel } from '@/lib-components/nodes/Panel.js'
 import type { VuetrexStage } from '@/lib-components/three/stage.js'
 import type { VxMaterialProps, VxHoverProps } from '@/lib-components/styling/types.js'
 
-function setup(Kind: typeof Box | typeof Panel) {
+// Exercise the supported package-root subclass surface alongside built-ins.
+import { MeshNode, type MeshNodeStage } from '@/lib-components/index.js'
+class CustomBrick extends MeshNode {
+    protected override readonly supportsDepth = true
+    constructor(stage: MeshNodeStage) { super(stage) }
+    modelGen() {
+        const depth = this.state.depth
+        return (height: number, size: number) => new THREE.Mesh(
+            new THREE.BoxGeometry(size * this.getScale(), height, (depth || size) * this.getScale()), this.material,
+        )
+    }
+}
+
+function setup(Kind: typeof Box | typeof Panel | typeof CustomBrick) {
     const scene = new THREE.Scene()
     const createMaterial = vi.fn(() => new THREE.MeshStandardMaterial({ color: 0x123456, roughness: 0.3, metalness: 0.1 }))
     const renderMesh = vi.fn((element, height, size, generate, parent = scene) => {
@@ -29,11 +42,11 @@ function setup(Kind: typeof Box | typeof Panel) {
         elements: shallowRef([node]), group: scene, isGroupNode: true,
         layoutPositionOf: () => new THREE.Vector3(), parent: shallowRef(null),
     } as any
-    const surface = () => (node instanceof Box ? node.element.mesh : node.element.mesh!.children[0]) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>
+    const surface = () => (node instanceof MeshNode ? node.element.mesh : node.element.mesh!.children[0]) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>
     return { node, surface, createMaterial, stage }
 }
 
-for (const Kind of [Box, Panel]) describe(`${Kind.name} shared material binding`, () => {
+for (const Kind of [Box, Panel, CustomBrick]) describe(`${Kind.name} shared material binding`, () => {
     it('reacts to field deletion, hover edits, and undefined bindings without rebuilding geometry', async () => {
         const { node, surface, createMaterial } = setup(Kind)
         const texture = new THREE.Texture()
@@ -116,11 +129,13 @@ for (const Kind of [Box, Panel]) describe(`${Kind.name} shared material binding`
         node.setStateValue('hover', { color: 'red', emissive: 'blue', scale: 1.1, transition: 1 })
         node.syncWithThree()
         await nextTick()
+        const originalMaterial = surface().material
         const oldGeometryDispose = vi.spyOn(surface().geometry, 'dispose')
         node.dispatchPointerenter(new MouseEvent('pointerenter'))
         node.setStateValue('size', 2)
         await nextTick()
         expect(oldGeometryDispose).toHaveBeenCalledOnce()
+        expect(surface().material).toBe(originalMaterial)
         const { material, geometry } = surface()
         const geometryDispose = vi.spyOn(geometry, 'dispose'), materialDispose = vi.spyOn(material, 'dispose')
         const target = node.element.mesh!
@@ -136,4 +151,16 @@ for (const Kind of [Box, Panel]) describe(`${Kind.name} shared material binding`
             expect(gsap.getTweensOf(object)).toHaveLength(0)
         }
     })
+})
+
+it('keeps a public custom shape footprint and generated depth in agreement', async () => {
+    const { node, surface } = setup(CustomBrick)
+    node.setStateValue('depth', 0.75)
+    node.syncWithThree()
+    await nextTick()
+    surface().geometry.computeBoundingBox()
+    expect(surface().geometry.boundingBox!.getSize(new THREE.Vector3()).toArray()).toEqual([1, 0.5, 0.75])
+    expect(node.measuredSize.value.toArray()).toEqual([1, 0.5, 0.75])
+    expect(node.renderOffset().y).toBe(0.25)
+    node.onRemoved()
 })

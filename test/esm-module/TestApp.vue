@@ -2,7 +2,8 @@
   <div class="hello">
     <div>{{msg}}</div>
     <VxStyleSheet :sheets="[sheet]">
-    <Vuetrex>
+    <Vuetrex :elements="elements">
+      <vx-custom-brick :size="1.2" :height="0.3" :depth="0.8" :material="{ color: 0x55aadd }" />
       <vx-environment preset="studio" />
       <vx-camera :direction="[8, 6, 11]" fit="content" />
       <vx-floor finish="mirror" :reflection="0.6" :fade-start="20" :fade-end="50" />
@@ -41,6 +42,7 @@
 
 <script>
 import { VxStyleSheet, defineVxStyleSheet, finishes, Vuetrex, defineGeometryOutputs, geo, inspectGeometry, particles, resolveMaterial } from '@exceeder/vuetrex';
+import { elements } from './CustomBrick.js';
 import { getCurrentInstance } from 'vue';
 export default {
   components: {
@@ -71,6 +73,7 @@ export default {
     console.log("Vuetrex loaded:",Vuetrex)
     console.log("Procedural inspection:", inspectGeometry(proceduralGeometry, { scale: 1.15 }))
     return {
+      elements,
       proceduralGeometry,
       particleEffect,
     }

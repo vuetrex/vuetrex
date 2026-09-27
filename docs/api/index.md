@@ -455,3 +455,10 @@ The package exports:
   operator option types
 - `particles`, `defineParticles()`, `defineParticleOutputs()`, `ParticleNode`, particle graph/field types, and the
   custom backend registration API
+
+## Fixed-shape extension API
+
+`MeshNode`, `MeshNodeStage`, and `MeshState` are exported from `@exceeder/vuetrex`.
+Register subclasses through `elements` or `registerElement()`. See the
+[fixed-shape extension guide](/guide/fixed-shape-extensions) for the supported hooks,
+geometry/material ownership, compiler configuration, and packaged-consumer example.

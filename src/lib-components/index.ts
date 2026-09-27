@@ -232,3 +232,6 @@ export type { VxTexturePurpose, VxCanvasTextureOptions } from './styling/texture
 export type { VxEnvironmentProps, VxCameraProps, VxFloorProps } from './scene/declarations.js';
 
 export type { VxLightingProps, VxShadowQuality } from './three/lighting/LiveLighting.js';
+
+export { MeshNode } from './nodes/MeshNode.js';
+export type { MeshNodeStage, MeshState } from './nodes/MeshNode.js';
