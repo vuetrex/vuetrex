@@ -87,8 +87,8 @@ from implemented runtime features.
 
 ### 3. Expose lighting and camera controls for illustrative scenes
 
-- [ ] Add declarative key/fill intensity and shadow quality controls; current
-  fixed stage lighting limits art direction even with studio environment controls.
+- [x] Add declarative key/fill intensity and shadow quality controls through
+  `vx-lighting`, with reactive updates, default restoration, and owned shadow-target cleanup.
 - [ ] Develop the [automated studio-light proposal](docs/superpowers/plans/2026-09-04-built-in-automated-studio-light.md)
   for soft/contact shading, with explicit bake ownership, invalidation, and fallback.
   Keep lighting work separate from composer AO and bloom.

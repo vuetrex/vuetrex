@@ -50,8 +50,24 @@ allowed per scene. Removing the declaration restores the previous stage configur
 | Element | Props and defaults |
 | --- | --- |
 | `vx-environment` | `preset="studio"`, optional caller-owned `texture`, `enabled=true`, `intensity=0.55`, Y `rotation=0` in radians |
+| `vx-lighting` | `keyIntensity=5.5`, `fillIntensity=2`, `shadowQuality="medium"` (`off`, `low`, `medium`, `high`) |
 | `vx-camera` | `fit="content"`, `direction=[0, 0.65, 1]`, `padding=0.75`, `duration=0.6` seconds |
 | `vx-floor` | `finish="matte"` or `"mirror"`, `color=0x3f3f3f`, `reflection=0.6`, `grid=false`, `captions=false`; optional paired `fadeStart` and `fadeEnd` |
+
+Live lighting controls the two stage-owned directional lights. The shadow-casting key uses `lightColor2`;
+the fill uses `lightColor1`. Intensities must be finite and nonnegative; zero turns off that light's contribution.
+
+```vue
+<vx-lighting :key-intensity="4" :fill-intensity="1.5" shadow-quality="high" />
+```
+
+Shadow presets use 256/8 (`low`), 512/16 (`medium`), or 1024/32 (`high`) map resolution/blur samples.
+Resolution is capped by the GPU texture limit. `off` disables the key's shadow and releases its shadow targets.
+The stage setting `shadows: false` remains authoritative for every preset. Quality changes preserve the existing
+shadow camera and softness radius; higher quality does not expand shadow coverage. Removed props restore the
+listed defaults; removing the declaration restores the configuration captured at mount. Only one `vx-lighting`
+is allowed per scene. Environment lighting and application-added lights are independent. These controls do not
+add baked/contact shading, composer ambient occlusion, or bloom.
 
 Environment texture input takes precedence over the studio preset. Disabling preserves the generated texture for
 reuse; replacing it with a borrowed texture disposes the generated resource. Camera direction sets the view heading,

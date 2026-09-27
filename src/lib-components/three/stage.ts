@@ -1,3 +1,4 @@
+import { LiveLighting, type VxLightingProps } from './lighting/LiveLighting.js'
 import type { VxSettings, VxDiagnosticsSettings } from '../root-api.js';
 import { VxCameraController, type VxCameraView } from './cameraController.js';
 import type { VxCameraProps, VxFloorProps } from '../scene/declarations.js';
@@ -280,6 +281,7 @@ export class VuetrexStage extends Scene implements VxStage {
         updateFn: () => {}
     }
     private captions: Array<{x:number, y:number, text:string, visible: boolean}> = []
+    private liveLighting?: LiveLighting
     private groundMirror?: THREEx.Reflector
     private floorSurface?: THREE.Mesh
     private readonly nodesById = new Map<string, Node>()
@@ -553,35 +555,17 @@ export class VuetrexStage extends Scene implements VxStage {
     }
 
     createLights(scene: THREE.Scene) {
-        const light = new THREE.DirectionalLight(this.settings.lightColor1 || 0xccffff, 2.0);
+        this.liveLighting?.dispose()
+        this.liveLighting = new LiveLighting(scene, this.settings, this.shadowsEnabled(), this.renderer.capabilities.maxTextureSize)
+    }
 
-        light.position.set(20, 3, -25);
-        light.target.position.set(-5, -0.5, 0);
-        scene.add(light);
+    captureLightingStyle(): Required<VxLightingProps> {
+        if (!this.liveLighting) throw new Error('Stage lighting is not mounted')
+        return this.liveLighting.capture()
+    }
 
-        const light2 = new THREE.DirectionalLight(this.settings.lightColor2 || 0xffffff, 5.5);
-        light2.position.set(-7, 25, 13);
-        light2.target.position.set( 0, 0, 0 );
-        light2.castShadow = this.shadowsEnabled();
-        const d = 8;
-        light2.shadow.camera = new THREE.OrthographicCamera( -d, d, d, -d,  0.5, 55);
-        light2.shadow.radius = 7;
-        light2.shadow.bias = -0.004;
-        light2.shadow.normalBias = 0;
-        (light2.shadow as any).blurSamples = 16;
-        light2.shadow.mapSize.width = light2.shadow.mapSize.height = 512;
-
-        scene.add(light2);
-
-        // let light3 = new THREE.PointLight(this.settings.lightColor1 || 0xbbbbff, 0.3);
-        // light3.position.set(10, -10, 5);
-        // const light3 = new THREE.HemisphereLight(0xffffff, 0x000000, 1.0);
-        // light3.castShadow = true;
-        // scene.add(light3);
-
-        // const light4 = new THREE.AmbientLight(this.settings.lightColor3 || 0xffffff, 0.3);
-        // light4.position.y = 10;
-        // scene.add(light4);
+    applyLightingStyle(style: VxLightingProps): void {
+        this.liveLighting?.apply(style)
     }
 
     createElementMaterial() {
@@ -852,6 +836,7 @@ export class VuetrexStage extends Scene implements VxStage {
         }
         this.clearDiagnostics()
         this.connectors.clear();
+        this.liveLighting?.dispose()
         this.disposeStageSurfaces()
         this.nodesById.clear()
         this.nodesByName.clear()

@@ -42,10 +42,10 @@ bends reproduce an illustration rather than an automatically arranged diagram.
 3. **Clearer vertical alignment.** `start` shifts each child down by half its
    height; it does not mean “put the base on the floor.” Name or document this
    distinction prominently and show unequal-height bars in examples.
-4. **Illustration lighting controls.** Expose light intensity, shadow resolution,
-   contact shadows, and an orthographic camera through declarations. The current
-   scene uses perspective and fixed stage lighting, so it lacks the reference's
-   softer contact shading and near-isometric projection.
+4. **Soft contact shading and orthographic camera.** The scene now uses
+   `vx-lighting` with key intensity 3, fill 0.8, and medium shadows, plus studio
+   environment intensity 0.3 to reduce washed-out surfaces. The reference's softer
+   contact shading and near-isometric projection remain future improvements.
 5. **Connector presentation controls.** Independent arrowhead size, rounded bends,
    and an optional glow would make thin blue data routes easier to reproduce.
    The current bright bands are emissive, but do not create the reference's bloom.

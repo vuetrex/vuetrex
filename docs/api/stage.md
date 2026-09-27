@@ -205,6 +205,8 @@ const settings: VxSettings = {
 | `gap` | Default container gap |
 | `diagnostics` | `true` or per-overlay `VxDiagnosticsSettings` |
 
+Use [`<vx-lighting>`](/api/#scene-declarations) for reactive key/fill intensity and shadow quality.
+
 Use [`<vx-display-wall>`](/guide/display-walls) for background walls, live charts, and text.
 Configure particle color, size, blending, and density on a `ParticleSource` inside connector `.flow()`.
 

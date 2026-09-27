@@ -230,3 +230,5 @@ export { finishes } from './styling/finishes.js';
 export { useCanvasTexture } from './styling/textures.js';
 export type { VxTexturePurpose, VxCanvasTextureOptions } from './styling/textures.js';
 export type { VxEnvironmentProps, VxCameraProps, VxFloorProps } from './scene/declarations.js';
+
+export type { VxLightingProps, VxShadowQuality } from './three/lighting/LiveLighting.js';

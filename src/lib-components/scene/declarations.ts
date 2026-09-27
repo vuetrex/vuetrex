@@ -1,3 +1,4 @@
+import { lightingDefaults } from '../three/lighting/LiveLighting.js'
 import { shallowReactive, toRaw, watchEffect, type WatchStopHandle } from 'vue'
 import { Texture } from 'three'
 import { StageDeclaration } from '../nodes/StageDeclaration.js'
@@ -128,5 +129,18 @@ export class FloorDeclaration extends SceneDeclaration {
             throw new RangeError('Floor fade requires 0 <= fadeStart < fadeEnd')
         }
         this.stage.applyFloorStyle({ ...this.state })
+    }
+}
+
+export class LightingDeclaration extends SceneDeclaration {
+    constructor(stage: VuetrexStage) {
+        super(stage, 'vx-lighting', { ...lightingDefaults })
+    }
+    protected capture(): () => void {
+        const prior = this.stage.captureLightingStyle()
+        return () => this.stage.applyLightingStyle(prior)
+    }
+    protected apply(): void {
+        this.stage.applyLightingStyle({ ...this.state })
     }
 }

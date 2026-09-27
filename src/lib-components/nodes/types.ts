@@ -1,4 +1,4 @@
-import { EnvironmentDeclaration, CameraDeclaration, FloorDeclaration } from '../scene/declarations.js';
+import { EnvironmentDeclaration, CameraDeclaration, FloorDeclaration, LightingDeclaration } from '../scene/declarations.js';
 import {VuetrexStage} from '@/lib-components/three/stage.js';
 import {Base} from '@/lib-components/nodes/Base.js';
 import {GroupNode} from '@/lib-components/nodes/GroupNode.js';
@@ -34,6 +34,7 @@ export type ElementRegistry = Record<string, ClassComponent | FunctionalComponen
  * prop to <vuetrex> for per-instance registration.
  */
 const builtins: ElementRegistry = {
+    'vx-lighting': LightingDeclaration,
     'vx-environment': EnvironmentDeclaration,
     'vx-camera': CameraDeclaration,
     'vx-floor': FloorDeclaration,

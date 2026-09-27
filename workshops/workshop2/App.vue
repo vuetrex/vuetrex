@@ -4,7 +4,8 @@
 
     <section class="scene-card" aria-label="Data infrastructure diagram">
       <vuetrex height="76vh" width="100%" :settings="settings" :elements="elements">
-        <vx-environment preset="studio" :intensity="0.48" :rotation="0.3" />
+        <vx-lighting :key-intensity="3" :fill-intensity="0.8" shadow-quality="medium" />
+        <vx-environment preset="studio" :intensity="0.3" :rotation="0.3" />
         <vx-camera :direction="[7, 8, 10]" fit="content" :padding="0.2" :duration="0" />
         <vx-floor
           finish="matte"
@@ -155,8 +156,10 @@ const gridTexture = useCanvasTexture(ctx => {
   ctx.fillStyle = '#e5e3e0'
   ctx.fillRect(0, 0, size, size)
   ctx.strokeStyle = '#c6c4c2'
-  ctx.lineWidth = 1
-  for (let point = 0; point <= size; point += 12) {
+  // Keep the authored grid spacing and weight as texture resolution increases.
+  const textureScale = size / 256
+  ctx.lineWidth = textureScale
+  for (let point = 0; point <= size; point += 12 * textureScale) {
     ctx.beginPath()
     ctx.moveTo(point, 0)
     ctx.lineTo(point, size)
@@ -166,7 +169,7 @@ const gridTexture = useCanvasTexture(ctx => {
     ctx.lineTo(size, point)
     ctx.stroke()
   }
-}, { width: 256, height: 256, purpose: 'color' })
+}, { width: 1024, height: 1024, purpose: 'color' })
 
 const platformMaterial = computed(() => ({
   color: 0xffffff,

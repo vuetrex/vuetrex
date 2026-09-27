@@ -209,12 +209,14 @@ Connector output is tagged for owner-level picking without creating one semantic
 
 ### Scene declarations (`scene/`)
 
-`EnvironmentDeclaration`, `CameraDeclaration`, and `FloorDeclaration` extend `StageDeclaration`. They own stage-wide
+`EnvironmentDeclaration`, `CameraDeclaration`, `FloorDeclaration`, and `LightingDeclaration` extend `StageDeclaration`. They own stage-wide
 configuration, not spatial objects, and never participate in layout or authored content bounds. Each kind has one
 exclusive owner per stage; duplicate declarations report errors. Prop removal restores declaration defaults; unmount
 restores the captured stage state. The environment declaration owns its generated studio texture and reuses it while
 disabled, but disposes it when replaced by a borrowed texture or unmounted. Stage floor methods own floor resources
-and dispose them on replacement. Camera methods preserve bounds-driven fitting. The reflector shader is unchanged.
+and dispose them on replacement. Camera methods preserve bounds-driven fitting. The reflector shader is unchanged. The stage-owned `LiveLighting` rig applies key/fill intensity and shadow
+quality changes in place, owns both directional lights and shadow targets, and disposes targets on resize,
+disable, and stage teardown. Lighting declarations restore the captured rig configuration on removal.
 
 ### Concrete nodes
 
