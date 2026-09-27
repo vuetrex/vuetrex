@@ -1,3 +1,4 @@
+import { watchSceneEffect } from '../diagnostics/sceneErrors.js'
 import { reactive, watchEffect, type WatchStopHandle } from 'vue'
 import { Group, Vector3 } from 'three'
 import { Node } from '@/lib-components/nodes/Node.js'
@@ -54,7 +55,7 @@ export class Spacer extends Node {
 
     syncWithThree(): void {
         if (this.stopHandle) return
-        this.stopHandle = watchEffect(() => {
+        this.stopHandle = watchSceneEffect(this, () => {
             const parent = this.nearestAncestorObject()
             if (this.anchor.parent !== parent) parent.add(this.anchor)
             this.anchor.name = `el-${this.id}`

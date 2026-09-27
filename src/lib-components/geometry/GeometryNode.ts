@@ -1,3 +1,4 @@
+import { watchSceneEffect } from '../diagnostics/sceneErrors.js'
 import type { Base } from '@/lib-components/nodes/Base.js'
 import { MaterialController } from '../styling/MaterialController.js'
 import { resolveMaterialBinding, type VxMaterialBinding } from '../styling/stylesheets.js'
@@ -163,7 +164,7 @@ export class GeometryNode extends Node {
     syncWithThree(): void {
         if (this.compileStopHandle || this.removed) return
 
-        this.compileStopHandle = watchEffect(() => {
+        this.compileStopHandle = watchSceneEffect(this, () => {
             if (this.parent.value === null) return
             const graph = this.state.graph
             const parameters = this.state.parameters
@@ -194,14 +195,14 @@ export class GeometryNode extends Node {
             this.stage.invalidateContentBounds?.()
         }, { flush: 'post' })
 
-        this.materialStopHandle = watchEffect(() => {
+        this.materialStopHandle = watchSceneEffect(this, () => {
             const styles = this.stage.materialStyles?.value
             const binding = resolveMaterialBinding(styles, this.state.material)
             this.materialController.update(binding.layers)
             this.realizer.updateMaterials(this.state.materials, binding.layers, styles)
         }, { flush: 'post' })
 
-        this.placementStopHandle = watchEffect(() => {
+        this.placementStopHandle = watchSceneEffect(this, () => {
             void this.realizationRevision.value
             if (this.parent.value === null) return
             const parent = this.nearestAncestorObject()

@@ -1,3 +1,4 @@
+import { watchSceneEffect } from '../diagnostics/sceneErrors.js'
 import { resolveMaterialBinding, type VxMaterialBinding } from '../styling/stylesheets.js'
 import { reactive, watchEffect, type WatchStopHandle } from 'vue'
 import { Group, Mesh, MeshStandardMaterial, Vector3 } from 'three'
@@ -201,7 +202,7 @@ export class Panel extends Node {
 
         this.subscribeEvents()
 
-        this.stopHandles.push(watchEffect(() => {
+        this.stopHandles.push(watchSceneEffect(this, () => {
             const position = this.element.getPosition()
             const parentObject = this.nearestAncestorObject()
             if (this.rootGroup.parent !== parentObject) parentObject.add(this.rootGroup)
@@ -215,7 +216,7 @@ export class Panel extends Node {
             this.stage.invalidateContentBounds?.()
         }))
 
-        this.stopHandles.push(watchEffect(() => {
+        this.stopHandles.push(watchSceneEffect(this, () => {
             const width = this.width()
             const depth = this.depth()
             const height = this.height()
@@ -225,7 +226,7 @@ export class Panel extends Node {
             this.stage.invalidateContentBounds?.()
         }))
 
-        this.stopHandles.push(watchEffect(() => {
+        this.stopHandles.push(watchSceneEffect(this, () => {
             const scale = this.contentScale()
             this.group.position.set(0, this.height() / 2, this.contentCenterZ())
             this.group.scale.setScalar(scale)
@@ -233,12 +234,12 @@ export class Panel extends Node {
             this.stage.invalidateContentBounds?.()
         }))
 
-        this.stopHandles.push(watchEffect(() => {
+        this.stopHandles.push(watchSceneEffect(this, () => {
             const binding = resolveMaterialBinding(this.stage.materialStyles?.value, this.state.material, this.state.hover)
             this.materialController.update(binding.layers, binding.hover)
         }))
 
-        this.stopHandles.push(watchEffect(() => this.updateLabel()))
+        this.stopHandles.push(watchSceneEffect(this, () => this.updateLabel()))
         this.stage.reconcileConnections()
     }
 

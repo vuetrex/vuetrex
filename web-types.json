@@ -13,7 +13,7 @@
           "description": "Root scene container. Import Vuetrex and place the scene in its default slot.",
           "source": {
             "file": "dist_types/src/lib-components/root-api.d.ts",
-            "offset": 357
+            "offset": 422
           },
           "attributes": [
             {
@@ -22,7 +22,7 @@
               "default": "{}",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 504
+                "offset": 569
               },
               "required": false,
               "value": {
@@ -42,7 +42,7 @@
               "default": "\"static\"",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 601
+                "offset": 666
               },
               "required": false,
               "value": {
@@ -56,7 +56,7 @@
               "default": "\"50vh\"",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 731
+                "offset": 796
               },
               "required": false,
               "value": {
@@ -70,7 +70,7 @@
               "default": "\"100%\"",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 866
+                "offset": 931
               },
               "required": false,
               "value": {
@@ -84,7 +84,7 @@
               "default": "false",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 993
+                "offset": 1058
               },
               "required": false,
               "value": {
@@ -97,7 +97,7 @@
               "description": "Ordered style definitions for this scene. Overrides sheets inherited from a `vx-stylesheet` provider; changes apply reactively.",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1154
+                "offset": 1219
               },
               "required": false,
               "value": {
@@ -110,7 +110,7 @@
               "description": "Color scheme for this scene. Overrides the scheme inherited from a `vx-stylesheet` provider; `system` follows the browser preference.",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1346
+                "offset": 1411
               },
               "required": false,
               "value": {
@@ -127,7 +127,7 @@
               "default": "\"scene\"",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1566
+                "offset": 1631
               },
               "required": false,
               "value": {
@@ -144,7 +144,7 @@
               "default": "[]",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1708
+                "offset": 1773
               },
               "required": false,
               "value": {
@@ -158,7 +158,7 @@
               "default": "{}",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1837
+                "offset": 1902
               },
               "required": false,
               "value": {
@@ -176,7 +176,7 @@
               "description": "Emitted once after stage mounting, before the inner scene tree mounts on the next Vue tick.\nThe payload provides the public stage controls; content bounds are not ready yet.",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 2146
+                "offset": 2211
               },
               "arguments": [
                 {
@@ -184,6 +184,23 @@
                   "type": {
                     "module": "@exceeder/vuetrex",
                     "name": "VxStage"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "scene-error",
+              "description": "Structured scene failure, emitted in development and production. Includes tag, optional node ID/property, phase, correction, and original cause.",
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 2395
+              },
+              "arguments": [
+                {
+                  "name": "error",
+                  "type": {
+                    "module": "@exceeder/vuetrex",
+                    "name": "VxSceneError"
                   }
                 }
               ]

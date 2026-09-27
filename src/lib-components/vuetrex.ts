@@ -1,8 +1,9 @@
+import { sceneError, type VxSceneError } from './diagnostics/sceneErrors.js'
 import type { VuetrexProps, VuetrexEvents, VxSettings } from './root-api.js';
 import type { ComponentObjectPropsOptions } from 'vue';
 import { mergeConnectorAppearances, mergeStyleSheets, styleSheetContextKey, useResolvedColorScheme, type VxColorScheme, type VxStyleSheetDefinition } from './styling/stylesheets.js';
 import { createRendererForStage } from '@/lib-components/renderer.js';
-import { computed, defineComponent, Fragment, getCurrentInstance, nextTick, h, onMounted, onUnmounted, ref, PropType, watch, inject } from 'vue';
+import { computed, defineComponent, Fragment, shallowRef, onErrorCaptured, getCurrentInstance, nextTick, h, onMounted, onUnmounted, ref, PropType, watch, inject } from 'vue';
 import { Root } from '@/lib-components/nodes/Root.js';
 import { VuetrexStage, VxStage as _VxStage, VxMouseEvent as _VxMouseEvent } from '@/lib-components/three/stage.js';
 import { ElementRegistry } from '@/lib-components/nodes/types.js';
@@ -28,6 +29,7 @@ export default defineComponent({
     emits: {
         /** Stage mounted; the inner scene tree mounts on the next Vue tick. */
         ready: (..._args: VuetrexEvents['ready']) => true,
+        'scene-error': (..._args: VuetrexEvents['scene-error']) => true,
     },
     setup(props, {slots, emit}) {
         const inheritedStyles = inject(styleSheetContextKey, undefined);
@@ -39,6 +41,12 @@ export default defineComponent({
             : sceneResolvedScheme.value);
         const connectorAppearances = computed(() => mergeConnectorAppearances(sheets.value, resolvedScheme.value));
         const materialStyles = computed(() => mergeStyleSheets(sheets.value, resolvedScheme.value));
+        const lastError = shallowRef<VxSceneError>()
+        const reportError = (error: VxSceneError) => {
+            lastError.value = error
+            console.error(`[Vuetrex] <${error.tag}>${error.nodeId ? ` #${error.nodeId}` : ''}${error.property ? ` property ${error.property}` : ''}: ${error.message} ${error.correction}`, error.cause)
+            emit('scene-error', error)
+        }
         const elRef = ref(null);
         const maxWidth = ref(4096);
         const maxHeight = ref(4096);
@@ -60,6 +68,10 @@ export default defineComponent({
          */
         const Connector = defineComponent({
             setup(_, { slots }) {
+                onErrorCaptured((cause, instance, info) => {
+                    reportError(sceneError(cause, instance?.$options.name ?? 'scene component', 'render'))
+                    return false
+                })
                 const instance = getCurrentInstance();
                 if (instance) {
                     // @see runtime-core createComponentInstance
@@ -82,34 +94,36 @@ export default defineComponent({
                 return;
             }
 
-            const stage = new VuetrexStage(elRef.value, {...props.settings});
-            stage.materialStyles = materialStyles;
-            stage.connectorAppearances = connectorAppearances;
-            vuetrexRenderer = createRendererForStage(stage, props.elements);
-            stageRoot = new Root(stage);
+            try {
+                const stage = new VuetrexStage(elRef.value, {...props.settings});
+                stage.materialStyles = materialStyles;
+                stage.connectorAppearances = connectorAppearances;
+                vuetrexRenderer = createRendererForStage(stage, props.elements, reportError);
+                stageRoot = new Root(stage);
 
-            watch(
-                // Inline :camera="{ orbit }" creates a fresh wrapper on render;
-                // only a changed value should replace the active timeline.
-                () => JSON.stringify(props.camera),
-                () => stage.setCamera(props.camera),
-                { immediate: true }
-            );
-            stage.mount();
-            emit("ready", stage);
+                watch(
+                    // Inline :camera="{ orbit }" creates a fresh wrapper on render;
+                    // only a changed value should replace the active timeline.
+                    () => JSON.stringify(props.camera),
+                    () => { try { stage.setCamera(props.camera) } catch (cause) { reportError(sceneError(cause, 'Vuetrex', 'prop', 'camera')) } },
+                    { immediate: true }
+                );
+                stage.mount();
+                emit("ready", stage);
 
-            if (!props.stopped) stage.start();
+                if (!props.stopped) stage.start();
 
-            watch(
-                () => props.stopped,
-                (stopped) => (stopped ? stage.pause() : stage.unpause())
-            );
+                watch(
+                    () => props.stopped,
+                    (stopped) => (stopped ? stage.pause() : stage.unpause())
+                );
 
-            nextTick().then(() => {
-                if (stageRoot) {
-                    vuetrexRenderer?.(h(Connector, slots.default), stageRoot);
-                }
-            });
+                nextTick().then(() => {
+                    if (stageRoot) {
+                        vuetrexRenderer?.(h(Connector, slots.default), stageRoot);
+                    }
+                }).catch(cause => reportError(sceneError(cause, 'Vuetrex', 'render')));
+            } catch (cause) { reportError(sceneError(cause, 'Vuetrex', 'mount')) }
         });
 
         onUnmounted(() => {
@@ -133,13 +147,27 @@ export default defineComponent({
                 "div",
                 {
                     class: "custom-renderer-wrapper",
-                    style: { position: props.position,
+                    style: { position: props.position === 'static' ? 'relative' : props.position,
                         height: props.height,
                         width: props.width,
                         maxWidth: maxWidth.value,
                         maxHeight: maxHeight.value },
-                    ref: elRef
-                }
+                },
+                [
+                    h('div', { ref: elRef, style: { width: '100%', height: '100%' } }),
+                    process.env.NODE_ENV !== 'production' && lastError.value
+                        ? h('div', { role: 'alert', class: 'vuetrex-scene-error', style: {
+                            position: 'absolute', inset: '12px', bottom: 'auto', zIndex: 10,
+                            padding: '16px', background: '#fff3f1', color: '#651b16', border: '1px solid #d96b60',
+                            borderRadius: '6px', font: '14px/1.5 system-ui', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
+                            maxHeight: '80%', overflow: 'auto',
+                        } }, [
+                            h('strong', `Scene error: <${lastError.value.tag}>${lastError.value.nodeId ? ` #${lastError.value.nodeId}` : ''}`),
+                            h('div', `${lastError.value.property ? `Property: ${lastError.value.property}. ` : ''}${lastError.value.message}`),
+                            h('div', lastError.value.correction),
+                            h('button', { type: 'button', onClick: () => { lastError.value = undefined } }, 'Dismiss'),
+                        ]) : null,
+                ]
             );
     },
 });

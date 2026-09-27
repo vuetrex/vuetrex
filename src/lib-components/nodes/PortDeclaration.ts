@@ -1,3 +1,4 @@
+import { watchScene } from '../diagnostics/sceneErrors.js'
 import { reactive, toRaw, watch, type WatchStopHandle } from 'vue'
 import { stableValue } from '../connectors/compiler/evaluator.js'
 import { StageDeclaration } from './StageDeclaration.js'
@@ -46,7 +47,7 @@ export class PortDeclaration extends StageDeclaration {
     }
     syncWithThree(): void {
         if (this.stopHandle) return
-        this.stopHandle = watch(() => {
+        this.stopHandle = watchScene(this, () => {
             const owner = this.parent.value
             if (!owner) return undefined
             if (!(owner instanceof Node) || !owner.hasExplicitId) throw new Error('vx-port requires a direct spatial parent with an explicit semantic id.')

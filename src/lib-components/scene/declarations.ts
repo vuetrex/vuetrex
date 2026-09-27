@@ -1,3 +1,4 @@
+import { watchSceneEffect } from '../diagnostics/sceneErrors.js'
 import { lightingDefaults } from '../three/lighting/LiveLighting.js'
 import { shallowReactive, toRaw, watchEffect, type WatchStopHandle } from 'vue'
 import { Texture } from 'three'
@@ -45,7 +46,7 @@ abstract class SceneDeclaration extends StageDeclaration {
         if (map.has(this.kind)) throw new Error(`Only one ${this.kind} declaration is allowed per Vuetrex scene`)
         map.set(this.kind, this)
         this.restore = this.capture()
-        this.stop = watchEffect(() => this.apply(), { flush: 'post' })
+        this.stop = watchSceneEffect(this, () => this.apply(), { flush: 'post' })
     }
     protected abstract capture(): () => void
     protected abstract apply(): void

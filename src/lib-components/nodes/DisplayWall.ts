@@ -1,3 +1,4 @@
+import { watchSceneEffect, watchScene } from '../diagnostics/sceneErrors.js'
 import { reactive, watch, watchEffect, type WatchStopHandle } from 'vue'
 import {
     BufferGeometry,
@@ -183,7 +184,7 @@ export class DisplayWall extends Node {
     syncWithThree(): void {
         if (this.stopHandles.length > 0) return
 
-        this.stopHandles.push(watchEffect(() => {
+        this.stopHandles.push(watchSceneEffect(this, () => {
             const parent = this.nearestAncestorObject()
             if (this.root.parent !== parent) parent.add(this.root)
             this.root.name = `el-${this.id}`
@@ -193,7 +194,7 @@ export class DisplayWall extends Node {
             this.stage.invalidateContentBounds?.()
         }))
 
-        this.stopHandles.push(watch(() => [
+        this.stopHandles.push(watchScene(this, () => [
             this.state.shape,
             this.state.width,
             this.state.height,
@@ -223,7 +224,7 @@ export class DisplayWall extends Node {
             this.stage.invalidateContentBounds?.()
         }, { immediate: true }))
 
-        this.stopHandles.push(watchEffect(() => {
+        this.stopHandles.push(watchSceneEffect(this, () => {
             // Read the surface even while a structural rebuild is between screens,
             // so Vue keeps this effect subscribed to later surface changes.
             const surface = this.state.surface ?? {}

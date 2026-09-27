@@ -1,3 +1,4 @@
+import { watchSceneEffect } from '../diagnostics/sceneErrors.js'
 import {Node} from '@/lib-components/nodes/Node.js';
 import {
     depthLayout,
@@ -215,7 +216,7 @@ export class GroupNode extends Node {
     syncWithThree() {
         if (this.stopHandle) return
 
-        this.stopHandle = watchEffect(() => {
+        this.stopHandle = watchSceneEffect(this, () => {
             const pos = this.element.getPosition()
             const parentObj = this.nearestAncestorObject()
 

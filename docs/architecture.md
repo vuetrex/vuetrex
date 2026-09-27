@@ -376,3 +376,11 @@ events carry `{ id, item, instanceIndex }` in `event.vxInstance`.
 
 For a new container layout, extend `GroupNode` with a new `Layout` implementation and add focused measurement and
 nesting tests.
+
+### Scene diagnostics
+
+Renderer-created hosts carry weakly held diagnostic context. Prop/creation/insertion
+operations and built-in reactive effects report structured errors to their owning
+Vuetrex component. The component emits `scene-error` in every mode and renders a
+development-only DOM panel beside the canvas. Direct low-level callers retain
+throwing semantics. Reporting does not change logical-tree or GPU ownership.

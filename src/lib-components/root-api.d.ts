@@ -1,3 +1,4 @@
+import type { VxSceneError } from './diagnostics/sceneErrors.js'
 import type { ElementRegistry } from './nodes/types.js'
 import type { VxStage } from './three/stage.js'
 import type { VxCameraView } from './three/cameraController.js'
@@ -49,6 +50,8 @@ export interface VuetrexEvents {
      * The payload provides the public stage controls; content bounds are not ready yet.
      */
     ready: [stage: VxStage]
+    /** Structured scene failure, emitted in development and production. Includes tag, optional node ID/property, phase, correction, and original cause. */
+    'scene-error': [error: VxSceneError]
 }
 
 /** Initial settings for Vuetrex. Colors are numeric RGB values such as 0x85898d; distances use world units. */

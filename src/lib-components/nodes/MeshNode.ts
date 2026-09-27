@@ -1,3 +1,4 @@
+import { watchSceneEffect } from '../diagnostics/sceneErrors.js'
 import { resolveMaterialBinding, type VxMaterialBinding } from '../styling/stylesheets.js'
 import {reactive, watchEffect, WatchStopHandle, computed, ComputedRef} from 'vue';
 import { Base } from './Base.js';
@@ -191,7 +192,7 @@ export abstract class MeshNode extends Node {
         if (this.stopHandle || this.removed) return;
 
         // Geometry watchEffect — rebuilds mesh when layout or geometry params change.
-        this.stopHandle = watchEffect(() => {
+        this.stopHandle = watchSceneEffect(this, () => {
             const { myIdx, siblingCount } = this.layoutContext.value;
             if (this.parent.value !== null) {
                 void siblingCount;
@@ -206,13 +207,13 @@ export abstract class MeshNode extends Node {
         }, { flush: this.flushMode });
 
         // Material-only updates never rebuild geometry; undefined restores construction defaults.
-        this.materialStopHandle = watchEffect(() => {
+        this.materialStopHandle = watchSceneEffect(this, () => {
             const binding = resolveMaterialBinding(this.stage.materialStyles?.value, this.state.material, this.state.hover)
             this.materialController.update(binding.layers, binding.hover);
         });
 
         // Caption watchEffect
-        this.captionStopHandle = watchEffect(() => {
+        this.captionStopHandle = watchSceneEffect(this, () => {
             const { text, height, size, depth } = this.state;
             void text;
             void depth;
@@ -226,7 +227,7 @@ export abstract class MeshNode extends Node {
         // to element.mesh so it inherits the box transform (including hover scale).
         // Re-runs when lines, geometry, or the layout context change; the latter
         // covers the case where the geometry effect rebuilt the parent mesh.
-        this.labelStopHandle = watchEffect(() => {
+        this.labelStopHandle = watchSceneEffect(this, () => {
             // Track layout context so we re-run right after a geometry rebuild.
             void this.layoutContext.value;
             const {

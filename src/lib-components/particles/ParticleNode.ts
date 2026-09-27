@@ -1,3 +1,4 @@
+import { watchSceneEffect } from '../diagnostics/sceneErrors.js'
 import * as THREE from 'three'
 import { markRaw, shallowReactive, shallowRef, watchEffect, type WatchStopHandle } from 'vue'
 import { createParticleBackend, type ParticleBackend } from '@/lib-components/particles/backend.js'
@@ -141,7 +142,7 @@ export class ParticleNode extends Node {
 
         // Establish the group's coordinate space before compiling named-target
         // clouds, whose target bounds must be converted from world to local.
-        this.placementStopHandle = watchEffect(() => {
+        this.placementStopHandle = watchSceneEffect(this, () => {
             void this.realizationRevision.value
             if (this.parent.value === null) return
             const parent = this.nearestAncestorObject()
@@ -155,7 +156,7 @@ export class ParticleNode extends Node {
             this.stage.invalidateContentBounds?.()
         }, { flush: 'post' })
 
-        this.compileStopHandle = watchEffect(() => {
+        this.compileStopHandle = watchSceneEffect(this, () => {
             if (this.parent.value === null) return
             const graph = this.state.graph
             const parameters = this.state.parameters

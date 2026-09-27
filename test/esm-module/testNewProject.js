@@ -66,7 +66,7 @@ try {
     ].join('\n'))
 
     await writeFile(join(projectRoot, 'consumer.ts'), [
-        "import { Vuetrex, VxStylesheet, VxStyleSheet, defineVxStyleSheet, finishes, useCanvasTexture, type VuetrexProps, type VuetrexEvents, type VxSettings, type VxMaterialBinding, type VxEnvironmentProps, type VxCameraProps, type VxFloorProps, type ConnectorHandle, type ConnectorPortDeclarationRecord, type ConnectorHostProps } from '@exceeder/vuetrex'",
+        "import { Vuetrex, VxStylesheet, VxStyleSheet, defineVxStyleSheet, finishes, useCanvasTexture, type VuetrexProps, type VuetrexEvents, type VxSettings, type VxMaterialBinding, type VxEnvironmentProps, type VxCameraProps, type VxFloorProps, type VxSceneError, type ConnectorHandle, type ConnectorPortDeclarationRecord, type ConnectorHostProps } from '@exceeder/vuetrex'",
         "import { sceneElements } from './src/elements.config.js'",
         "import { CustomBrick } from './src/CustomBrick.js'",
         "// @ts-expect-error missing declared custom tag",
@@ -77,6 +77,9 @@ try {
         "const root: VuetrexProps = { settings, height: '520px', stopped: false, scheme: 'system' }",
         "type Props = InstanceType<typeof Vuetrex>['$props']",
         "const liveRoot: Props = { ...root, camera: { orbit: { target: [0, 0, 0], height: 9, radius: 24, azimuth: -30 } }, onReady: stage => { stage.camera.timeline({ repeat: -1, yoyo: true }).to({ azimuth: 30 }, { duration: 60, ease: 'none' }) } }",
+        "const onSceneError = (error: VxSceneError) => { void [error.tag, error.property, error.correction, error.cause] }",
+        "const diagnosticRoot: Props = { 'onScene-error': onSceneError }",
+        "void diagnosticRoot",
         "type Assert<T extends true> = T",
         "type Same<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false",
         "type ReadyIsTyped = Assert<Same<Parameters<NonNullable<Props['onReady']>>, VuetrexEvents['ready']>>",

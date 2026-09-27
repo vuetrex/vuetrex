@@ -1,3 +1,4 @@
+import { watchScene } from '../diagnostics/sceneErrors.js'
 import { markRaw, shallowReactive, watch, type WatchStopHandle } from 'vue'
 import { Color } from 'three'
 import { compileConnectors } from '@/lib-components/connectors/compiler/evaluator.js'
@@ -125,7 +126,7 @@ export class ConnectorGraphHost extends StageDeclaration {
 
     syncWithThree(): void {
         if (this.stopHandle) return
-        this.stopHandle = watch(() => {
+        this.stopHandle = watchScene(this, () => {
             const parent = this.parent.value
             if (!parent) return undefined
             const parameters = this.state.parameters

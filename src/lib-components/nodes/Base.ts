@@ -1,3 +1,4 @@
+import { runSceneOperation } from '../diagnostics/sceneErrors.js'
 import {computed, queuePostFlushCb, ComputedRef, Ref, shallowRef, toRaw, triggerRef} from 'vue';
 
 // defer synchronization until after rendering for all nodes to have complete data about parents and children
@@ -5,11 +6,9 @@ const pendingSyncBase: Base[] = [];
 let pending = false;
 
 const flushChanges = () => {
-    pendingSyncBase.forEach(base => {
-        base.applySync()
-    })
-    pendingSyncBase.length = 0
+    const batch = pendingSyncBase.splice(0)
     pending = false
+    for (const base of batch) base.applySync()
 };
 
 const registerUpdatedBase = (base: Base) => {
@@ -115,13 +114,14 @@ export abstract class Base {
 
     appendChild(child: Base) {
         this.validateChild(child);
-        child.parentNodeValue?.detachChildForMove(child);
-        child.removing = false;
-        child.setParent(this);
+        // Validate stage identity before changing either parent's logical tree.
         if (child.isRenderableNode()) {
             const node = child as any;
             node.stage?.registerNode?.(node);
         }
+        child.parentNodeValue?.detachChildForMove(child);
+        child.removing = false;
+        child.setParent(this);
         this.childList.push(child);
         triggerRef(this.children);
         this.registerSync();
@@ -152,13 +152,14 @@ export abstract class Base {
         this.validateChild(child);
         // Match Node.insertBefore(): inserting a node before itself is a no-op.
         if (child === anchor) return;
-        child.parentNodeValue?.detachChildForMove(child);
-        child.removing = false;
-        child.setParent(this);
+        // Validate stage identity before changing either parent's logical tree.
         if (child.isRenderableNode()) {
             const node = child as any;
             node.stage?.registerNode?.(node);
         }
+        child.parentNodeValue?.detachChildForMove(child);
+        child.removing = false;
+        child.setParent(this);
         const anchorIdx = this.childList.indexOf(anchor);
         if (anchorIdx >= 0) {
             this.childList.splice(anchorIdx, 0, child);
@@ -177,10 +178,10 @@ export abstract class Base {
     }
 
     applySync(): void {
-        this.childList.forEach(b => {
-            b.syncWithThree()
-        })
         this.mustSync = false
+        this.childList.forEach(b => {
+            runSceneOperation(b, 'sync', () => b.syncWithThree())
+        })
     }
 
     syncWithThree() {

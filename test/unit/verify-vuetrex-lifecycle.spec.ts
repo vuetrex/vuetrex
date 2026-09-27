@@ -125,3 +125,31 @@ describe('Vuetrex custom-renderer lifecycle', () => {
         expect(media.removeEventListener).toHaveBeenCalledOnce()
     })
 })
+
+for (const mode of ['development', 'production']) it(`reports scene errors to apps and console in ${mode}`, async () => {
+    vi.stubEnv('NODE_ENV', mode)
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    class InvalidElement extends TestElement {
+        override setStateValue(key: string, value: unknown) {
+            if (key === 'amount') throw new TypeError('amount must be a finite number')
+            super.setStateValue(key, value)
+        }
+    }
+    const onError = vi.fn()
+    const wrapper = mount(Vuetrex, {
+        props: { elements: { 'vx-invalid': InvalidElement }, 'onScene-error': onError },
+        slots: { default: () => h('vx-invalid', { id: 'broken', amount: 'bad' }) },
+    })
+    try {
+        await flushPromises(); await nextTick()
+        const event = onError.mock.calls[0]?.[0]
+        expect(event).toMatchObject({ tag: 'vx-invalid', nodeId: 'broken', property: 'amount', phase: 'prop' })
+        expect(log).toHaveBeenCalled()
+        expect(wrapper.find('[role="alert"]').exists()).toBe(mode === 'development')
+        if (mode === 'development') {
+            expect(wrapper.text()).toContain('amount must be a finite number')
+            await wrapper.get('button').trigger('click')
+            expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+        }
+    } finally { wrapper.unmount(); log.mockRestore(); vi.unstubAllEnvs() }
+})

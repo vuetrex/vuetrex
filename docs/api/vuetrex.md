@@ -112,6 +112,11 @@ for an initial-pose example and stage-owned GSAP animation.
 The payload provides the public stage controls; content bounds are not ready yet.
 See the [stage methods](/api/stage).
 
+`@scene-error="onSceneError"` receives a `VxSceneError` in development and production.
+It includes the failing tag, optional node ID/property, phase, message, correction, and original cause.
+Development builds also show a dismissible error panel inside the scene. See
+[scene errors](/guide/scene-errors) for recovery and production handling.
+
 The **default slot** holds the scene tree. Omitting it prevents stage creation.
 
 ## IntelliJ IDEA / WebStorm

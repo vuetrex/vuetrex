@@ -19,6 +19,7 @@ const fields = name => interfaces.find(node => node.name.text === name).members.
 const props = fields('VuetrexProps')
 const settings = fields('VxSettings')
 const ready = fields('VuetrexEvents')[0]
+const sceneErrorEvent = fields('VuetrexEvents')[1]
 const table = rows => '| Name | Type | Default | Description |\n| --- | --- | --- | --- |\n' + rows.map(row =>
     `| \`${row.name}\` | \`${row.type.replaceAll('|', '\\|')}\` | \`${row.default ?? '—'}\` | ${row.description} |`,
 ).join('\n')
@@ -42,7 +43,9 @@ const webTypes = {
             ...(prop.name === 'settings' ? { 'description-sections': { 'All settings': table(settings) } } : {}),
         })),
         events: [{ name: 'ready', description: ready.description, source: ready.source,
-            arguments: [{ name: 'stage', type: { module: pkg.name, name: 'VxStage' } }] }],
+            arguments: [{ name: 'stage', type: { module: pkg.name, name: 'VxStage' } }] },
+            { name: 'scene-error', description: sceneErrorEvent.description, source: sceneErrorEvent.source,
+                arguments: [{ name: 'error', type: { module: pkg.name, name: 'VxSceneError' } }] }],
         slots: [{ name: 'default', description: 'The scene tree rendered by Vuetrex. Required to create a stage.' }],
     }] } },
 }
@@ -139,6 +142,11 @@ for an initial-pose example and stage-owned GSAP animation.
 
 \`@ready="onReady"\` receives a \`VxStage\`. ${ready.description}
 See the [stage methods](/api/stage).
+
+\`@scene-error="onSceneError"\` receives a \`VxSceneError\` in development and production.
+It includes the failing tag, optional node ID/property, phase, message, correction, and original cause.
+Development builds also show a dismissible error panel inside the scene. See
+[scene errors](/guide/scene-errors) for recovery and production handling.
 
 The **default slot** holds the scene tree. Omitting it prevents stage creation.
 

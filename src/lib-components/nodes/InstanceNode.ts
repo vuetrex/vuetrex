@@ -1,3 +1,4 @@
+import { watchSceneEffect } from '../diagnostics/sceneErrors.js'
 import type { Base } from '@/lib-components/nodes/Base.js'
 import { MaterialController } from '../styling/MaterialController.js'
 import { resolveMaterialBinding, type VxMaterialBinding } from '../styling/stylesheets.js'
@@ -159,11 +160,11 @@ export class InstanceNode<T = unknown> extends Node {
     syncWithThree(): void {
         if (this.stopHandle || this.removed) return
 
-        this.materialStopHandle = watchEffect(() => {
+        this.materialStopHandle = watchSceneEffect(this, () => {
             const binding = resolveMaterialBinding(this.stage.materialStyles?.value, this.state.material)
             this.materialController.update(binding.layers)
         })
-        this.stopHandle = watchEffect(() => {
+        this.stopHandle = watchSceneEffect(this, () => {
             const records = this.encodeItems()
             const geometry = this.resolveGeometry()
             const highestSlot = records.reduce((highest, record) => Math.max(highest, record.slot), -1)

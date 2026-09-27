@@ -237,3 +237,5 @@ export { MeshNode } from './nodes/MeshNode.js';
 export type { MeshNodeStage, MeshState } from './nodes/MeshNode.js';
 
 export { createElementConfig, isVuetrexElement } from './compiler.js';
+
+export type { VxSceneError } from './diagnostics/sceneErrors.js';
