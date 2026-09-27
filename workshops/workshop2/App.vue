@@ -3,10 +3,9 @@
     <a class="back" href="/">&larr; workshops</a>
 
     <section class="scene-card" aria-label="Data infrastructure diagram">
-      <vuetrex height="76vh" width="100%" :settings="settings" :elements="elements">
+      <vuetrex height="76vh" width="100%" :settings="settings" :elements="elements" :camera="cameraView">
         <vx-lighting :key-intensity="3" :fill-intensity="0.8" shadow-quality="medium" />
         <vx-environment preset="studio" :intensity="0.3" :rotation="0.3" />
-        <vx-camera :direction="[7, 8, 10]" fit="content" :padding="0.2" :duration="0" />
         <vx-floor
           finish="matte"
           :color="0xf3f4f6"
@@ -50,15 +49,8 @@
           <FloorPorts :width="0.92" :depth="0.74" />
         </vx-stack>
 
-        <!-- Compact metallic processing hub. -->
-        <vx-stack id="hub" :placement="at(-0.35, platformTop, 1.45)" :gap="0.025">
-          <vx-box :size="0.96" :depth="0.82" :height="0.12" :material="materials.darkBase" />
-          <vx-box :size="0.78" :depth="0.68" :height="0.19" :material="materials.metal" />
-          <vx-box :size="0.76" :depth="0.66" :height="0.025" :material="materials.blue" />
-          <vx-box :size="0.78" :depth="0.68" :height="0.18" :material="materials.metal" />
-          <vx-box :size="0.5" :depth="0.46" :height="0.055" :material="materials.metal" />
-          <FloorPorts :width="0.96" :depth="0.82" />
-        </vx-stack>
+        <!-- Compact metallic processing hub unfolds into a three-part monitor. -->
+        <MonitorHub :platform-top="platformTop" :open="monitorOpen" @toggle="monitorOpen = !monitorOpen" />
 
         <!-- Three metric columns echo the chart on the right of the reference. -->
         <vx-row id="metrics" :placement="at(3, platformTop, -1.5)" :gap="0.15">
@@ -101,18 +93,42 @@
         <vx-connectors scope="workshop-2" :graph="diagram" />
       </vuetrex>
 
-      <div class="caption">DATA FLOOR</div>
+      <div class="caption" style="padding-top: 2em">DATA FLOOR</div>
+      <button class="monitor-toggle" type="button" :aria-expanded="monitorOpen" @click="monitorOpen = !monitorOpen">
+        {{ monitorOpen ? 'Close hub monitor' : 'Open hub monitor' }}
+      </button>
+      <span class="monitor-hint">or click the metallic hub</span>
     </section>
   </main>
 </template>
 
 <script setup lang="ts">
 import { Vuetrex, connectors, useCanvasTexture, type VxSettings } from '@/lib-components'
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import gsap from 'gsap'
 import { Quaternion, Vector3 } from 'three'
 
-import { Plinth } from './Plinth.js'
-import FloorPorts from './FloorPorts.vue'
+import { Plinth } from './things/Plinth.js'
+import FloorPorts from './things/FloorPorts.vue'
+import MonitorHub from './things/MonitorHub.vue'
+
+const monitorOpen = ref(false)
+// Animate one complete camera pose instead of refitting changing monitor bounds.
+const overview = { x: 0, y: 0.45, z: 0, height: 11, radius: 14, azimuth: 35 }
+const closeup = { x: -0.35, y: 0.8, z: 1.4, height: 2.7, radius: 3.4, azimuth: 0 }
+const cameraPose = reactive({ ...overview })
+const cameraView = computed(() => ({ orbit: {
+  target: [cameraPose.x, cameraPose.y, cameraPose.z] as const,
+  height: cameraPose.height, radius: cameraPose.radius, azimuth: cameraPose.azimuth,
+} }))
+let cameraTween: gsap.core.Tween | undefined
+watch(monitorOpen, open => {
+  cameraTween?.kill()
+  cameraTween = gsap.to(cameraPose, {
+    ...(open ? closeup : overview), duration: 1.2, ease: 'sine.inOut',
+  })
+})
+onBeforeUnmount(() => cameraTween?.kill())
 
 const elements = { 'vx-workshop-plinth': Plinth }
 const platformTop = 0.18
@@ -264,6 +280,19 @@ const diagram = connectors
   font-weight: 800;
   letter-spacing: 0.025em;
 }
+
+.monitor-toggle {
+  margin-top: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid #8d9eac;
+  border-radius: 0.4rem;
+  background: #eef3f7;
+  color: #173b55;
+  font: inherit;
+  cursor: pointer;
+}
+.monitor-toggle:focus-visible { outline: 2px solid #168bdf; outline-offset: 3px; }
+.monitor-hint { margin-left: 0.75rem; color: #65717b; font-size: 0.85rem; }
 
 @media (max-width: 700px) {
   .workshop { padding-inline: 0; }

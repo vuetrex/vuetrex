@@ -3,12 +3,18 @@
 Open `/workshops/workshop2/` with `pnpm dev:demos` running. The scene recreates
 the reference's floor only: gridded rounded plinth, two white servers, blue
 database, processing hub, three bars, coral terminal, and two satellite stores.
-Drag to orbit and scroll to zoom.
+Drag to orbit and scroll to zoom. Click the metallic hub (or the monitor button)
+to raise its packed screens, rotate around the rear X hinge, then unfold the outer
+and inner wings around the center screen's side Y hinges. Click again to close;
+clicking during motion reverses from the current pose. The sequence runs at 2× speed
+(1.2 seconds). Opening moves to an explicit hub close-up; closing restores the scene overview.
+One 1.2-second `sine.inOut` camera tween animates both the target and orbit, so
+unfolding panels do not restart bounds-fitting transitions.
 
 The models, materials, placements, ports, and connections use Vuetrex. The
 rounded plinth is a local fixed `MeshNode` extension registered through the
 scene's `elements` prop; it uses the standard renderer lifecycle and material
-ownership. Its UVs project the canvas grid across the top. `FloorPorts.vue`
+ownership. Its UVs project the canvas grid across the top. `things/FloorPorts.vue`
 shares four explicit ports outside each object's base. A few manually authored
 bends reproduce an illustration rather than an automatically arranged diagram.
 
@@ -55,3 +61,17 @@ bends reproduce an illustration rather than an automatically arranged diagram.
 The result is an approximation, not a pixel match. The reference's beveled hub
 details, luminous line halos, and soft ambient occlusion remain simplified.
 Manual waypoint coordinates would also need updating if the object layout changes.
+
+## Folding monitor and animation API findings
+
+`things/MonitorHub.vue` owns one GSAP timeline and kills it on unmount. It animates a
+reactive pose; computed `Placement` values drive the nested hinge groups.
+`things/MonitorPanel.vue` supplies the three reusable framed screens. The hub keeps its
+original semantic ID and fixed floor ports, so its ground connections stay attached.
+
+Vuetrex's placement hierarchy and bubbling clicks are adequate for building the
+mechanism. Its `animateTo()` helper is not sufficient for this animation: it only
+supports Y translation and scale, does not expose pivot/rotation controls or a
+reversible timeline handle, and does not own/cancel its timelines on teardown.
+Direct transform tweens can also compete with reactive placement synchronization.
+Concrete follow-ups are recorded in the roadmap's articulated animation section.

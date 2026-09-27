@@ -122,6 +122,21 @@ from implemented runtime features.
   versus manual routes. Workshop2's authored world-space bends reproduce a fixed
   illustration but need updating when its object layout changes.
 
+### 6. Support articulated animation without application-owned transform plumbing
+
+- [ ] Extend animation authoring beyond `animateTo()`'s Y translation and scale:
+  support full XYZ translation and quaternion/local-axis rotation, with explicit
+  pivot/hinge origins. Workshop2's folding monitor currently needs nested placement
+  groups and GSAP-driven reactive quaternions for its rear X and side Y hinges.
+- [ ] Provide owned, reversible multi-node timelines with sequence/overlap controls,
+  interruption handling, and cancel/reverse handles. Current `animateTo()` returns
+  void and does not register its timelines for node/stage teardown; workshop2 owns
+  and kills its GSAP timeline explicitly.
+- [ ] Define how animated transforms compose with reactive placement/layout and
+  update bounds/connectors. `animateTo()` directly mutates Three.js transforms,
+  while placement sync can overwrite them; workshop2 animates placement inputs to
+  keep a single source of transform state. Include interruption and unmount tests.
+
 ## Follow-ups requiring a concrete use case
 
 - [ ] Consider `wrap="grid"` for one-dimensional layouts when an authoring use
