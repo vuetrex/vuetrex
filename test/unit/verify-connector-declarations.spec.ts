@@ -14,6 +14,7 @@ import { compileConnectors, connectors } from '@/lib-components/connectors/index
 import { defineVxStyleSheet, mergeConnectorAppearances } from '@/lib-components/styling/stylesheets.js'
 import type { VuetrexStage } from '@/lib-components/three/stage.js'
 import type { Element3d } from '@/lib-components/three/element3d.js'
+import { patchProp } from '@/lib-components/patchProp.js'
 
 class HostRoot extends Base { protected state = {} }
 class Endpoint extends Node {
@@ -63,6 +64,114 @@ function harness() {
 }
 
 describe('connector template declarations', () => {
+    it.each(['host', 'edge'])('reconciles all multi-word %s props in both spellings and restores inherited defaults', async target => {
+        const { stage, render, root } = harness()
+        const defaults = { routeStrategy: 'orthogonal', strokeColor: '#123456', strokeWidth: 0.07,
+            strokeOpacity: 0.6, markerStart: 'dot', markerEnd: 'arrow' }
+        stage.connectorAppearances = shallowRef({ primary: defaults }) as any
+        const draw = (props: Record<string, unknown>) => {
+            render(h('vx-connectors', { scope: 'audited', appearance: 'primary', ...(target === 'host' ? props : {}) }, [
+                h('vx-edge', { key: 'link', from: 'a', to: 'b', ...(target === 'edge' ? props : {}) }),
+            ]), root)
+        }
+        const expected = (style: typeof defaults) => {
+            const record = stage.connectors.get({ scope: 'audited', key: 'link' })!.authored
+            expect(record.routing.strategy).toBe(style.routeStrategy)
+            expect(record.strokes[0]).toMatchObject({ color: style.strokeColor, width: style.strokeWidth,
+                opacity: style.strokeOpacity, markerStart: style.markerStart, markerEnd: style.markerEnd })
+        }
+        const kebab = { 'route-strategy': 'direct', 'stroke-color': '#ffffff', 'stroke-width': '0.2',
+            'stroke-opacity': '0.8', 'marker-start': 'diamond', 'marker-end': 'none' }
+        draw(kebab); await nextTick()
+        expected({ routeStrategy: 'direct', strokeColor: '#ffffff', strokeWidth: 0.2, strokeOpacity: 0.8, markerStart: 'diamond', markerEnd: 'none' })
+        const camel = { routeStrategy: 'bezier', strokeColor: '#ff0000', strokeWidth: 0.3, strokeOpacity: 0.9, markerStart: 'none', markerEnd: 'dot' }
+        draw(camel); await nextTick(); expected(camel)
+        draw({}); await nextTick(); expected(defaults)
+        draw(kebab); await nextTick()
+        draw(Object.fromEntries(Object.keys(kebab).map(key => [key, undefined]))); await nextTick(); expected(defaults)
+    })
+
+    it.each([ConnectorGraphHost, EdgeDeclaration])('validates both spellings before updating %s', Type => {
+        const { stage } = harness()
+        const node = new Type(stage)
+        const invalid: Record<string, unknown[]> = {
+            strokeWidth: [-1, NaN, Infinity, true, false, [], [1], {}, '', ' ', 'bad'],
+            strokeOpacity: [-1, 1.1, NaN, true, [], '', 'bad'],
+            routeStrategy: ['', ' ', false, 1, {}],
+            markerStart: [true, '', 'triangle', 1, {}],
+            markerEnd: [true, '', 'triangle', 1, {}],
+            strokeColor: [false, [], {}, NaN, Infinity, -1, 1.2, '', ' '],
+        }
+        const valid: Record<string, unknown> = { strokeWidth: 0.2, strokeOpacity: 0.5, routeStrategy: 'custom-route',
+            markerStart: false, markerEnd: 'arrow', strokeColor: new THREE.Color('red') }
+        for (const [camel, values] of Object.entries(invalid)) {
+            const kebab = camel.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)
+            for (const key of [camel, kebab]) {
+                patchProp(node, key, null, valid[camel])
+                for (const value of values) expect(() => patchProp(node, key, valid[camel], value)).toThrow()
+                expect((node as any).state[camel]).toBe(valid[camel])
+                for (const removed of [null, undefined]) {
+                    patchProp(node, key, valid[camel], removed)
+                    expect((node as any).state[camel]).toBeUndefined()
+                }
+            }
+        }
+        for (const key of ['from-port', 'fromPort', 'to-port', 'toPort']) expect(() => patchProp(node, key, null, 'left')).toThrow('no longer accepts')
+        expect(() => patchProp(node, 'stroke-wdth', null, 1)).toThrow('Unknown')
+        expect(() => patchProp(node, 'interactive', null, 'yes')).toThrow('boolean')
+        for (const removed of [null, undefined]) {
+            patchProp(node, 'interactive', null, true)
+            patchProp(node, 'interactive', true, removed)
+            expect((node as any).state.interactive).toBe(false)
+            patchProp(node, 'parameters', null, { amount: 2 })
+            patchProp(node, 'parameters', { amount: 2 }, removed)
+            expect((node as any).state.parameters).toEqual({})
+            patchProp(node, 'graph', null, connectors.edge('a', 'b'))
+            patchProp(node, 'graph', null, removed)
+            expect((node as any).state.graph).toBeUndefined()
+        }
+        expect(() => patchProp(node, 'graph', null, {})).toThrow('ConnectorSource')
+        expect(() => patchProp(node, 'parameters', null, [])).toThrow('object')
+        const listener = vi.fn()
+        patchProp(node, 'onClick', null, listener)
+        patchProp(node, 'onClick', listener, null)
+        expect(() => patchProp(node, 'onClick', null, 'bad')).toThrow('function')
+    })
+
+    it('validates port values and restores optional defaults after removal', () => {
+        const { stage } = harness()
+        const node = new PortDeclaration(stage)
+        patchProp(node, 'name', null, 'output'); patchProp(node, 'face', null, 'right')
+        for (const at of [false, '', 'xx', {}, [0], [0, 2], [0, NaN], new Array(2)]) {
+            patchProp(node, 'at', null, at)
+            expect(() => node.snapshot()).toThrow('coordinates')
+        }
+        patchProp(node, 'at', null, null)
+        patchProp(node, 'direction', null, '')
+        expect(() => node.snapshot()).toThrow('direction')
+        patchProp(node, 'direction', '', undefined)
+        expect(node.snapshot()).toMatchObject({ name: 'output', face: 'right', at: undefined, direction: undefined })
+        patchProp(node, 'face', 'right', null)
+        patchProp(node, 'position', null, new Array(3))
+        patchProp(node, 'normal', null, [1, 0, 0])
+        expect(() => node.snapshot()).toThrow('finite position and normal')
+        patchProp(node, 'position', null, null)
+        patchProp(node, 'normal', null, null)
+        patchProp(node, 'face', null, 'right')
+        for (const key of ['override', 'disabled']) {
+            patchProp(node, key, null, '')
+            expect((node as any).state[key]).toBe(true)
+            for (const removed of [null, undefined]) {
+                patchProp(node, key, true, removed)
+                expect((node as any).state[key]).toBe(false)
+            }
+            expect(() => patchProp(node, key, null, 'yes')).toThrow('boolean')
+        }
+        expect(() => patchProp(node, 'unknown-prop', null, 1)).toThrow('Unknown')
+        patchProp(node, 'name', 'output', null)
+        expect(() => node.snapshot()).toThrow('unique name')
+    })
+
     it('lowers local, central, and graph edges into equivalent frozen records', () => {
         const record = { key: 'a-b', from: 'a.output', to: 'b.input' }
         const local = compileEdge(record, 'a')

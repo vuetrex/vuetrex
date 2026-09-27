@@ -59,6 +59,14 @@ while fitting determines distance. Floor reflection is 0–1; increasing it redu
 Set both floor fade values to blend the floor into the exact stage background by its world-space X/Z extent. For
 example, `:fade-start="20" :fade-end="50"` keeps the central 40-by-40 area crisp and removes the distant edge.
 
+Scene and connector declarations accept both kebab-case and camelCase multi-word
+props (`fade-start` / `fadeStart`, `stroke-width` / `strokeWidth`). Use one spelling
+per prop in a render. Omitting a binding or passing `null`/`undefined` restores the
+scene default or connector inheritance; required endpoint/port fields must still
+be supplied. Numeric props accept finite numbers and nonempty numeric strings,
+not booleans, arrays, or objects. Boolean props accept booleans, `"true"`, `"false"`,
+or an empty presence attribute. Unknown declaration props are errors.
+
 ### Containers
 
 | Element | Purpose | Important props |
@@ -202,6 +210,10 @@ Presentation props are `appearance`, `route-strategy`, `clearance`, `elevation`,
 `stroke-opacity`, `marker-start`, and `marker-end`. Stylesheet definitions support a separate `connectors` registry
 in each common/light/dark scheme. Backend defaults, named appearance, host props, then edge props or explicit graph
 fields determine the final values. `null`/`undefined` template props restore inheritance.
+
+Stroke width, clearance, and elevation must be nonnegative; opacity is in [0, 1].
+Markers accept `arrow`, `dot`, `diamond`, `none`, or bound `false`. Route strategy
+names must be nonempty strings and may name a registered custom strategy.
 
 A face is `left`, `right`, `front`, `back`, `top`, or `bottom`; `at` is a normalized pair, default `[0.5, 0.5]`.
 Exact position and normal are finite local triples with a nonzero normal. Disabled overrides can omit coordinates.

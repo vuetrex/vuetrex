@@ -1,4 +1,4 @@
-import { reactive, watch, type WatchStopHandle } from 'vue'
+import { reactive, toRaw, watch, type WatchStopHandle } from 'vue'
 import { stableValue } from '../connectors/compiler/evaluator.js'
 import { StageDeclaration } from './StageDeclaration.js'
 import { Node } from './Node.js'
@@ -6,7 +6,6 @@ import type { VuetrexStage } from '../three/stage.js'
 import type { ConnectorPortDeclarationRecord } from '../connectors/declarations.js'
 
 const faces = ['left', 'right', 'front', 'back', 'top', 'bottom']
-const bool = (value: unknown) => value === true || value === '' || value === 'true'
 export class PortDeclaration extends StageDeclaration {
     declare protected state: ConnectorPortDeclarationRecord
     private stopHandle?: WatchStopHandle
@@ -16,14 +15,15 @@ export class PortDeclaration extends StageDeclaration {
         this.state = reactive({ name: '', position: undefined, normal: undefined, face: undefined, at: undefined,
             override: false, disabled: false, direction: undefined })
     }
-    override setStateValue(key: string, value: unknown): void {
-        if (key === 'override' || key === 'disabled') this.state[key] = bool(value)
-        else super.setStateValue(key, value ?? undefined)
+    protected override setDeclarationProp(key: string, value: unknown): void {
+        if (!Object.hasOwn(toRaw(this.state), key)) return super.setDeclarationProp(key, value)
+        if (key === 'override' || key === 'disabled') this.state[key] = this.booleanProp(key, value ?? false)
+        else (this.state as any)[key] = value ?? undefined
     }
     snapshot(): ConnectorPortDeclarationRecord {
         const value = this.state
-        if (typeof value.name !== 'string' || !value.name) throw new Error('vx-port requires a unique name on its owner.')
-        if (value.direction && !['in', 'out', 'bidirectional'].includes(value.direction)) throw new Error('Invalid vx-port direction.')
+        if (typeof value.name !== 'string' || !value.name.trim()) throw new Error('vx-port requires a unique name on its owner.')
+        if (value.direction !== undefined && !['in', 'out', 'bidirectional'].includes(value.direction)) throw new Error('Invalid vx-port direction.')
         const exact = value.position !== undefined || value.normal !== undefined
         if (exact && (value.face !== undefined || value.at !== undefined)) throw new Error('vx-port position/normal and face/at are mutually exclusive.')
         if (!value.face && value.at !== undefined) throw new Error('vx-port at requires a face.')
@@ -31,12 +31,12 @@ export class PortDeclaration extends StageDeclaration {
         if (!(value.disabled && !exact && !value.face)) {
             if (exact) {
                 for (const vector of [value.position, value.normal]) {
-                    if (!Array.isArray(vector) || vector.length !== 3 || !vector.every(Number.isFinite)) throw new Error('vx-port requires finite position and normal triples together.')
+                    if (!Array.isArray(vector) || vector.length !== 3 || !Array.from(vector).every(Number.isFinite)) throw new Error('vx-port requires finite position and normal triples together.')
                 }
                 if (value.normal!.every(n => n === 0)) throw new Error('vx-port normal must be nonzero.')
             } else {
                 if (!value.face || !faces.includes(value.face)) throw new Error('vx-port requires a face or position and normal.')
-                if (value.at && (value.at.length !== 2 || !value.at.every(n => Number.isFinite(n) && n >= 0 && n <= 1))) throw new Error('vx-port at must contain two coordinates in [0, 1].')
+                if (value.at !== undefined && (!Array.isArray(value.at) || value.at.length !== 2 || !Array.from(value.at).every(n => Number.isFinite(n) && n >= 0 && n <= 1))) throw new Error('vx-port at must contain two coordinates in [0, 1].')
             }
         }
         return Object.freeze({ ...value,

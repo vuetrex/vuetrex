@@ -29,16 +29,12 @@ abstract class SceneDeclaration extends StageDeclaration {
         super(stage)
         this.state = shallowReactive({ ...defaults })
     }
-    override setStateValue(key: string, value: unknown): void {
-        key = key.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
+    protected override setDeclarationProp(key: string, value: unknown): void {
         if (!Object.hasOwn(this.defaults, key)) throw new Error(`Unknown ${this.kind} property: ${key}`)
         const fallback = this.defaults[key]
         if (value == null) value = fallback
-        if (typeof fallback === 'boolean') value = value === true || value === '' || value === 'true'
-        if (typeof fallback === 'number') {
-            value = Number(value)
-            if (!Number.isFinite(value)) throw new TypeError(`${this.kind}.${key} must be finite`)
-        }
+        if (typeof fallback === 'boolean') value = this.booleanProp(key, value)
+        if (typeof fallback === 'number') value = this.numberProp(key, value)
         this.state[key] = value
     }
     syncWithThree(): void {
@@ -100,7 +96,7 @@ export class CameraDeclaration extends SceneDeclaration {
     protected apply(): void {
         const direction = this.state.direction as number[]
         if (this.state.fit !== 'content') throw new Error('vx-camera.fit must be content')
-        if (!Array.isArray(direction) || direction.length !== 3 || !direction.every(Number.isFinite)
+        if (!Array.isArray(direction) || direction.length !== 3 || !Array.from(direction).every(Number.isFinite)
             || !direction.some(n => n !== 0) || direction[1] < 0) throw new TypeError('Camera direction requires three finite numbers, nonzero length, and nonnegative Y')
         if (this.state.padding < 0 || this.state.duration < 0) throw new RangeError('Camera padding and duration cannot be negative')
         this.stage.setCameraView({ direction: [...direction] as [number, number, number], padding: this.state.padding, duration: this.state.duration })
@@ -112,13 +108,11 @@ export class FloorDeclaration extends SceneDeclaration {
         super(stage, 'vx-floor', { finish: 'matte', color: 0x3f3f3f, reflection: 0.6, grid: false, captions: false,
             fadeStart: undefined, fadeEnd: undefined })
     }
-    override setStateValue(key: string, value: unknown): void {
-        key = key.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
+    protected override setDeclarationProp(key: string, value: unknown): void {
         if ((key === 'fadeStart' || key === 'fadeEnd') && value != null) {
-            value = Number(value)
-            if (!Number.isFinite(value)) throw new TypeError(`vx-floor.${key} must be finite`)
+            value = this.numberProp(key, value)
         }
-        super.setStateValue(key, value)
+        super.setDeclarationProp(key, value)
     }
     protected capture(): () => void {
         const prior = this.stage.captureFloorStyle()

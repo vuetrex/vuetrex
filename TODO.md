@@ -47,6 +47,9 @@ from implemented runtime features.
   element and connector APIs; these are example components, not new built-ins.
 - Fixed scene declarations rejecting kebab-case floor fade props and leaving a
   blank canvas; regression coverage includes numeric validation and prop removal.
+- Audited all scene, connector-host, edge, and port declarations. Shared prop-name
+  normalization, numeric/boolean validation, explicit invalid-value errors, and
+  renderer-level tests now cover both spellings and removal/inheritance behavior.
 - Corrected the example's submerged metric bars and connectors ending inside
   models; removed the redundant runtime compiler configuration warning.
 - Added a workshop-specific typecheck configuration. Corrected stale camera-test
@@ -61,9 +64,6 @@ from implemented runtime features.
 - [ ] Show actionable development-time scene errors instead of a blank canvas:
   identify the declaration/node, invalid property, and useful correction. Keep
   errors observable to applications as well as the console.
-- [ ] Audit multi-word template props across declaration types; test kebab-case,
-  camelCase, removal, and invalid values. The floor fix should become a consistent
-  contract rather than a one-off repair.
 - [ ] Include workshops in a maintained typecheck/CI command. Root `tsconfig.json`
   currently excludes them; workshop2's separate configuration is only a first step.
 - [ ] Add browser smoke checks for representative demos/workshops: successful

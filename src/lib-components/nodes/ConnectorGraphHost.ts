@@ -1,4 +1,5 @@
 import { markRaw, shallowReactive, watch, type WatchStopHandle } from 'vue'
+import { Color } from 'three'
 import { compileConnectors } from '@/lib-components/connectors/compiler/evaluator.js'
 import { isConnectorSource } from '@/lib-components/connectors/graph.js'
 import type {
@@ -47,17 +48,27 @@ export class ConnectorGraphHost extends StageDeclaration {
         this.state = shallowReactive({ graph: undefined, parameters: {}, interactive: false })
     }
 
-    override setStateValue(key: string, value: unknown): void {
-        const normalized = key.indexOf('-') >= 0
-            ? key.replace(/-([a-z])/g, (_, character) => character.toUpperCase())
-            : key
+    protected override setDeclarationProp(normalized: string, value: unknown): void {
         if (normalized === 'fromPort' || normalized === 'toPort') {
-            throw new Error(`vx-edge no longer accepts ${key}; use from="node.port" / to="node.port" or bind a structured endpoint.`)
+            throw new Error(`vx-edge no longer accepts ${normalized}; use from="node.port" / to="node.port" or bind a structured endpoint.`)
         }
         if ([...presentationKeys, 'scope', 'from', 'to'].includes(normalized as any)) {
             if (value != null && ['clearance', 'elevation', 'strokeWidth', 'strokeOpacity'].includes(normalized)) {
-                value = Number(value)
-                if (!Number.isFinite(value) || (value as number) < 0 || (normalized === 'strokeOpacity' && (value as number) > 1)) throw new Error(`Invalid connector ${key}.`)
+                value = this.numberProp(normalized, value)
+                if ((value as number) < 0 || (normalized === 'strokeOpacity' && (value as number) > 1)) throw new Error(`Invalid connector ${normalized}.`)
+            }
+            if (value != null && ['appearance', 'scope', 'routeStrategy'].includes(normalized)
+                && (typeof value !== 'string' || !value.trim())) {
+                throw new TypeError(`Connector ${normalized} must be a nonempty string.`)
+            }
+            if (value != null && (normalized === 'markerStart' || normalized === 'markerEnd')
+                && value !== false && !['arrow', 'dot', 'diamond', 'none'].includes(value as string)) {
+                throw new TypeError(`Invalid connector ${normalized}; expected arrow, dot, diamond, none, or false.`)
+            }
+            if (normalized === 'strokeColor' && value != null
+                && !(value instanceof Color) && !(typeof value === 'string' && value.trim())
+                && !(typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 0xffffff && Number.isInteger(value))) {
+                throw new TypeError('Connector strokeColor must be a color string, RGB hex number, or Three.js Color.')
             }
             if (this.isEdgeDeclaration && (normalized === 'from' || normalized === 'to') && value != null) {
                 templateEndpoint(value as ConnectorTemplateEndpoint, normalized)
@@ -80,10 +91,15 @@ export class ConnectorGraphHost extends StageDeclaration {
             return
         }
         if (normalized === 'interactive') {
-            this.state.interactive = value === true || value === '' || value === 'true'
+            this.state.interactive = this.booleanProp(normalized, value ?? false)
             return
         }
-        super.setStateValue(key, value)
+        if (['onClick', 'onDblclick', 'onPointerenter', 'onPointerleave'].includes(normalized)) {
+            if (value != null && typeof value !== 'function') throw new TypeError(`Connector ${normalized} must be a function.`)
+            this.setEvent(normalized as keyof ConnectorGraphHostEvents, (value ?? undefined) as ConnectorEventListener | undefined)
+            return
+        }
+        super.setDeclarationProp(normalized, value)
     }
 
     set onClick(listener: ConnectorEventListener | undefined) { this.setEvent('onClick', listener) }
