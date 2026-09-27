@@ -244,6 +244,9 @@ export abstract class MeshNode extends Node {
             }
             if (!this.labelMesh) {
                 this.labelMesh = new Text();
+                // Annotations do not emit in selected bloom unless their logical
+                // owner (or an ancestor) is explicitly included.
+                this.labelMesh.userData.vxBloomRole = 'annotation';
                 this.labelMesh.anchorY = 'middle';
                 // No `font` set: troika falls back to its bundled default and
                 // shares one SDF atlas across the whole scene by default.

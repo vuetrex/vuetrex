@@ -1,34 +1,44 @@
 <template>
-  <h1>Workshop 1</h1>
-  <a href="/">back</a>
-  <section>
-    <vuetrex height="79vh" width="100%" :settings="settings" :camera="{ orbit }" :sheets="[styles]" @ready="initStage">
-      <vx-layer elevation="0.1">
-        <vx-row>
-          <VNode :body="text" header="Camera" :footer="footer1" id="node1">
-              <vx-port name="trigger" face="front" :at="[0.5, 0.1]" />
-              <vx-edge key="n1-n2" from="node1.output" to="node2.input" appearance="primary" />
-          </VNode>
-          <VNode body="" header="Config" :footer="footer2" id="node2">
-              <vx-port name="trigger" face="front" :at="[0.5, 0.1]" />
-          </VNode>
-          <VNode body="" header="Composer" id="node3"/>
-        </vx-row>
-        <vx-row :gap="1.4">
-          <VColumns id="c1">
-              <vx-port name="left" face="left" :at="[0.5, 0.1]" />
-              <vx-port name="back" face="back" :at="[0.5, 0.1]" />
+  <main class="workshop">
+    <a class="back" href="/">&larr; workshops</a>
+    <section class="scene-card">
+      <vuetrex height="79vh" width="100%" :settings="settings" :camera="{ orbit }" :sheets="[styles]"
+               @ready="initStage">
+        <vx-composer
+            preset="editorial"
+            quality="high"
+            :bloom="{ mode: 'selected', strength: 0.35, radius: 0.3, threshold: 0 }"
+        />
+        <vx-layer elevation="0.1">
+          <vx-row>
+            <VNode :body="text" header="Camera" :footer="footer1" id="node1"
+                   :effects="{ bloom: 'include' }">
+              <vx-port name="trigger" face="front" :at="[0.5, 0.1]"/>
+              <vx-edge key="n1-n2" from="node1.output" to="node2.input" appearance="primary"/>
+            </VNode>
+            <VNode body="" header="Config" :footer="footer2" id="node2"
+                   :effects="{ bloom: 'include' }">
+              <vx-port name="trigger" face="front" :at="[0.5, 0.1]"/>
+            </VNode>
+            <VNode body="" header="Composer" id="node3" :effects="{ bloom: 'include' }"/>
+          </vx-row>
+          <vx-row :gap="1.4">
+            <VColumns id="c1">
+              <vx-port name="left" face="left" :at="[0.5, 0.1]"/>
+              <vx-port name="back" face="back" :at="[0.5, 0.1]"/>
               <vx-particles :graph="torusParticles" anchor="origin" :participates-in-layout="false"/>
-          </VColumns>
-        </vx-row>
+            </VColumns>
+          </vx-row>
 
-      </vx-layer>
-      <vx-connectors scope="workshop" appearance="secondary">
-        <vx-edge key="c-n1" from="c1.left" to="node1.trigger" />
-        <vx-edge key="c-n2" from="c1.back" to="node2.trigger" />
-      </vx-connectors>
-    </vuetrex>
-  </section>
+        </vx-layer>
+        <vx-connectors scope="workshop" appearance="secondary">
+          <vx-edge key="c-n1" from="c1.left" to="node1.trigger"/>
+          <vx-edge key="c-n2" from="c1.back" to="node2.trigger"/>
+        </vx-connectors>
+      </vuetrex>
+    </section>
+    <h1>Experiment</h1>
+  </main>
 </template>
 
 <script setup lang="ts">
@@ -55,13 +65,19 @@ const orbit = {
 const styles = defineVxStyleSheet({
   common: {
     connectors: {
-      primary: { routeStrategy: 'orthogonal', clearance: 0.5, strokeColor: '#ffffff', strokeWidth: 0.05, markerEnd: 'arrow' },
-      secondary: { routeStrategy: 'bezier', clearance: 0.5, strokeColor: '#a5d6db', strokeWidth: 0.025 },
+      primary: {
+        routeStrategy: 'orthogonal',
+        clearance: 0.5,
+        strokeColor: '#ffffff',
+        strokeWidth: 0.05,
+        markerEnd: 'arrow'
+      },
+      secondary: {routeStrategy: 'bezier', clearance: 0.5, strokeColor: '#a5d6db', strokeWidth: 0.025},
     },
   },
 })
 
-const debug = reactive({c:[0,0,0], t:[0,0,0], f:0});
+const debug = reactive({c: [0, 0, 0], t: [0, 0, 0], f: 0});
 
 const text = computed(() =>
     `  Position
@@ -99,21 +115,21 @@ function initStage(stage: VxStage) {
 
 const fireflies = computed(() =>
     particles.cloud([0, 0.5, 0], {count: 8192, radius: 2.0, distribution: 'surface', seed: 42,})
-    .appearance({
-      color: ({random}) => random > 0.78 ? 0x8989d9 : 0x272d84,
-      size: ({random}) => 0.01 + random * 0.09,
-      opacity: ({random}) => 0.3 + random * 0.5, blending: 'additive'
-    })
-    .motion({
-      turbulence: ({random}) => 0.025 + random * 0.04,
-      turbulenceScale: 1.35,
-      orbit: {axis: [0, 1, 0], speed: 0.11}
-    })
-    .named('plant-fireflies'),
+        .appearance({
+          color: ({random}) => random > 0.78 ? 0x8989d9 : 0x272d84,
+          size: ({random}) => 0.01 + random * 0.09,
+          opacity: ({random}) => 0.3 + random * 0.5, blending: 'additive'
+        })
+        .motion({
+          turbulence: ({random}) => 0.025 + random * 0.04,
+          turbulenceScale: 1.35,
+          orbit: {axis: [0, 1, 0], speed: 0.11}
+        })
+        .named('plant-fireflies'),
 )
 
 const ringPoints = (radius: number, tilt = -0.11): [number, number, number][] =>
-    Array.from({ length: 32 }, (_, i) => {
+    Array.from({length: 32}, (_, i) => {
       const angle = 2 * Math.PI * i / 32
       const x = radius * Math.cos(angle)
       const z = radius * Math.sin(angle)
@@ -125,12 +141,12 @@ const saturnRings = particles.paths([1.15, 1.35, 1.75].map((radius, i) => ({
       points: ringPoints(radius),
       closed: true,
     })),
-    { count: 1024, spread: 0.145, distribution: 'random', seed: 42 },
+    {count: 1024, spread: 0.145, distribution: 'random', seed: 42},
 );
 
-const torusParticles = particles.path(ringPoints(1.3), { closed: true, count: 10000, spread: 0.22 })
-    .appearance({ color: 0xa9b5e8, size: 0.025, opacity: 0.7 })
-    .motion({ speed: 0.25 })
+const torusParticles = particles.path(ringPoints(1.3), {closed: true, count: 10000, spread: 0.22})
+    .appearance({color: 0xa9b5e8, size: 0.025, opacity: 0.7})
+    .motion({speed: 0.25})
 
 //--------- nodes -------
 
@@ -153,3 +169,33 @@ const timer = setInterval(() => {
 }, 50)
 
 </script>
+<style>
+.workshop {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 0 1.25rem 1.5rem;
+  background: #f7f7f8;
+  color: #18232c;
+}
+.back {
+  position: absolute;
+  z-index: 2;
+  top: 1rem;
+  left: 1.25rem;
+  color: #65717b;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.scene-card {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+@media (max-width: 700px) {
+  .workshop { padding-inline: 0; }
+  .back { left: 0.8rem; }
+}
+</style>

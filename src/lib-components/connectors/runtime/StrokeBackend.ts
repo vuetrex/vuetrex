@@ -147,6 +147,7 @@ export class StrokeBackend implements ConnectorAppearanceBackend<ConnectorDecora
         mesh.userData.vxConnectorOwner = record.interactive ? record.ownerId : undefined
         mesh.userData.vxConnectorKey = record.key
         mesh.userData.vxConnectorPart = record.bundleMemberKeys ? 'bundle' : 'stroke'
+        mesh.userData.vxBloomEffects = record.style.effects
         this.byObject.set(mesh, record)
         this.group.add(mesh)
         this.allocations++

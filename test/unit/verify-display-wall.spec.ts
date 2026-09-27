@@ -86,4 +86,25 @@ describe('DisplayWall', () => {
         expect(painted).toContain('traffic')
         wall.onRemoved()
     })
+
+    it('updates screen radiance and bloom metadata without rebuilding or owning the mask', async () => {
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(mockCanvasContext())
+        const wall = new DisplayWall(makeStage())
+        wall.syncWithThree()
+        await nextTick()
+        const screen = (wall.element.mesh as THREE.Group).children.find(object => object.name.endsWith('-screen')) as THREE.Mesh
+        const geometry = screen.geometry
+        expect(screen.userData.vxBloomEffects).toEqual({ bloom: 'exclude', bloomGain: 1 })
+
+        const mask = new THREE.Texture(), dispose = vi.spyOn(mask, 'dispose')
+        wall.setStateValue('screen-style', { brightness: 2, effects: { bloom: 'include', bloomGain: 0.08 }, bloomMask: mask })
+        await nextTick()
+        expect(screen.geometry).toBe(geometry)
+        expect((screen.material as THREE.MeshBasicMaterial).color.r).toBe(2)
+        expect(screen.userData.vxBloomEffects).toEqual({ bloom: 'include', bloomGain: 0.08 })
+        expect(screen.userData.vxScreenStyle.bloomMask).toBe(mask)
+
+        wall.onRemoved()
+        expect(dispose).not.toHaveBeenCalled()
+    })
 })

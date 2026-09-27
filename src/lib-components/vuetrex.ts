@@ -1,7 +1,7 @@
 import { sceneError, type VxSceneError } from './diagnostics/sceneErrors.js'
 import type { VuetrexProps, VuetrexEvents, VxSettings } from './root-api.js';
 import type { ComponentObjectPropsOptions } from 'vue';
-import { mergeConnectorAppearances, mergeStyleSheets, styleSheetContextKey, useResolvedColorScheme, type VxColorScheme, type VxStyleSheetDefinition } from './styling/stylesheets.js';
+import { mergeComposerStyleSheets, mergeConnectorAppearances, mergeStyleSheets, styleSheetContextKey, useResolvedColorScheme, type VxColorScheme, type VxStyleSheetDefinition } from './styling/stylesheets.js';
 import { createRendererForStage } from '@/lib-components/renderer.js';
 import { computed, defineComponent, Fragment, shallowRef, onErrorCaptured, getCurrentInstance, nextTick, h, onMounted, onUnmounted, ref, PropType, watch, inject } from 'vue';
 import { Root } from '@/lib-components/nodes/Root.js';
@@ -30,6 +30,7 @@ export default defineComponent({
         /** Stage mounted; the inner scene tree mounts on the next Vue tick. */
         ready: (..._args: VuetrexEvents['ready']) => true,
         'scene-error': (..._args: VuetrexEvents['scene-error']) => true,
+        'composer-status': (..._args: VuetrexEvents['composer-status']) => true,
     },
     setup(props, {slots, emit}) {
         const inheritedStyles = inject(styleSheetContextKey, undefined);
@@ -41,6 +42,7 @@ export default defineComponent({
             : sceneResolvedScheme.value);
         const connectorAppearances = computed(() => mergeConnectorAppearances(sheets.value, resolvedScheme.value));
         const materialStyles = computed(() => mergeStyleSheets(sheets.value, resolvedScheme.value));
+        const composerStyles = computed(() => mergeComposerStyleSheets(sheets.value, resolvedScheme.value));
         const lastError = shallowRef<VxSceneError>()
         const reportError = (error: VxSceneError) => {
             lastError.value = error
@@ -96,8 +98,13 @@ export default defineComponent({
 
             try {
                 const stage = new VuetrexStage(elRef.value, {...props.settings});
+                stage.setComposerStatusListener?.(status => emit('composer-status', status));
                 stage.materialStyles = materialStyles;
                 stage.connectorAppearances = connectorAppearances;
+                watch(composerStyles, value => {
+                    try { stage.setComposerStyles?.(value) }
+                    catch (cause) { reportError(sceneError(cause, 'Vuetrex', 'prop', 'sheets')) }
+                }, { immediate: true, deep: true })
                 vuetrexRenderer = createRendererForStage(stage, props.elements, reportError);
                 stageRoot = new Root(stage);
 

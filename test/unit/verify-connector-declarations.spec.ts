@@ -8,7 +8,7 @@ import { PortDeclaration } from '@/lib-components/nodes/PortDeclaration.js'
 import { ConnectorGraphHost, EdgeDeclaration } from '@/lib-components/nodes/ConnectorGraphHost.js'
 import { Connectors } from '@/lib-components/three/connectors/connectors.js'
 import { createRendererForStage } from '@/lib-components/renderer.js'
-import { compileEdge, lowerEdge, presentPlan } from '@/lib-components/connectors/declarations.js'
+import { compileEdge, lowerEdge, mergePresentation, presentPlan } from '@/lib-components/connectors/declarations.js'
 import { declaredPortDefinition } from '@/lib-components/connectors/compiler/ports.js'
 import { compileConnectors, connectors } from '@/lib-components/connectors/index.js'
 import { defineVxStyleSheet, mergeConnectorAppearances } from '@/lib-components/styling/stylesheets.js'
@@ -64,6 +64,13 @@ function harness() {
 }
 
 describe('connector template declarations', () => {
+    it('merges bloom membership and gain independently across presentation layers', () => {
+        expect(mergePresentation(
+            { effects: { bloom: 'include', bloomGain: 0.6 } },
+            { effects: { bloomGain: 0.2 } },
+        ).effects).toEqual({ bloom: 'include', bloomGain: 0.2 })
+    })
+
     it.each(['host', 'edge'])('reconciles all multi-word %s props in both spellings and restores inherited defaults', async target => {
         const { stage, render, root } = harness()
         const defaults = { routeStrategy: 'orthogonal', strokeColor: '#123456', strokeWidth: 0.07,

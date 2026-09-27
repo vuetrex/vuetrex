@@ -340,6 +340,7 @@ function createBatch(key: string, style: ResolvedStyle, count: number, pixelRati
     points.name = `vx-particle-batch-${key}`
     points.frustumCulled = false
     points.userData.vxParticles = true
+    points.userData.vxParticleAdapter = 'cpu'
     return { key, points, positions, hits: [], count: 0 }
 }
 

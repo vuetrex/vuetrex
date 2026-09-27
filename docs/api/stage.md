@@ -114,6 +114,17 @@ Group bounds are green, measured layout footprints are cyan, current default con
 node IDs are labeled above content. Diagnostic objects are excluded from camera fitting, pointer events, and the
 logical node tree. The same value can be supplied initially as `settings.diagnostics`.
 
+### `composerDiagnostics()`
+
+Returns an immutable snapshot of the requested and effective composer options, active pass keys, target size,
+estimated owned target bytes, supported features, fallbacks, allocation/update counters, and the last pipeline error.
+Use the root `composer-status` event for reactive status; it is deduplicated and never fires per frame.
+
+```ts
+const status = stage.composerDiagnostics()
+console.log(status.effective, status.fallbackReasons)
+```
+
 ## Camera orbit timelines
 
 The root `camera` prop accepts a named node, `"scene"` for automatic fitting, or `{ orbit }` for an explicit pose.

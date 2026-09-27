@@ -61,9 +61,9 @@ from implemented runtime features.
 
 ### 1. Make rendering failures visible and catch them in examples
 
-- [ ] Show actionable development-time scene errors instead of a blank canvas:
-  identify the declaration/node, invalid property, and useful correction. Keep
-  errors observable to applications as well as the console.
+- [x] Show actionable development-time scene errors with tag/node context,
+  property details where available, and correction guidance. `scene-error` events
+  and console diagnostics remain available in production; see [scene errors](docs/guide/scene-errors.md).
 - [ ] Include workshops in a maintained typecheck/CI command. Root `tsconfig.json`
   currently excludes them; workshop2's separate configuration is only a first step.
 - [ ] Add browser smoke checks for representative demos/workshops: successful

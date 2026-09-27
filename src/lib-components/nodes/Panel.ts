@@ -262,6 +262,9 @@ export class Panel extends Node {
 
         if (!this.labelMesh) {
             this.labelMesh = new Text()
+            // Annotations remain dark by default, but an explicit effects policy
+            // on their logical owner can opt the complete contribution in.
+            this.labelMesh.userData.vxBloomRole = 'annotation'
             this.labelMesh.anchorY = 'middle'
             this.rootGroup.add(this.labelMesh)
         }

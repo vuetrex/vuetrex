@@ -71,6 +71,8 @@ export interface VxStage {
     setDiagnostics(diagnostics: boolean | VxDiagnosticsSettings): void
     /** Inspect authored, resolved, and realized connector state without exposing mutable paths. */
     connectorDiagnostics(): ConnectorRuntimeDiagnostics
+    /** Inspect the requested and effective post-processing plan and owned target budget. */
+    composerDiagnostics(): import('./postprocessing/ComposerController.js').ComposerDiagnostics
 }
 
 export interface VxMouseEvent extends MouseEvent {
@@ -772,6 +774,7 @@ export class VuetrexStage extends Scene implements VxStage {
                 label.position.set(center.x, top + 0.06, center.z)
                 label.name = `vx-diagnostic-id-${id}`
                 label.userData.vxDiagnostic = 'node-id'
+                label.userData.vxBloomEffects = { bloom: 'exclude', bloomGain: 0 }
                 label.renderOrder = 1004
                 label.material.depthTest = false
                 label.sync()

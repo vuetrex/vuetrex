@@ -12,6 +12,7 @@ export type {
     VxDisplayPaintContext,
     VxDisplaySurface,
     VxDisplayWallShape,
+    VxDisplayScreenStyle,
 } from '@/lib-components/nodes/DisplayWall.js';
 export type { VxMaterialProps, VxHoverProps, VxResolvedMaterial } from '@/lib-components/styling/types.js';
 export { resolveMaterial } from '@/lib-components/styling/resolveMaterial.js';
@@ -224,12 +225,16 @@ export type { ConnectorGraphHostEvents } from '@/lib-components/nodes/ConnectorG
 export { StageDeclaration } from '@/lib-components/nodes/StageDeclaration.js';
 export type { VuetrexStage } from '@/lib-components/three/stage.js';
 
-export { VxStylesheet, VxStyleSheet, defineVxStyleSheet } from './styling/stylesheets.js';
+export { VxStylesheet, VxStyleSheet, defineVxStyleSheet, mergeComposerStyleSheets } from './styling/stylesheets.js';
 export type { VxMaterialBinding, VxMaterialStyle, VxStyleSheetDefinition, VxStyleScheme, VxColorScheme } from './styling/stylesheets.js';
 export { finishes } from './styling/finishes.js';
 export { useCanvasTexture } from './styling/textures.js';
 export type { VxTexturePurpose, VxCanvasTextureOptions } from './styling/textures.js';
 export type { VxEnvironmentProps, VxCameraProps, VxFloorProps } from './scene/declarations.js';
+export { mergeComposerOptions, resolveComposerOptions, resolveNodeEffects } from './scene/composer.js';
+export type { VxComposerOptions, VxComposerPreset, VxComposerQuality, VxToneMapping, VxAntialias,
+    VxBloomMode, VxBloomOptions, VxEffectOption, VxNodeEffects, VxResolvedComposerOptions } from './scene/composer.js';
+export type { ComposerDiagnostics } from './three/postprocessing/ComposerController.js';
 
 export type { VxLightingProps, VxShadowQuality } from './three/lighting/LiveLighting.js';
 

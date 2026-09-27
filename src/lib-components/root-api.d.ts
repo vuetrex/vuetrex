@@ -3,6 +3,7 @@ import type { ElementRegistry } from './nodes/types.js'
 import type { VxStage } from './three/stage.js'
 import type { VxCameraView } from './three/cameraController.js'
 import type { VxColorScheme, VxStyleSheetDefinition } from './styling/stylesheets.js'
+import type { ComposerDiagnostics } from './three/postprocessing/ComposerController.js'
 
 /** Root scene container. Import Vuetrex and place the scene in its default slot. */
 export interface VuetrexProps {
@@ -52,6 +53,8 @@ export interface VuetrexEvents {
     ready: [stage: VxStage]
     /** Structured scene failure, emitted in development and production. Includes tag, optional node ID/property, phase, correction, and original cause. */
     'scene-error': [error: VxSceneError]
+    /** Emitted when the requested/effective composer plan or a fallback changes; never emitted per frame. */
+    'composer-status': [status: ComposerDiagnostics]
 }
 
 /** Initial settings for Vuetrex. Colors are numeric RGB values such as 0x85898d; distances use world units. */

@@ -4,6 +4,7 @@ import { VuetrexStage } from '@/lib-components/three/stage.js';
 import { reactive, computed, ComputedRef } from 'vue';
 import * as THREE from 'three';
 import type { ConnectorPortDefinition } from '@/lib-components/connectors/types.js';
+import { resolveNodeEffects, type VxNodeEffects } from '../scene/composer.js'
 
 declare type VxEventListener<T extends Event> = (event: T) => void;
 
@@ -35,6 +36,7 @@ export abstract class Node extends Base {
         disabled: false,
         participatesInLayout: true,
     });
+    private nodeEffects: Readonly<VxNodeEffects> | undefined
     protected subscribed: boolean = false;
     public readonly type: string = 'Node';
 
@@ -212,6 +214,22 @@ export abstract class Node extends Base {
         return this.visible;
     }
 
+    /** Resolve bloom membership and gain independently through logical ownership. */
+    resolvedNodeEffects(): { bloom: 'auto' | 'include' | 'exclude'; bloomGain: number } {
+        let bloom: 'auto' | 'include' | 'exclude' | undefined
+        let bloomGain: number | undefined
+        let current: Base | null = this
+        while (current) {
+            if (current instanceof Node) {
+                bloom ??= current.nodeEffects?.bloom
+                bloomGain ??= current.nodeEffects?.bloomGain
+            }
+            if (bloom !== undefined && bloomGain !== undefined) break
+            current = current.parent.value
+        }
+        return { bloom: bloom ?? 'auto', bloomGain: bloomGain ?? 1 }
+    }
+
     /** Apply common visibility and interaction state to a newly-created object. */
     applyObjectState(object: THREE.Object3D = this.element.mesh as THREE.Object3D): void {
         if (!object) return;
@@ -254,6 +272,7 @@ export abstract class Node extends Base {
         if (normalized === 'visible') { this.setVisible(value); return; }
         if (normalized === 'disabled') { this.setDisabled(value); return; }
         if (normalized === 'participatesInLayout') { this.setLayoutParticipation(value); return; }
+        if (normalized === 'effects') { this.nodeEffects = resolveNodeEffects(value); return; }
         super.setStateValue(key, value);
     }
 

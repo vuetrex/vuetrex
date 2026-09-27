@@ -13,7 +13,7 @@
           "description": "Root scene container. Import Vuetrex and place the scene in its default slot.",
           "source": {
             "file": "dist_types/src/lib-components/root-api.d.ts",
-            "offset": 422
+            "offset": 510
           },
           "attributes": [
             {
@@ -22,7 +22,7 @@
               "default": "{}",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 569
+                "offset": 657
               },
               "required": false,
               "value": {
@@ -42,7 +42,7 @@
               "default": "\"static\"",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 666
+                "offset": 754
               },
               "required": false,
               "value": {
@@ -56,7 +56,7 @@
               "default": "\"50vh\"",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 796
+                "offset": 884
               },
               "required": false,
               "value": {
@@ -70,7 +70,7 @@
               "default": "\"100%\"",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 931
+                "offset": 1019
               },
               "required": false,
               "value": {
@@ -84,7 +84,7 @@
               "default": "false",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1058
+                "offset": 1146
               },
               "required": false,
               "value": {
@@ -97,7 +97,7 @@
               "description": "Ordered style definitions for this scene. Overrides sheets inherited from a `vx-stylesheet` provider; changes apply reactively.",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1219
+                "offset": 1307
               },
               "required": false,
               "value": {
@@ -110,7 +110,7 @@
               "description": "Color scheme for this scene. Overrides the scheme inherited from a `vx-stylesheet` provider; `system` follows the browser preference.",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1411
+                "offset": 1499
               },
               "required": false,
               "value": {
@@ -127,7 +127,7 @@
               "default": "\"scene\"",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1631
+                "offset": 1719
               },
               "required": false,
               "value": {
@@ -144,7 +144,7 @@
               "default": "[]",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1773
+                "offset": 1861
               },
               "required": false,
               "value": {
@@ -158,7 +158,7 @@
               "default": "{}",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1902
+                "offset": 1990
               },
               "required": false,
               "value": {
@@ -176,7 +176,7 @@
               "description": "Emitted once after stage mounting, before the inner scene tree mounts on the next Vue tick.\nThe payload provides the public stage controls; content bounds are not ready yet.",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 2211
+                "offset": 2299
               },
               "arguments": [
                 {
@@ -193,7 +193,7 @@
               "description": "Structured scene failure, emitted in development and production. Includes tag, optional node ID/property, phase, correction, and original cause.",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 2395
+                "offset": 2483
               },
               "arguments": [
                 {
@@ -201,6 +201,23 @@
                   "type": {
                     "module": "@exceeder/vuetrex",
                     "name": "VxSceneError"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "composer-status",
+              "description": "Emitted when the requested/effective composer plan or a fallback changes; never emitted per frame.",
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 2634
+              },
+              "arguments": [
+                {
+                  "name": "status",
+                  "type": {
+                    "module": "@exceeder/vuetrex",
+                    "name": "ComposerDiagnostics"
                   }
                 }
               ]
@@ -226,7 +243,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 595
+                "offset": 681
               }
             },
             {
@@ -238,7 +255,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 623
+                "offset": 709
               }
             },
             {
@@ -250,7 +267,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 686
+                "offset": 772
               }
             },
             {
@@ -262,7 +279,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 705
+                "offset": 791
               }
             },
             {
@@ -274,7 +291,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 221
+                "offset": 279
               }
             },
             {
@@ -286,7 +303,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 245
+                "offset": 303
               }
             },
             {
@@ -298,7 +315,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 287
+                "offset": 345
               }
             },
             {
@@ -310,7 +327,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 310
+                "offset": 368
               }
             },
             {
@@ -322,7 +339,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 333
+                "offset": 391
               }
             },
             {
@@ -334,7 +351,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 377
+                "offset": 435
               }
             },
             {
@@ -346,7 +363,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 402
+                "offset": 460
               }
             },
             {
@@ -358,7 +375,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 429
+                "offset": 487
               }
             },
             {
@@ -370,7 +387,19 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 478
+                "offset": 536
+              }
+            },
+            {
+              "name": "effects",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "VxNodeEffects"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 583
               }
             }
           ],
@@ -406,7 +435,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1032
+                "offset": 1118
               }
             },
             {
@@ -418,7 +447,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1048
+                "offset": 1134
               }
             },
             {
@@ -430,7 +459,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1085
+                "offset": 1171
               }
             },
             {
@@ -442,7 +471,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1119
+                "offset": 1205
               }
             },
             {
@@ -454,7 +483,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 221
+                "offset": 279
               }
             },
             {
@@ -466,7 +495,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 245
+                "offset": 303
               }
             },
             {
@@ -478,7 +507,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 287
+                "offset": 345
               }
             },
             {
@@ -490,7 +519,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 310
+                "offset": 368
               }
             },
             {
@@ -502,7 +531,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 333
+                "offset": 391
               }
             },
             {
@@ -514,7 +543,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 377
+                "offset": 435
               }
             },
             {
@@ -526,7 +555,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 402
+                "offset": 460
               }
             },
             {
@@ -538,7 +567,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 429
+                "offset": 487
               }
             },
             {
@@ -550,7 +579,19 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 478
+                "offset": 536
+              }
+            },
+            {
+              "name": "effects",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "VxNodeEffects"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
+                "offset": 583
               }
             }
           ],
@@ -586,7 +627,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1197
+                "offset": 1283
               }
             },
             {
@@ -598,7 +639,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1214
+                "offset": 1300
               }
             },
             {
@@ -610,7 +651,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1251
+                "offset": 1337
               }
             },
             {
@@ -622,7 +663,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1286
+                "offset": 1372
               }
             },
             {
@@ -634,7 +675,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1343
+                "offset": 1429
               }
             },
             {
@@ -646,7 +687,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1378
+                "offset": 1464
               }
             },
             {
@@ -658,7 +699,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1401
+                "offset": 1487
               }
             },
             {
@@ -670,7 +711,109 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/connectors/template-api.d.ts",
-                "offset": 1424
+                "offset": 1510
+              }
+            }
+          ]
+        },
+        {
+          "name": "vx-composer",
+          "description": "Host-only final-image configuration. One declaration is allowed per Vuetrex scene.",
+          "attributes": [
+            {
+              "name": "preset",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "VxComposerPreset"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
+                "offset": 537
+              }
+            },
+            {
+              "name": "enabled",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
+                "offset": 567
+              }
+            },
+            {
+              "name": "quality",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "VxComposerQuality"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
+                "offset": 589
+              }
+            },
+            {
+              "name": "max-pixel-ratio",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
+                "offset": 621
+              }
+            },
+            {
+              "name": "reduced-effects",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean | 'system'"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
+                "offset": 648
+              }
+            },
+            {
+              "name": "output",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "Readonly<{ toneMapping?: VxToneMapping; exposure?: number }>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
+                "offset": 688
+              }
+            },
+            {
+              "name": "bloom",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "VxEffectOption<VxBloomOptions>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
+                "offset": 762
+              }
+            },
+            {
+              "name": "antialias",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "VxAntialias"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
+                "offset": 805
               }
             }
           ]

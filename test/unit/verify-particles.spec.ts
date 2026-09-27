@@ -70,9 +70,12 @@ describe('ParticleNode', () => {
             fogFar: { value: expect.any(Number) },
             pixelRatio: { value: expect.any(Number) },
         })
+        expect(points.userData.vxParticleAdapter).toBe('cpu')
+        expect(points.userData.vxParticles).toBe(false)
         expect(points.name.startsWith('el-')).toBe(false)
         node.setStateValue('interactive', true)
         await flush()
+        expect(points.userData.vxParticleAdapter).toBe('cpu')
         expect(points.name.startsWith('el-')).toBe(true)
         expect(node.instanceHitAt(0, points)?.id).toContain(':0')
         const before = [...points.geometry.attributes.position.array]

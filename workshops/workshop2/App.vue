@@ -270,7 +270,7 @@ const diagram = connectors
 }
 
 .scene-card {
-  max-width: 1180px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 

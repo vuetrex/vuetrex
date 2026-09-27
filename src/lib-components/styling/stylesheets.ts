@@ -1,10 +1,11 @@
 import { mergePresentation, type ConnectorAppearances } from '../connectors/declarations.js'
 import { computed, defineComponent, Fragment, h, onMounted, onUnmounted, provide, ref, watch, type InjectionKey, type ComputedRef, type PropType } from 'vue'
 import type { VxHoverProps, VxMaterialProps } from './types.js'
+import { mergeComposerOptions, type VxComposerOptions } from '../scene/composer.js'
 
 export type VxMaterialBinding = string | (VxMaterialProps & { preset?: string })
 export interface VxMaterialStyle { extends?: string; base?: VxMaterialProps; hover?: VxHoverProps }
-export interface VxStyleScheme { connectors?: ConnectorAppearances; materials?: Readonly<Record<string, VxMaterialStyle>> }
+export interface VxStyleScheme { connectors?: ConnectorAppearances; materials?: Readonly<Record<string, VxMaterialStyle>>; composer?: Readonly<VxComposerOptions> }
 export interface VxStyleSheetDefinition { common?: VxStyleScheme; light?: VxStyleScheme; dark?: VxStyleScheme }
 export type VxColorScheme = 'light' | 'dark' | 'system'
 export type MaterialStyles = Readonly<Record<string, VxMaterialStyle>>
@@ -15,6 +16,7 @@ export interface VxStyleSheetContext {
 export const styleSheetContextKey: InjectionKey<VxStyleSheetContext> = Symbol('Vuetrex stylesheet inputs')
 export const connectorAppearancesKey: InjectionKey<ComputedRef<ConnectorAppearances>> = Symbol('Vuetrex connector appearances')
 export const materialStylesKey: InjectionKey<ComputedRef<MaterialStyles>> = Symbol('Vuetrex material styles')
+export const composerStylesKey: InjectionKey<ComputedRef<VxComposerOptions | undefined>> = Symbol('Vuetrex composer styles')
 
 /** Freeze the authored structure, never the caller's textures or color objects. */
 export function defineVxStyleSheet(definition: VxStyleSheetDefinition): VxStyleSheetDefinition {
@@ -28,7 +30,12 @@ export function defineVxStyleSheet(definition: VxStyleSheetDefinition): VxStyleS
                 base: style.base && Object.freeze({ ...style.base }),
                 hover: style.hover && Object.freeze({ ...style.hover }) })
         }
-        result[scheme] = Object.freeze({ materials: Object.freeze(materials), connectors: Object.freeze(Object.fromEntries(Object.entries(value.connectors ?? {}).map(([name, style]) => [name, Object.freeze({ ...style })]))) })
+        const composer = value.composer && Object.freeze({ ...value.composer,
+            output: value.composer.output && Object.freeze({ ...value.composer.output }),
+            bloom: typeof value.composer.bloom === 'object' && value.composer.bloom !== null
+                ? Object.freeze({ ...value.composer.bloom }) : value.composer.bloom })
+        result[scheme] = Object.freeze({ materials: Object.freeze(materials), connectors: Object.freeze(Object.fromEntries(Object.entries(value.connectors ?? {}).map(([name, style]) => [name, Object.freeze({ ...style,
+            effects: style.effects && Object.freeze({ ...style.effects }) })]))), composer })
     }
     return Object.freeze(result)
 }
@@ -85,6 +92,10 @@ export function mergeConnectorAppearances(sheets: readonly VxStyleSheetDefinitio
     return Object.freeze(styles)
 }
 
+export function mergeComposerStyleSheets(sheets: readonly VxStyleSheetDefinition[], scheme: 'light' | 'dark'): VxComposerOptions | undefined {
+    return mergeComposerOptions(...sheets.flatMap(sheet => [sheet.common?.composer, sheet[scheme]?.composer]))
+}
+
 /** Resolve a reactive scheme, following the browser preference only for `system`. */
 export function useResolvedColorScheme(scheme: ComputedRef<VxColorScheme>): ComputedRef<'light' | 'dark'> {
     const systemDark = ref(false)
@@ -119,6 +130,7 @@ export const VxStylesheet = defineComponent({
         provide(styleSheetContextKey, { sheets, resolvedScheme })
         provide(connectorAppearancesKey, computed(() => mergeConnectorAppearances(sheets.value, resolvedScheme.value)))
         provide(materialStylesKey, computed(() => mergeStyleSheets(sheets.value, resolvedScheme.value)))
+        provide(composerStylesKey, computed(() => mergeComposerStyleSheets(sheets.value, resolvedScheme.value)))
         return () => h(Fragment, slots.default?.())
     },
 })

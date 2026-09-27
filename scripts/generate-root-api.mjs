@@ -20,6 +20,7 @@ const props = fields('VuetrexProps')
 const settings = fields('VxSettings')
 const ready = fields('VuetrexEvents')[0]
 const sceneErrorEvent = fields('VuetrexEvents')[1]
+const composerStatusEvent = fields('VuetrexEvents')[2]
 const table = rows => '| Name | Type | Default | Description |\n| --- | --- | --- | --- |\n' + rows.map(row =>
     `| \`${row.name}\` | \`${row.type.replaceAll('|', '\\|')}\` | \`${row.default ?? '—'}\` | ${row.description} |`,
 ).join('\n')
@@ -45,7 +46,9 @@ const webTypes = {
         events: [{ name: 'ready', description: ready.description, source: ready.source,
             arguments: [{ name: 'stage', type: { module: pkg.name, name: 'VxStage' } }] },
             { name: 'scene-error', description: sceneErrorEvent.description, source: sceneErrorEvent.source,
-                arguments: [{ name: 'error', type: { module: pkg.name, name: 'VxSceneError' } }] }],
+                arguments: [{ name: 'error', type: { module: pkg.name, name: 'VxSceneError' } }] },
+            { name: 'composer-status', description: composerStatusEvent.description, source: composerStatusEvent.source,
+                arguments: [{ name: 'status', type: { module: pkg.name, name: 'ComposerDiagnostics' } }] }],
         slots: [{ name: 'default', description: 'The scene tree rendered by Vuetrex. Required to create a stage.' }],
     }] } },
 }
@@ -71,6 +74,20 @@ for (const [name, type, description] of [
             description: 'Receives the connector hit, including its public scope/key handle, and the original mouse event.' })) }),
     })
 }
+const composerFile = 'src/lib-components/scene/composer-api.d.ts'
+const composerInput = await readFile(composerFile, 'utf8')
+const composerSource = ts.createSourceFile(composerFile, composerInput, ts.ScriptTarget.Latest, true)
+const composerInterface = composerSource.statements.find(node => ts.isInterfaceDeclaration(node) && node.name.text === 'VxComposerOptions')
+webTypes.contributions.html.elements.push({
+    name: 'vx-composer',
+    description: 'Host-only final-image configuration. One declaration is allowed per Vuetrex scene.',
+    attributes: composerInterface.members.map(node => ({
+        name: node.name.getText(composerSource).replace(/[A-Z]/g, char => `-${char.toLowerCase()}`),
+        required: false,
+        value: { kind: 'expression', type: node.type.getText(composerSource) },
+        source: { file: 'dist_types/' + composerFile, offset: node.name.getStart(composerSource) },
+    })),
+})
 const reference = `---
 title: Vuetrex root component
 description: All root attributes, settings, events, and editor support in one place.
@@ -148,6 +165,9 @@ It includes the failing tag, optional node ID/property, phase, message, correcti
 Development builds also show a dismissible error panel inside the scene. See
 [scene errors](/guide/scene-errors) for recovery and production handling.
 
+\`@composer-status="onComposerStatus"\` receives a deduplicated \`ComposerDiagnostics\` snapshot when the requested
+or effective post-processing plan changes or a fallback occurs. It is not a per-frame event.
+
 The **default slot** holds the scene tree. Omitting it prevents stage creation.
 
 ## IntelliJ IDEA / WebStorm
@@ -159,7 +179,7 @@ are also documented in the emitted TypeScript declarations.
 
 Evaluate attribute completion on \`<Vuetrex>\`, Quick Documentation on \`settings\` or \`stopped\`, and
 Go to Declaration on attributes. Exact navigation behavior depends on which Vue/TypeScript provider IDEA selects.
-The metadata covers only the root component, not \`vx-*\` elements.
+The metadata covers the root component and host declarations such as connectors and \`vx-composer\`.
 
 Maintainers: run \`node scripts/generate-root-api.mjs\` after editing the root interfaces.
 The build regenerates these files; \`node scripts/generate-root-api.mjs --check\` detects stale output.

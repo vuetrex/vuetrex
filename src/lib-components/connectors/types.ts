@@ -130,6 +130,8 @@ export interface ConnectorStrokeOptions<Item = unknown> {
     markerStart?: ConnectorField<BuiltinConnectorMarker | false, Item>
     markerEnd?: ConnectorField<BuiltinConnectorMarker | false, Item>
     depthTest?: ConnectorField<boolean, Item>
+    /** Image-effect membership for this realized stroke; it never changes routing. */
+    effects?: import('../scene/composer.js').VxNodeEffects
 }
 
 export interface ConnectorMarkerOptions<Item = unknown> {

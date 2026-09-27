@@ -6,10 +6,18 @@ import type { ConnectorSource } from './types.js'
 export type * from './template-api.js'
 import type { ConnectorPresentation, ConnectorAppearances, ConnectorEdgeDeclarationRecord, ConnectorTemplateEndpoint } from './template-api.js'
 
-export const presentationKeys = ['appearance', 'routeStrategy', 'clearance', 'elevation', 'strokeColor', 'strokeWidth', 'strokeOpacity', 'markerStart', 'markerEnd'] as const
+export const presentationKeys = ['appearance', 'routeStrategy', 'clearance', 'elevation', 'strokeColor', 'strokeWidth', 'strokeOpacity', 'markerStart', 'markerEnd', 'effects'] as const
 export function mergePresentation(...layers: (ConnectorPresentation | undefined)[]): ConnectorPresentation {
-    return Object.assign({}, ...layers.filter(Boolean).map(layer => Object.fromEntries(
-        Object.entries(layer!).filter(([key, value]) => presentationKeys.includes(key as typeof presentationKeys[number]) && value !== undefined && value !== null))))
+    const result: ConnectorPresentation = {}
+    for (const layer of layers) {
+        if (!layer) continue
+        const defined = Object.fromEntries(Object.entries(layer).filter(([key, value]) =>
+            presentationKeys.includes(key as typeof presentationKeys[number]) && value !== undefined && value !== null))
+        const inheritedEffects = result.effects
+        Object.assign(result, defined)
+        if (defined.effects) result.effects = Object.freeze({ ...inheritedEffects, ...defined.effects })
+    }
+    return result
 }
 export function namedPresentation(styles: ConnectorAppearances, name?: string): ConnectorPresentation | undefined {
     if (!name) return undefined
@@ -48,7 +56,7 @@ export function lowerEdge(record: ConnectorEdgeDeclarationRecord, ownerId?: stri
 /** Apply template defaults only to fields not explicitly authored by the graph. */
 export function presentPlan(plan: AuthoredConnectorPlan, style: ConnectorPresentation): AuthoredConnectorPlan {
     const route = Object.fromEntries(Object.entries({ strategy: style.routeStrategy, clearance: style.clearance, elevation: style.elevation }).filter(([, v]) => v !== undefined))
-    const stroke = Object.fromEntries(Object.entries({ color: style.strokeColor, width: style.strokeWidth, opacity: style.strokeOpacity, markerStart: style.markerStart, markerEnd: style.markerEnd }).filter(([, v]) => v !== undefined))
+    const stroke = Object.fromEntries(Object.entries({ color: style.strokeColor, width: style.strokeWidth, opacity: style.strokeOpacity, markerStart: style.markerStart, markerEnd: style.markerEnd, effects: style.effects }).filter(([, v]) => v !== undefined))
     if (!Object.keys(route).length && !Object.keys(stroke).length) return plan
     return Object.freeze({ ...plan, records: Object.freeze(plan.records.map(record => {
         const routing = Object.freeze({ ...record.routing, ...Object.fromEntries(Object.entries(route).filter(([key]) => !record.routingExplicit.includes(key))) })

@@ -6,7 +6,20 @@ outline: deep
 
 # Composer and visual styles
 
-**Status: proposed, September 26, 2026.** The APIs below are not implemented. This document changes no runtime behavior.
+**Status: foundation and bloom milestone implemented, September 27, 2026.** The controller/ownership,
+declarative configuration and stylesheet resolution, output/AA, and selective/luminance bloom phases are available.
+Depth/annotation handling, ambient occlusion, restrained grading/vignette, and the later-stage features remain deferred.
+Authored controls for those deferred effects are rejected with their property path rather than silently ignored.
+
+### Current support
+
+| Area | Support |
+|---|---|
+| Controller lifecycle | Stage-owned controller, legacy fallback, keyed reconciliation, resize/DPR handling, idempotent disposal, diagnostics/status event |
+| Configuration | `vx-composer`, stylesheet `composer`, presets, validation, reduced-effects policy |
+| Output | None/Neutral/ACES/AgX tone mapping, exposure, terminal output conversion, FXAA/off/auto |
+| Bloom | Luminance and semantic selected modes, inherited node gain/policy, opaque occlusion, screens and connector strokes |
+| Deferred | Depth/annotation protection, AO, grading/vignette, DOF, outlines, LUTs, per-instance masks |
 
 ## Purpose
 
@@ -27,7 +40,6 @@ Existing scene declarations extend the host-only `StageDeclaration`; stylesheets
 Start with a profile and adjust the effects that matter:
 
 ```vue
-<!-- Proposed API -->
 <Vuetrex :sheets="[diagramStyles]" scheme="dark">
   <vx-composer
     preset="luminous"
@@ -45,7 +57,6 @@ Start with a profile and adjust the effects that matter:
 Share presentation across views through stylesheets:
 
 ```ts
-// Proposed extension: composer is a new stylesheet field.
 const diagramStyles = defineVxStyleSheet({
   common: {
     composer: { preset: 'technical', quality: 'balanced' },
@@ -64,7 +75,7 @@ const diagramStyles = defineVxStyleSheet({
 
 Effects do not silently modify backgrounds, lights, materials, cameras, floors, or semantic palettes. A complete aesthetic pairs a composer profile with existing scene declarations and material/connector styles. Application components can package that pairing; no competing theme system is needed.
 
-### Proposed public contract
+### Implemented public contract
 
 ```ts
 type VxComposerPreset = 'technical' | 'studio' | 'luminous' | 'editorial'
@@ -86,9 +97,6 @@ interface VxComposerOptions {
     radius: number
     threshold: number
   }>
-  ambientOcclusion?: VxEffectOption<{ intensity: number; radius: number }>
-  grading?: VxEffectOption<{ contrast: number; saturation: number }>
-  vignette?: VxEffectOption<{ strength: number }>
   antialias?: 'auto' | 'off' | 'fxaa'
 }
 
@@ -122,11 +130,11 @@ Profiles are versioned immutable parameter bundles, with documented values and p
 | Profile | Intended use | Composer treatment | Companion scene choices |
 |---|---|---|---|
 | `technical` | Dense topology and operational dashboards | Neutral tone mapping, exposure 1; bloom/AO/grading/vignette off | Clear palettes, matte surfaces, explicit selection cues |
-| `studio` | Physical data models and workshop2 | Neutral, exposure 1; AO intensity 0.2 / radius 0.25; other effects off | Pale floor, soft lighting, restrained rough materials |
+| `studio` | Physical data models and workshop2 | Neutral, exposure 1; effects off (AO target deferred) | Pale floor, soft lighting, restrained rough materials |
 | `luminous` | Activity and network flow | ACES, exposure 1; selected bloom strength 0.3 / radius 0.3 / threshold 0; other effects off | Dark floor, explicit emitters, subdued inactive objects |
-| `editorial` | Illustrative presentation | Neutral, exposure 1; AO 0.12 / radius 0.25; contrast 1.03 / saturation 0.9; other effects off | Warm neutrals, simplified geometry, strong silhouettes |
+| `editorial` | Illustrative presentation | Neutral, exposure 1; effects off (AO/grading target deferred) | Warm neutrals, simplified geometry, strong silhouettes |
 
-All profiles start with balanced quality, automatic AA, and system reduced-effects handling. Higher quality changes resolution/sampling, not palette or effect strength. Vignette remains opt-in. No preset enables depth of field, grain, chromatic aberration, or animated effects.
+All profiles start with balanced quality, automatic AA, and system reduced-effects handling. Higher quality changes resolution/sampling, not palette or effect strength. Vignette remains deferred. No preset enables depth of field, grain, chromatic aberration, or animated effects.
 
 For workshop2, combine `studio` with restrained selected bloom on database bands and active links. AO does not replace soft lighting: the separate studio-light proposal owns shadow baking. Publish light and dark examples for every profile, not only attractive dark screenshots.
 
@@ -261,16 +269,14 @@ No random flicker, pulsing, or scanlines by default. If users bind emission to a
 The library determines pass order. Arbitrary user pass arrays are out of scope initially.
 
 ```text
-world beauty + shared depth/normal inputs (linear HDR)
-  → AO applied to eligible opaque surface lighting
-  → bloom extraction, blur, and composition
-  → optional depth of field (future)
-  → linear grading and vignette
-  → protected world labels / selection annotations, depth tested
+world beauty (linear HDR)
+  → optional semantic/luminance bloom extraction, blur, and composition
   → one output tone-map and sRGB conversion
   → FXAA if selected (display-space input)
   → canvas; DOM overlays remain outside the composer
 ```
+
+Depth/normal inputs, AO, grading/vignette, and protected annotation composition are the deferred next stage.
 
 This is a dependency plan, not one full-size target per stage. Skip identity effects and share compatible inputs. AO must not darken emission, halos, or labels. An adapter that cannot separate those contributions must document its limitation before adoption.
 

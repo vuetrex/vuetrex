@@ -5,6 +5,7 @@ import { Texture } from 'three'
 import { StageDeclaration } from '../nodes/StageDeclaration.js'
 import type { VuetrexStage } from '../three/stage.js'
 import { createStudioEnvironment } from './studio.js'
+import type { VxComposerOptions } from './composer.js'
 
 export interface VxEnvironmentProps { preset?: 'studio'; texture?: Texture; enabled?: boolean; intensity?: number; rotation?: number }
 export interface VxCameraProps { direction?: readonly [number, number, number]; fit?: 'content'; padding?: number; duration?: number }
@@ -143,5 +144,25 @@ export class LightingDeclaration extends SceneDeclaration {
     }
     protected apply(): void {
         this.stage.applyLightingStyle({ ...this.state })
+    }
+}
+
+export class ComposerDeclaration extends SceneDeclaration {
+    constructor(stage: VuetrexStage) {
+        super(stage, 'vx-composer', { preset: undefined, enabled: undefined, quality: undefined,
+            maxPixelRatio: undefined, reducedEffects: undefined, output: undefined, bloom: undefined, antialias: undefined })
+    }
+    protected override setDeclarationProp(key: string, value: unknown): void {
+        if (key === 'enabled' && value != null) value = this.booleanProp(key, value)
+        super.setDeclarationProp(key, value)
+    }
+    protected capture(): () => void { return () => this.stage.setComposerDeclaration(undefined) }
+    protected apply(): void {
+        // Snapshot through the proxy first so Vue tracks both top-level bindings and
+        // parameter-only changes inside the authored output/bloom objects.
+        const state = { ...this.state }
+        const output = state.output && typeof state.output === 'object' ? { ...state.output } : state.output
+        const bloom = state.bloom && typeof state.bloom === 'object' ? { ...state.bloom } : state.bloom
+        this.stage.setComposerDeclaration({ ...state, output, bloom } as VxComposerOptions)
     }
 }

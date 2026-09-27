@@ -2,7 +2,7 @@ import type { ClassComponent, FunctionalComponent } from './nodes/types.js'
 
 /** Exact built-in renderer tags; Vue components such as vx-stylesheet are excluded. */
 export const builtinElementTags = Object.freeze([
-    'vx-lighting', 'vx-environment', 'vx-camera', 'vx-floor', 'vx-group', 'vx-layer',
+    'vx-composer', 'vx-lighting', 'vx-environment', 'vx-camera', 'vx-floor', 'vx-group', 'vx-layer',
     'vx-row', 'vx-stack', 'vx-ring', 'vx-connectors', 'vx-edge', 'vx-port', 'vx-panel',
     'vx-instances', 'vx-display-wall', 'vx-spacer', 'vx-geometry', 'vx-particles',
     'vx-box', 'vx-cylinder', 'vx-wedge',

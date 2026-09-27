@@ -44,6 +44,7 @@ export interface ResolvedConnectorStrokeOptions {
     readonly markerStart: BuiltinConnectorMarker | false
     readonly markerEnd: BuiltinConnectorMarker | false
     readonly depthTest: boolean
+    readonly effects?: import('../../scene/composer.js').VxNodeEffects
 }
 
 export interface ResolvedConnectorMarkerOptions {

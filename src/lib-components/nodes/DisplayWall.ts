@@ -1,5 +1,5 @@
 import { watchSceneEffect, watchScene } from '../diagnostics/sceneErrors.js'
-import { reactive, watch, watchEffect, type WatchStopHandle } from 'vue'
+import { markRaw, reactive, toRaw, watch, watchEffect, type WatchStopHandle } from 'vue'
 import {
     BufferGeometry,
     CanvasTexture,
@@ -14,11 +14,13 @@ import {
     PlaneGeometry,
     RepeatWrapping,
     SRGBColorSpace,
+    Texture,
     Vector3,
 } from 'three'
 import * as THREEx from '@/lib-components/three/three.imports.js'
 import { Node } from '@/lib-components/nodes/Node.js'
 import type { VuetrexStage } from '@/lib-components/three/stage.js'
+import { resolveNodeEffects, type VxNodeEffects } from '../scene/composer.js'
 
 export type VxDisplayWallShape = 'flat' | 'curved'
 
@@ -39,6 +41,13 @@ export interface VxDisplaySurface {
     paint?: (target: VxDisplayPaintContext) => void
 }
 
+export interface VxDisplayScreenStyle {
+    brightness?: number
+    effects?: VxNodeEffects
+    /** Borrowed non-color mask. Black suppresses bloom and white allows it. */
+    bloomMask?: Texture | null
+}
+
 interface DisplayWallState {
     text: string
     shape: VxDisplayWallShape
@@ -53,6 +62,7 @@ interface DisplayWallState {
     textureWidth: number
     textureHeight: number
     surface?: VxDisplaySurface
+    screenStyle?: VxDisplayScreenStyle
 }
 
 interface ScreenRecord {
@@ -158,6 +168,7 @@ export class DisplayWall extends Node {
             textureWidth: 1536,
             textureHeight: 768,
             surface: undefined,
+            screenStyle: undefined,
         }) as DisplayWallState
         this.element.mesh = this.root as any
     }
@@ -174,6 +185,24 @@ export class DisplayWall extends Node {
     }
 
     override setStateValue(key: string, value: any): void {
+        const normalized = key.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
+        if (normalized === 'screenStyle') {
+            if (value == null) { this.state.screenStyle = undefined; return }
+            if (typeof value !== 'object' || Array.isArray(value)) throw new TypeError('screenStyle must be an object')
+            for (const name of Object.keys(value)) if (!['brightness', 'effects', 'bloomMask'].includes(name)) {
+                throw new TypeError(`screenStyle.${name} is not supported`)
+            }
+            const brightness = value.brightness ?? 1
+            if (typeof brightness !== 'number' || !Number.isFinite(brightness) || brightness < 0 || brightness > 8) {
+                throw new RangeError('screenStyle.brightness must be between 0 and 8')
+            }
+            if (value.bloomMask !== undefined && value.bloomMask !== null && !(value.bloomMask instanceof Texture)) {
+                throw new TypeError('screenStyle.bloomMask must be a Three.js Texture or null')
+            }
+            this.state.screenStyle = markRaw({ brightness, effects: resolveNodeEffects(value.effects),
+                bloomMask: value.bloomMask == null ? value.bloomMask : toRaw(value.bloomMask) })
+            return
+        }
         if (key === 'shape') {
             if (value === 'flat' || value === 'curved') this.state.shape = value
             return
@@ -229,6 +258,11 @@ export class DisplayWall extends Node {
             // so Vue keeps this effect subscribed to later surface changes.
             const surface = this.state.surface ?? {}
             if (this.screen) this.paintScreen(this.screen, surface)
+        }))
+
+        this.stopHandles.push(watchSceneEffect(this, () => {
+            void this.state.screenStyle
+            this.applyScreenStyle()
         }))
     }
 
@@ -330,7 +364,18 @@ export class DisplayWall extends Node {
         mesh.renderOrder = 2
         const record = { canvas, context, texture, mesh, loadToken: 0 }
         this.screen = record
+        this.applyScreenStyle()
         return record
+    }
+
+    private applyScreenStyle(): void {
+        if (!this.screen) return
+        const style = this.state.screenStyle
+        const brightness = style?.brightness ?? 1
+        const material = this.screen.mesh.material as MeshBasicMaterial
+        material.color.setScalar(brightness)
+        this.screen.mesh.userData.vxBloomEffects = style?.effects ?? { bloom: 'exclude', bloomGain: 1 }
+        this.screen.mesh.userData.vxScreenStyle = { brightness, bloomMask: style?.bloomMask ?? null }
     }
 
     private paintScreen(screen: ScreenRecord, surface: VxDisplaySurface): void {

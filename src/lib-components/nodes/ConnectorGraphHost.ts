@@ -14,6 +14,7 @@ import { compileEdge, mergePresentation, namedPresentation, presentationKeys, pr
 import type { AuthoredConnectorPlan } from '../connectors/compiler/types.js'
 import { StageDeclaration } from '@/lib-components/nodes/StageDeclaration.js'
 import type { VuetrexStage } from '@/lib-components/three/stage.js'
+import { resolveNodeEffects } from '../scene/composer.js'
 
 type ConnectorEventListener = (hit: ConnectorHit, event: MouseEvent) => void
 
@@ -54,6 +55,7 @@ export class ConnectorGraphHost extends StageDeclaration {
             throw new Error(`vx-edge no longer accepts ${normalized}; use from="node.port" / to="node.port" or bind a structured endpoint.`)
         }
         if ([...presentationKeys, 'scope', 'from', 'to'].includes(normalized as any)) {
+            if (normalized === 'effects') value = resolveNodeEffects(value)
             if (value != null && ['clearance', 'elevation', 'strokeWidth', 'strokeOpacity'].includes(normalized)) {
                 value = this.numberProp(normalized, value)
                 if ((value as number) < 0 || (normalized === 'strokeOpacity' && (value as number) > 1)) throw new Error(`Invalid connector ${normalized}.`)

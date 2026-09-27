@@ -16,6 +16,7 @@ import type {
     ConnectorSource,
     ConnectorStrokeOptions,
 } from '@/lib-components/connectors/types.js'
+import { resolveNodeEffects } from '../../scene/composer.js'
 import type {
     AuthoredConnectorPlan,
     AuthoredConnectorRecord,
@@ -340,6 +341,7 @@ function mergeStrokeLayers(
         }
         if (layer.implicit) continue
         const updates = Object.fromEntries(layer.explicit.map(field => [field, (layer as any)[field]]))
+        if (layer.explicit.includes('effects')) updates.effects = Object.freeze({ ...current.effects, ...layer.effects })
         keyed.set(layer.key, Object.freeze({
             ...current,
             ...updates,
@@ -419,6 +421,7 @@ function resolveStroke(
         markerStart: resolveConnectorField(options.markerStart, context, parameters) ?? false,
         markerEnd: resolveConnectorField(options.markerEnd, context, parameters) ?? 'arrow',
         depthTest: resolveConnectorField(options.depthTest, context, parameters) ?? true,
+        effects: resolveNodeEffects(options.effects),
     })
 }
 
@@ -434,6 +437,7 @@ function defaultStroke(profile: ConnectorProfileName): ResolvedConnectorStrokeOp
         markerStart: false,
         markerEnd: 'arrow',
         depthTest: true,
+        effects: undefined,
     })
 }
 

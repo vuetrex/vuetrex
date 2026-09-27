@@ -11,7 +11,7 @@ describe('root component editor contract', () => {
     it('describes every runtime prop with the same default and a navigable source', () => {
         const metadata = JSON.parse(readFileSync('web-types.json', 'utf8'))
         const [root] = metadata.contributions.html.elements
-        expect(metadata.contributions.html.elements.map((element: { name: string }) => element.name)).toEqual(['Vuetrex', 'vx-connectors', 'vx-edge', 'vx-port'])
+        expect(metadata.contributions.html.elements.map((element: { name: string }) => element.name)).toEqual(['Vuetrex', 'vx-connectors', 'vx-edge', 'vx-port', 'vx-composer'])
         expect(root.name).toBe('Vuetrex')
         const props = Vuetrex.props as Record<string, { default: unknown }>
         expect(root.attributes.map((attr: { name: string }) => attr.name).sort()).toEqual(Object.keys(props).sort())

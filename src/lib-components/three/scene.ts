@@ -1,7 +1,8 @@
 import * as THREE from 'three';
-import * as THREEx from '@/lib-components/three/three.imports.js';
 import LifeCycle from '@/lib-components/three/lifecycle.js';
 import {Color} from 'three';
+import { ComposerController, type ComposerDiagnostics } from './postprocessing/ComposerController.js'
+import type { VxComposerOptions } from '../scene/composer.js'
 
 interface MousePosition {
     x: number
@@ -39,8 +40,10 @@ export default class Scene extends LifeCycle {
     protected selectedInstanceId: number | undefined
     protected selectedIntersection: THREE.Intersection | undefined
 
-    private composer: THREEx.EffectComposer;
-    private readonly renderPass: THREEx.RenderPass;
+    private readonly composerController: ComposerController
+    private composerStyles?: Readonly<VxComposerOptions>
+    private composerDeclaration?: Readonly<VxComposerOptions>
+    private composerStatusListener?: (status: ComposerDiagnostics) => void
 
     public colorMain = new THREE.Color(0x555555);
     public colorHighlight = new THREE.Color(0x3377bb);
@@ -73,10 +76,8 @@ export default class Scene extends LifeCycle {
         this.scene = this.createScene();
         this.scene.background = new Color('#808080');
 
-        //composer for mirror and other effects
-        this.composer = new THREEx.EffectComposer(this.renderer)
-        this.renderPass = new THREEx.RenderPass(this.scene, this.renderCamera)
-        this.composer.addPass(this.renderPass)
+        this.composerController = new ComposerController(this.renderer, this.scene, this.renderCamera, this.width, this.height,
+            status => this.composerStatusListener?.(status))
 
         //events
         this.mouse = { x: 0, y: 0 };
@@ -134,8 +135,12 @@ export default class Scene extends LifeCycle {
 
         this.stopRenderLoop();
         this.removeEventListeners();
-        this.renderPass.dispose();
-        this.composer.dispose();
+        if (this.composerController) this.composerController.destroy();
+        else {
+            // Supports lightweight Scene prototype fixtures used by downstream lifecycle tests.
+            (this as any).renderPass?.dispose?.();
+            (this as any).composer?.dispose?.();
+        }
         this.scene.clear();
         this.renderCamera.clear();
         while (this.domParent.lastChild) {
@@ -203,7 +208,23 @@ export default class Scene extends LifeCycle {
 
     //--- overrides ---
     render() {
-        this.composer.render();
+        this.composerController.render();
+    }
+
+    setComposerStyles(options?: Readonly<VxComposerOptions>): void {
+        this.composerStyles = options
+        this.composerController.configure(this.composerStyles, this.composerDeclaration)
+    }
+
+    setComposerDeclaration(options?: Readonly<VxComposerOptions>): void {
+        this.composerDeclaration = options
+        this.composerController.configure(this.composerStyles, this.composerDeclaration)
+    }
+
+    composerDiagnostics(): ComposerDiagnostics { return this.composerController.diagnostics() }
+
+    setComposerStatusListener(listener?: (status: ComposerDiagnostics) => void): void {
+        this.composerStatusListener = listener
     }
 
     //--- events ---
@@ -398,7 +419,6 @@ export default class Scene extends LifeCycle {
         // camera.position.x = -window.pageYOffset / 500;
         // camera.position.y = 11 + window.pageYOffset / 1000;
 
-        this.renderer.setSize(width, height);
-        this.composer.setSize(width, height);
+        this.composerController.resize(width, height, window.devicePixelRatio || 1);
     }
 }

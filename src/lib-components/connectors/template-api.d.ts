@@ -1,5 +1,6 @@
 import type * as THREE from 'three'
 import type { BuiltinConnectorMarker, ConnectorPortName, ConnectorSource, ConnectorStrategyName, ConnectorVector3Tuple } from './types.js'
+import type { VxNodeEffects } from '../scene/composer.js'
 
 export interface ConnectorPresentation {
     appearance?: string
@@ -11,6 +12,7 @@ export interface ConnectorPresentation {
     strokeOpacity?: number
     markerStart?: BuiltinConnectorMarker | false
     markerEnd?: BuiltinConnectorMarker | false
+    effects?: VxNodeEffects
 }
 export interface ConnectorHostProps extends ConnectorPresentation {
     graph?: ConnectorSource

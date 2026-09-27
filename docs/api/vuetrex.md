@@ -117,6 +117,9 @@ It includes the failing tag, optional node ID/property, phase, message, correcti
 Development builds also show a dismissible error panel inside the scene. See
 [scene errors](/guide/scene-errors) for recovery and production handling.
 
+`@composer-status="onComposerStatus"` receives a deduplicated `ComposerDiagnostics` snapshot when the requested
+or effective post-processing plan changes or a fallback occurs. It is not a per-frame event.
+
 The **default slot** holds the scene tree. Omitting it prevents stage creation.
 
 ## IntelliJ IDEA / WebStorm
@@ -128,7 +131,7 @@ are also documented in the emitted TypeScript declarations.
 
 Evaluate attribute completion on `<Vuetrex>`, Quick Documentation on `settings` or `stopped`, and
 Go to Declaration on attributes. Exact navigation behavior depends on which Vue/TypeScript provider IDEA selects.
-The metadata covers only the root component, not `vx-*` elements.
+The metadata covers the root component and host declarations such as connectors and `vx-composer`.
 
 Maintainers: run `node scripts/generate-root-api.mjs` after editing the root interfaces.
 The build regenerates these files; `node scripts/generate-root-api.mjs --check` detects stale output.
