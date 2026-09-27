@@ -32,7 +32,7 @@ Start with a profile and adjust the effects that matter:
   <vx-composer
     preset="luminous"
     quality="balanced"
-    :bloom="{ mode: 'selected', strength: 0.35, radius: 0.3, threshold: 1 }"
+    :bloom="{ mode: 'selected', strength: 0.35, radius: 0.3, threshold: 0 }"
   />
   <vx-environment preset="studio" :intensity="0.5" />
   <vx-floor finish="matte" :color="0x101923" />
@@ -57,7 +57,7 @@ const diagramStyles = defineVxStyleSheet({
     composer: { bloom: false, ambientOcclusion: { intensity: 0.15 } },
   },
   dark: {
-    composer: { bloom: { mode: 'selected', strength: 0.3, threshold: 1 } },
+    composer: { bloom: { mode: 'selected', strength: 0.3, threshold: 0 } },
   },
 })
 ```
@@ -94,17 +94,19 @@ interface VxComposerOptions {
 
 interface VxNodeEffects {
   bloom?: 'auto' | 'include' | 'exclude'
+  bloomGain?: number // 0–4; default 1; mask contribution only, never beauty brightness
 }
 ```
 
-`enabled: false` bypasses optional effects while retaining the requested output transform and AA. `bloom: false` disables only bloom. Without a composer declaration or stylesheet composer configuration, retain the legacy rendering path.
+`enabled: false` bypasses optional effects while retaining the requested output transform and AA. `bloom: false` disables only bloom. Explicitly enabling bloom without a mode defaults to `selected`. Without a composer declaration or stylesheet composer configuration, retain the legacy rendering path.
 
 | Control | Meaning and validation |
 |---|---|
 | Exposure | Positive finite output multiplier; default 1; no automatic brightness correction |
 | Bloom strength | Finite 0–2 multiplier on blurred radiance; default 0.3 when enabled |
 | Bloom radius | 0–1 halo spread; default 0.3; not world units |
-| Bloom threshold | Nonnegative linear scene luminance before exposure/tone mapping; default 1 |
+| Bloom threshold | Nonnegative linear source luminance before exposure/tone mapping; selected-mode default 0, luminance-mode default 1 |
+| Per-contribution bloom gain | 0–4 mask multiplier after threshold extraction; default 1; independent of visible emitter brightness |
 | AO intensity | 0–1 contact darkening; default 0.2 |
 | AO radius | Positive world-unit sampling radius; default 0.25; independent of camera fitting |
 | Contrast / saturation | 0–2 multipliers; identity 1; no automatic data normalization |
@@ -121,7 +123,7 @@ Profiles are versioned immutable parameter bundles, with documented values and p
 |---|---|---|---|
 | `technical` | Dense topology and operational dashboards | Neutral tone mapping, exposure 1; bloom/AO/grading/vignette off | Clear palettes, matte surfaces, explicit selection cues |
 | `studio` | Physical data models and workshop2 | Neutral, exposure 1; AO intensity 0.2 / radius 0.25; other effects off | Pale floor, soft lighting, restrained rough materials |
-| `luminous` | Activity and network flow | ACES, exposure 1; selected bloom strength 0.3 / radius 0.3 / threshold 1; other effects off | Dark floor, explicit emitters, subdued inactive objects |
+| `luminous` | Activity and network flow | ACES, exposure 1; selected bloom strength 0.3 / radius 0.3 / threshold 0; other effects off | Dark floor, explicit emitters, subdued inactive objects |
 | `editorial` | Illustrative presentation | Neutral, exposure 1; AO 0.12 / radius 0.25; contrast 1.03 / saturation 0.9; other effects off | Warm neutrals, simplified geometry, strong silhouettes |
 
 All profiles start with balanced quality, automatic AA, and system reduced-effects handling. Higher quality changes resolution/sampling, not palette or effect strength. Vignette remains opt-in. No preset enables depth of field, grain, chromatic aberration, or animated effects.
@@ -144,15 +146,115 @@ One controller handles both sheet and declaration inputs. Removing the declarati
 ## Bloom with semantic control
 
 - **Luminance mode:** sufficiently bright world pixels contribute, including bright floors and reflections. Useful for illustrations, but explicitly opt-in.
-- **Selected mode:** only contributions marked `include` can emit bloom, and they must still pass the threshold. White panels should not compete with an active stream. `auto` contributes nothing in this mode.
+- **Selected mode:** only contributions marked `include` can emit bloom. Extract their emitted radiance rather than their total lit beauty color. White panels and specular highlights should not compete with an active stream. `auto` contributes nothing in this mode. Threshold defaults to zero so saturated blue/red sources can glow without extreme material intensity; authors can raise it deliberately.
 
 `exclude` suppresses contribution in either mode. Groups provide inherited policy; nearest explicit descendants win. Text, captions, helpers, and selection annotations are excluded by default. Exclusion prevents a surface from generating bloom; it does not prevent nearby halos from overlapping it.
 
-Resolve membership through logical ownership, never mesh names. Fixed meshes, generated batches, instances, particles, and connector backends expose stable render contributions with adapters. First release supports whole-host policy for geometry, instances, and particles; per-instance emission masks are deferred. Connector appearance metadata receives an equivalent `effects` policy per keyed record, outside routing and stroke-material options. Membership changes must not rebuild connection topology.
+Resolve membership through logical ownership, never mesh names. Fixed meshes, generated batches, instances, particles, and connector backends expose stable render contributions with adapters. Compound built-ins must distinguish screen, frame, and annotation contributions. First release supports whole-host policy for geometry, instances, and particles; per-instance emission masks are deferred. Connector appearance metadata receives an equivalent `effects` policy per keyed record, outside routing and stroke-material options. Membership changes must not rebuild connection topology.
 
-Selected bloom requires an occlusion-correct radiance mask. Non-emitting opaque surfaces still occlude emitters behind them. Use owned mask resources/proxies or a verified auxiliary path, never unguarded swaps of live application materials. Unsupported custom shaders render normally but skip mask emission with a diagnostic. Validate alpha-tested cutouts; initially, blended surfaces do not occlude the mask, a documented approximation for glass-heavy scenes.
+Selected bloom requires an occlusion-correct radiance mask. Non-emitting opaque surfaces still occlude emitters behind them. Fully occluded sources contribute nothing; a visible source's blurred halo can overlap nearby silhouettes, as an image-space effect. Use owned mask resources/proxies or a verified auxiliary path, never unguarded swaps of live application materials. Unsupported custom shaders render normally but skip mask emission with a diagnostic. Validate alpha-tested cutouts; initially, blended surfaces do not occlude the mask, a documented approximation for glass-heavy scenes.
 
 Emissive intensity controls source radiance, not halo size. Connector and particle adapters need a documented, bounded linear emission multiplier because ordinary stroke colors may not exceed the HDR threshold. Introduce that presentation metadata with adapter tests. Enabling bloom must not automatically increase every object's emissive value.
+
+For selected bloom, the extraction contract is: resolve membership, sample linear emitted radiance, apply material alpha/coverage and any explicit mask, apply the source-luminance threshold, then multiply by `bloomGain`. Blur the combined contribution and apply scene bloom strength once. Never multiply beauty brightness by `bloomGain`, and never apply emissive intensity twice. `bloomGain: 0` suppresses the halo while retaining the visible luminous surface. It cannot override `exclude`. Gain inherits independently through groups, with nearest explicit value winning; removing it restores inherited/default gain.
+
+## Neon, monitors, and database rings
+
+These are first-class acceptance cases for the bloom milestone, not optional showcase effects. All three must work together in one scene at fixed exposure.
+
+| Subject | Visible source | Halo policy | Detail to preserve |
+|---|---|---|---|
+| Neon tube or trace | Bright, colored emissive core; physical tube geometry or a crisp connector stroke | Explicit include, moderate gain, restrained scene radius | Continuous core, recognizable hue, no halos through opaque occluders |
+| Lit monitor | Image/content rendered as a self-lit screen, independent of frame lighting | Off by default; optional small gain and content mask | Text, chart colors, black levels, bezel, readable contrast |
+| Database ring | Separate thin emissive band on an opaque body | Include bands only; casing and cap do not emit | Visible spacing between rings, cylindrical form, stable thin lines |
+
+### Independent controls instead of one brightness slider
+
+Keep four authoring decisions separate:
+
+1. **Source brightness:** material `emissiveIntensity`, or screen/connector adapter radiance.
+2. **Halo contribution:** `effects.bloomGain` weights that source without changing its visible core.
+3. **Halo spread and total strength:** composer radius/strength control the shared blur.
+4. **Light on nearby surfaces:** explicit lights or a documented lighting approximation, independent of bloom.
+
+One shared blur is the first-release budget. Gain can make a screen's halo weaker than neon, but cannot give each source a different blur radius. If simultaneous narrow monitor glow and broad neon glow require separate kernels, add a later bounded set of named bloom groups with declared memory/pass cost. Do not silently allocate a composer or blur chain per node.
+
+### Neon: bright core with a colored halo
+
+```vue
+<!-- Proposed effects metadata; material controls already exist. -->
+<vx-box
+  :size="2.4" :depth="0.06" :height="0.06"
+  :material="{
+    color: '#12404a', emissive: '#00d9ff', emissiveIntensity: 3,
+    roughness: 0.35,
+  }"
+  :effects="{ bloom: 'include', bloomGain: 0.8 }"
+/>
+```
+
+This strip illustrates emission; a shaped neon tube should use appropriate authored geometry. Preserve a sharp source in the beauty pass and add its blurred contribution separately. Never replace the source with a blurred sprite. Connector adapters should preserve the sharp stroke/arrow and extract their authored emission independently of routing.
+
+Thresholds based on luminance are hue-dependent: equally strong saturated blue and green need not cross the same threshold. Selected-mode threshold zero plus explicit membership avoids forcing blue rings to extreme intensities merely to glow. Tone mapping can still desaturate bright cores. Compare ACES and neutral output at fixed exposure; retain the colored halo and distinguishable categories instead of promising exact hue preservation at arbitrary brightness. Do not normalize emission from the current dataset or animate exposure to chase brightness.
+
+### Monitors: self-lit content without a glowing rectangle of unreadable text
+
+`DisplayWall` currently creates a canvas-backed `MeshBasicMaterial` screen with `toneMapped: false`, separate from its frame. The design must adapt that existing path; assigning emissive values to a standard material is not sufficient for it. Add an explicit screen contribution and a proposed surface style:
+
+```ts
+interface VxDisplayScreenStyle {
+  brightness?: number // finite 0–8 linear radiance multiplier; default 1
+  effects?: VxNodeEffects // screen defaults to bloom: 'exclude'
+  bloomMask?: Texture | null // borrowed non-color mask; null clears it
+}
+```
+
+```vue
+<!-- Proposed screen-style prop; monitorSurface is existing display content. -->
+<vx-display-wall
+  :surface="monitorSurface"
+  :screen-style="{
+    brightness: 1,
+    effects: { bloom: 'include', bloomGain: 0.08 },
+    bloomMask: screenGlowMask,
+  }"
+/>
+```
+
+`screen-style` controls the screen only. It neither lights the frame nor changes the screen canvas's drawing commands. An omitted screen bloom policy remains excluded even when an ancestor includes bloom; authors explicitly opt in through `screen-style.effects`. Reuse existing material styles for frames rather than applying screen settings to a compound root.
+
+Decode color content from its declared color space once, multiply linear screen radiance by brightness once, and send the same content to beauty and emission extraction. The optional mask uses linear non-color data: black suppresses halo contribution, white allows it. It does not modify screen alpha, content brightness, or selection. Sample it in the screen's content UV space, including curved/mirrored surfaces, rather than independent world UVs. Validate compatible mapping, and use existing borrowed-texture ownership rules.
+
+Text baked into a canvas/video texture cannot be recovered as protected annotation geometry. Keep bloom off by default; for intentional glow use a mask that excludes glyphs/chart lines, modest gain, or render critical labels as separate protected contributions. A source mask does not shield text from a neighboring halo, so masking alone cannot guarantee readable small text; the combined fixture must verify it, and strict readability should use bloom-off or separate protected labels.
+
+The current `toneMapped: false` flag is not an exemption from a final fullscreen output transform. Initial support uses the managed HDR output and documents that screen colors may differ from an HTML chart. Exact display-referred screen reproduction needs a separate depth-aware, display-space composition mode with defined reflection behavior; defer that mode rather than claiming existing flags solve it. Brightness and screen-content updates must not recreate geometry or the pass chain.
+
+### Database rings: narrow emitting bands, opaque unlit casing
+
+```vue
+<!-- Proposed effects metadata on existing stacked cylinders. -->
+<vx-stack :gap="0">
+  <vx-cylinder :size="1.1" :height="0.26" material="database-body" />
+  <vx-cylinder
+    :size="1.12" :height="0.025"
+    :material="{ color: '#168bdf', emissive: '#18aaff', emissiveIntensity: 2 }"
+    :effects="{ bloom: 'include', bloomGain: 0.6 }"
+  />
+  <vx-cylinder :size="1.1" :height="0.26" material="database-body" />
+</vx-stack>
+```
+
+Use separate bands or an emissive texture mask; including the database's whole lit beauty color would also bloom its cap and highlights. Adjacent opaque sections must occlude hidden band surfaces. At normal viewing distance the glow must not merge multiple rings into one blue blob. Avoid coplanar bands and z-fighting; authored geometry owns spacing, not the composer.
+
+Extract thin sources with coverage-aware downsampling so subpixel rings and traces do not disappear or flicker when orbiting, zooming, or reducing DPR. Do not compensate by changing semantic geometry width automatically. If reduced bloom resolution cannot preserve thin sources, retain full-resolution extraction with cheaper blur where supported, or disable the halo with a diagnostic while keeping the crisp source.
+
+### Spill, reflections, and motion
+
+Neon and screen emission should remain visible when bloom is disabled or reduced-effects mode is active. Bloom adds no physically correct illumination, shadows, or reflected radiance. Nearby colored spill requires separately authored lights, a lighting bake where applicable, or an explicitly labeled approximation. Do not spawn a point light for every ring, pixel, or connector; any later automatic emitter-light adapter needs an explicit light budget and opt-in ownership.
+
+Reflections need a precise first-release rule: the reflector renders the luminous beauty source into its normal reflection texture, but selected bloom does not infer emitter membership from that texture. Reflected halos are deferred until reflection emission/membership can be carried in a matching auxiliary buffer. Luminance mode may bloom a bright reflection, with its usual risk of also blooming other highlights. Never re-enter the main composer during reflection rendering, and never silently mark the entire floor as an emitter to fake this feature.
+
+No random flicker, pulsing, or scanlines by default. If users bind emission to activity, smooth and bound it, preserve source identity and shader allocations, and freeze decorative motion under reduced-motion policy. This does not suppress meaningful static emission or data updates.
 
 ## Pipeline and color management
 
@@ -206,14 +308,17 @@ stylesheet inputs + ComposerDeclaration (extends StageDeclaration)
 | `styling/stylesheets.ts` | Scheme integration and immutable inputs |
 | `three/postprocessing/ComposerController.ts` | Plan realization, rendering, resize, disposal, status |
 | `three/postprocessing/` adapters | Bloom masks, AO, annotations, output, AA |
+| `nodes/DisplayWall.ts` and emitter adapters | Separate screen/frame contributions, linear source extraction, screen-style updates |
 | `three/scene.ts` | Delegate existing composer lifecycle to the controller |
 | `nodes/types.ts`, public exports, template types | Registration and public API |
 
 The declaration has no spatial identity, bounds, layout, focus, or picking. `Scene` owns the controller; the declaration owns configuration only. The controller borrows scene, camera, and application textures, and owns passes, targets, proxies, and subscriptions. Do not repair logical-tree problems in `stage.ts` or vendor addon code into `three/external/`.
 
+Emitter contributions identify a stable owner/key, role (`surface`, `screen`, `annotation`), beauty/depth coverage, resolved policy/gain, and an adapter for linear radiance extraction. Standard materials extract emissive color × intensity × emissive-map sample; screen and unlit stroke adapters extract their own authored radiance. Preserve UV transforms, alpha testing, deformation, and instanced transforms. Skip unsupported adapters with a diagnostic rather than copying total beauty color. Screen texture repaints and brightness/gain changes update borrowed inputs/uniforms; shape replacement or removal reconciles/disposes only the affected adapter resources.
+
 Stable pass keys identify resources. Strength, threshold, grading, and exposure update parameters without allocating a new composer. Activation, mask mode, and quality may change resource topology. Prepare a candidate plan, validate it, swap at a frame boundary, and dispose replaced resources. On failure retain the last working plan and emit a diagnostic. Disabled effects release exclusive resources; shared inputs have explicit ownership/reference counts. No unbounded cache of old profiles.
 
-Resize renderer and composer using the same CSS size and effective DPR; detect DPR changes without CSS resize and avoid applying DPR twice. Suspend allocation for zero-sized/hidden canvases. Reflection rendering must not recursively invoke the main composer: bloom applies to the final reflected image, not a recursive processed mirror texture.
+Resize renderer and composer using the same CSS size and effective DPR; detect DPR changes without CSS resize and avoid applying DPR twice. Suspend allocation for zero-sized/hidden canvases. Reflection rendering must not recursively invoke the main composer. Apply the reflected-emission limitations above; do not imply selected bloom membership survives an ordinary reflection texture.
 
 Unmount the inner Vue tree before destroying the stage. Teardown must be idempotent: unsubscribe, stop controller work, dispose owned passes/targets exactly once, restore borrowed state, then destroy the renderer. Disposing `EffectComposer` does not replace disposal of added passes. Context restoration rebuilds the effective plan; failed restoration retains a basic render fallback and observable status.
 
@@ -236,7 +341,7 @@ Expose read-only `stage.composerDiagnostics()` with requested/effective options,
 ## Delivery and verification
 
 1. **Foundation:** controller extraction preserving legacy rendering; resolver, profiles, stylesheet/declaration integration, output/AA prototype, diagnostics, baseline captures, and ownership tests.
-2. **Bloom:** luminance/HDR prototype followed by selected masks and exclusions for supported built-ins and connector/particle adapters. Release luminous profiles only when white panels and text remain controlled.
+2. **Bloom and emitters:** luminance/HDR prototype followed by emissive-only selected masks, contribution gain, screen/frame separation and `screen-style`, plus supported connector/particle adapters. Release luminous profiles only when the combined neon/monitor/database fixture passes and white panels/text remain controlled.
 3. **Depth and annotations:** shared depth/normal inputs, AO, protected labels, grading/vignette, quality tiers, studio/editorial examples.
 4. **Later:** focus-aware DOF, outlines, per-instance/channel masks, color-managed LUTs, and registered advanced-effect adapters.
 
@@ -248,6 +353,10 @@ Acceptance checks:
 - Renderer tests: exclusive ownership, no spatial/layout impact, idempotent reactive installation, no dependency mutation, declaration removal revealing current sheet settings.
 - Resource tests: no allocations for parameter-only changes; disposal on replacement/unmount; repeated toggling; viewport/DPR changes; allocation failures; context loss/restoration.
 - Browser fixtures: workshop2, dense thin routes, categorical/continuous palettes, bright panels, occluded emitters, alpha surfaces, nested placement, generated geometry, instances, particles, mirrors, world text, DOM labels, selection, low-quality fallback.
+- Combined emitter fixture: cyan neon, a canvas monitor with fine text/charts, blue database rings, and a white non-emitting surface at fixed exposure. Verify each remains distinguishable in light/dark, with bloom enabled/disabled and reduced effects.
+- Emission tests: saturated red/blue/green, emissive maps, screen mask UVs, zero gain with visible core, threshold-before-gain ordering, no double intensity/color decoding, body/frame exclusion, and fully occluded emitters.
+- Readability/motion tests: ring separation, crisp neon cores, screen black levels, masked text, content repaints, camera orbit/zoom, low-DPR thin-line stability, reduced-motion behavior, and documented reflection/transparent-occlusion fallbacks.
+- Ownership tests: changing source brightness/gain, repainting a screen, or toggling screen emission must not recreate geometry/pass topology; removing one emitter releases its mask resources without disposing shared caller textures.
 - Fixed-camera/time/viewport/DPR captures for every profile and effects-off in light/dark. Check double gamma/exposure, halo bleed, disappearing edges, obscured text, AO flicker during orbit, and changed color ordering. Use device-tolerant image thresholds and inspect failures.
 - Benchmark small and dense scenes for frame time and memory on named hardware before promising frame rates.
 - Run focused tests, `pnpm test:run`, `pnpm typecheck`, packaging/export checks when public exports change, and `pnpm docs:build`. Public examples must compile against shipped exports.
