@@ -1,3 +1,4 @@
+import { workshopElements } from './workshops/workshop2/elements.config.js'
 import * as path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
@@ -39,15 +40,12 @@ export default defineConfig({
     },
     build: {
         lib: {
-            entry: path.resolve(__dirname, 'src/lib-components/index.ts'),
+            entry: { vuetrex: path.resolve(__dirname, 'src/lib-components/index.ts'), compiler: path.resolve(__dirname, 'src/lib-components/compiler.ts') },
             name: 'Vuetrex',
             formats: ['es'],
-            fileName: (format: string) => `vuetrex.${format}.js`,
+            fileName: (format: string, entryName: string) => entryName === 'vuetrex' ? `vuetrex.${format}.js` : 'compiler.js',
         },
         rollupOptions: {
-            input: {
-                main: path.resolve(__dirname, "src/lib-components/index.ts")
-            },
             output: {
                 // Provide global variables to use in the UMD build
                 // for externalized deps
@@ -66,8 +64,7 @@ export default defineConfig({
         vue({
         template: {
             compilerOptions: {
-                isCustomElement: (tag:string) =>
-                    /^vx-(group|layer|row|stack|ring|panel|instances|geometry|particles|display-wall|spacer|box|cylinder|wedge|connectors|edge|port|environment|lighting|camera|floor|workshop-plinth)$/.test(tag)
+                isCustomElement: workshopElements.isCustomElement
             }
         }}),
         glsl()

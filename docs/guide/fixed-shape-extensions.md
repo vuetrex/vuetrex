@@ -50,19 +50,61 @@ import { elements } from './CustomBrick.js'
 </template>
 ```
 
-Register tags with Vue's compiler too. For Vite, add the custom tag to your existing
-`isCustomElement` predicate; retain all existing built-in tags:
+## Shared compiler and runtime registration
+
+For custom elements, declare their names once in a lightweight shared module:
 
 ```ts
-vue({ template: { compilerOptions: {
-  isCustomElement: tag => existingCustomElementCheck(tag) || tag === 'vx-custom-brick',
-} } })
+// elements.config.ts — no shape constructors or browser code here
+import { createElementConfig } from '@exceeder/vuetrex/compiler'
+export const sceneElements = createElementConfig(['vx-custom-brick'])
 ```
 
-`existingCustomElementCheck` above represents your existing predicate. Runtime
-registration and compiler recognition are separate. Per-scene `elements` is
-recommended for local shapes. `registerElement('vx-custom-brick', CustomBrick)`
-registers the constructor globally instead; it does not configure Vue's compiler.
+Use its predicate in Vite:
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import { sceneElements } from './elements.config.js'
+
+export default defineConfig({
+  plugins: [vue({ template: { compilerOptions: {
+    isCustomElement: sceneElements.isCustomElement,
+  } } })],
+})
+```
+
+Bind the implementation in application code:
+
+```ts
+import { sceneElements } from './elements.config.js'
+import { CustomBrick } from './CustomBrick.js'
+export const elements = sceneElements.defineElements({ 'vx-custom-brick': CustomBrick })
+```
+
+Pass `elements` to `<Vuetrex :elements="elements">` as above. The helper accepts both
+class constructors and functional `{ setup(stage) }` implementations. Missing or extra
+bindings are rejected by TypeScript and checked at runtime. Tag names must be unique,
+lowercase kebab-case; use a literal list to retain precise TypeScript checking.
+
+Built-in renderer tags are always recognized; do not list them unless intentionally
+providing a runtime override. Vue components such as `Vuetrex` and `vx-stylesheet`
+remain normal components. Unknown tags are not automatically claimed by a `vx-` prefix.
+Separate configurations stay isolated and the helper does not register anything globally.
+
+The `/compiler` entry point has no runtime Vue, Three.js, DOM, or renderer dependencies.
+Keep shape implementations in a separate module so importing configuration in Node
+never evaluates application rendering code. The helper is also exported from the package
+root for application use; prefer `/compiler` in build configuration.
+
+Compilation and runtime creation remain separate phases: changing `elements` or calling
+`registerElement()` in the browser cannot recompile an already-built Vue template.
+Restart/rebuild when the shared tag list changes. Existing manual predicates and runtime
+registries continue to work. For global registration, bind through `defineElements()`
+then call `registerElement(tag, implementation)` for each entry before mounting scenes.
+For other web components, compose your predicate explicitly:
+`tag => sceneElements.isCustomElement(tag) || otherCustomElementCheck(tag)`.
 
 ## Supported subclass contract
 

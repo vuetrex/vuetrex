@@ -108,6 +108,7 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import gsap from 'gsap'
 import { Quaternion, Vector3 } from 'three'
 
+import { workshopElements } from './elements.config.js'
 import { Plinth } from './things/Plinth.js'
 import FloorPorts from './things/FloorPorts.vue'
 import MonitorHub from './things/MonitorHub.vue'
@@ -130,7 +131,7 @@ watch(monitorOpen, open => {
 })
 onBeforeUnmount(() => cameraTween?.kill())
 
-const elements = { 'vx-workshop-plinth': Plinth }
+const elements = workshopElements.defineElements({ 'vx-workshop-plinth': Plinth })
 const platformTop = 0.18
 
 const at = (x: number, y: number, z: number) => ({

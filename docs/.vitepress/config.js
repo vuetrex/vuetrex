@@ -1,3 +1,4 @@
+import { isVuetrexElement } from '../../src/lib-components/compiler.ts'
 import { fileURLToPath } from 'node:url'
 
 /**
@@ -28,7 +29,7 @@ export default {
     vue: {
         template: {
             compilerOptions: {
-                isCustomElement: tag => tag.startsWith('vx-')
+                isCustomElement: isVuetrexElement
             }
         }
     },

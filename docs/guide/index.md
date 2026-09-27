@@ -33,7 +33,7 @@ pnpm add @exceeder/vuetrex
 The package has peer dependencies on `vue`, `three`, `gsap`, and `troika-three-text`. A normal package-manager install
 will resolve them; applications with strict peer dependency settings can add them explicitly.
 
-## Tell Vue that `vx-*` tags are scene elements
+## Tell Vue which tags are scene elements
 
 Vuetrex interprets these tags through its custom renderer. Configure Vue's template compiler so the outer renderer
 does not try to resolve each tag as a normal Vue component:
@@ -42,19 +42,26 @@ does not try to resolve each tag as a normal Vue component:
 // vite.config.ts
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { isVuetrexElement } from '@exceeder/vuetrex/compiler'
 
 export default defineConfig({
   plugins: [
     vue({
       template: {
         compilerOptions: {
-          isCustomElement: tag => tag.startsWith('vx-'),
+          isCustomElement: isVuetrexElement,
         },
       },
     }),
   ],
 })
 ```
+
+The compiler entry point is lightweight and safe to import in Node configuration.
+It recognizes built-in renderer tags without swallowing Vue components such as
+`vx-stylesheet` or unknown `vx-*` tags. For custom shapes, use the
+[shared element configuration](/guide/fixed-shape-extensions#shared-compiler-and-runtime-registration)
+to declare tag names once for both compilation and runtime registration.
 
 ## Render one object
 

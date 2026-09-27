@@ -1,3 +1,4 @@
+import type { builtinElementTags } from '../compiler.js';
 import { EnvironmentDeclaration, CameraDeclaration, FloorDeclaration, LightingDeclaration } from '../scene/declarations.js';
 import {VuetrexStage} from '@/lib-components/three/stage.js';
 import {Base} from '@/lib-components/nodes/Base.js';
@@ -57,7 +58,7 @@ const builtins: ElementRegistry = {
     'vx-box': Box,
     'vx-cylinder': Cylinder,
     'vx-wedge': Wedge,
-}
+} satisfies Record<typeof builtinElementTags[number], ClassComponent | FunctionalComponent>
 
 /**
  * Register a custom element type globally. Must be called before the

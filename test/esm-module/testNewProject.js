@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { cp, mkdir, mkdtemp, rm, symlink, writeFile, readFile } from 'node:fs/promises'
 import assert from 'node:assert/strict'
 import { join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { build } from 'vite'
 
@@ -48,6 +48,10 @@ try {
         join(projectRoot, 'src', 'App.vue'),
     )
     await cp(join(repositoryRoot, 'test', 'esm-module', 'CustomBrick.ts'), join(projectRoot, 'src', 'CustomBrick.ts'))
+    await cp(join(repositoryRoot, 'test', 'esm-module', 'elements.config.ts'), join(projectRoot, 'src', 'elements.config.ts'))
+    const { sceneElements } = await import(pathToFileURL(join(projectRoot, 'src', 'elements.config.ts')).href)
+    assert.equal(sceneElements.isCustomElement('vx-custom-brick'), true)
+    assert.equal(sceneElements.isCustomElement('vx-stylesheet'), false)
     await writeFile(join(projectRoot, 'package.json'), JSON.stringify({
         name: 'vuetrex-esm-consumer',
         private: true,
@@ -63,6 +67,12 @@ try {
 
     await writeFile(join(projectRoot, 'consumer.ts'), [
         "import { Vuetrex, VxStylesheet, VxStyleSheet, defineVxStyleSheet, finishes, useCanvasTexture, type VuetrexProps, type VuetrexEvents, type VxSettings, type VxMaterialBinding, type VxEnvironmentProps, type VxCameraProps, type VxFloorProps, type ConnectorHandle, type ConnectorPortDeclarationRecord, type ConnectorHostProps } from '@exceeder/vuetrex'",
+        "import { sceneElements } from './src/elements.config.js'",
+        "import { CustomBrick } from './src/CustomBrick.js'",
+        "// @ts-expect-error missing declared custom tag",
+        "sceneElements.defineElements({})",
+        "// @ts-expect-error extra tag not declared in shared configuration",
+        "sceneElements.defineElements({ 'vx-custom-brick': CustomBrick, 'vx-extra': CustomBrick })",
         "const settings = { fog: { near: 20 }, diagnostics: { footprints: true }, floorFadeStart: 20 } satisfies VxSettings",
         "const root: VuetrexProps = { settings, height: '520px', stopped: false, scheme: 'system' }",
         "type Props = InstanceType<typeof Vuetrex>['$props']",
@@ -120,7 +130,7 @@ try {
             vue({
                 template: {
                     compilerOptions: {
-                        isCustomElement: tag => /^vx-(group|layer|row|stack|ring|panel|instances|geometry|particles|box|cylinder|wedge|connectors|edge|port|environment|camera|floor|custom-brick)$/.test(tag),
+                        isCustomElement: sceneElements.isCustomElement,
                     },
                 },
             }),

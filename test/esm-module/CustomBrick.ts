@@ -1,4 +1,5 @@
-import { MeshNode, type MeshNodeStage, type ElementRegistry } from '@exceeder/vuetrex'
+import { sceneElements } from './elements.config.js'
+import { MeshNode, type MeshNodeStage } from '@exceeder/vuetrex'
 import { BoxGeometry, Mesh } from 'three'
 
 /** A consumer-owned fixed shape using only supported package imports. */
@@ -15,4 +16,4 @@ export class CustomBrick extends MeshNode {
     }
 }
 
-export const elements = { 'vx-custom-brick': CustomBrick } satisfies ElementRegistry
+export const elements = sceneElements.defineElements({ 'vx-custom-brick': CustomBrick })

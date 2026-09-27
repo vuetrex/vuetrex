@@ -100,8 +100,9 @@ from implemented runtime features.
 - [x] Provide a supported public fixed-shape extension entry point: `MeshNode`,
   `MeshNodeStage`, and `MeshState`, with [ownership guidance](docs/guide/fixed-shape-extensions.md)
   and a typechecked packaged-consumer example. Workshop2's plinth uses the public entry point.
-- [ ] Simplify/document runtime element registration together with Vue compiler
-  custom-tag recognition; authors currently configure these in separate places.
+- [x] Share custom tag names through `createElementConfig()`: compiler recognition
+  and checked runtime bindings use one manifest. The lightweight `/compiler` entry,
+  workshop2, packaged-consumer fixture, and extension guide demonstrate the setup.
 - [ ] Add a rounded platform primitive or configurable planar corner radius,
   distinct from edge bevel thickness, with predictable grid UVs and bounds. The
   workshop's local plinth proves the need; it does not deliver a library primitive.

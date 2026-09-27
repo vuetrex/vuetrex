@@ -462,3 +462,8 @@ The package exports:
 Register subclasses through `elements` or `registerElement()`. See the
 [fixed-shape extension guide](/guide/fixed-shape-extensions) for the supported hooks,
 geometry/material ownership, compiler configuration, and packaged-consumer example.
+
+`createElementConfig(customTags)` shares exact tag recognition and validated runtime
+bindings via `isCustomElement` and `defineElements()`. Use `isVuetrexElement` for
+built-ins only. Both helpers are available from the lightweight
+`@exceeder/vuetrex/compiler` entry point as well as the package root.

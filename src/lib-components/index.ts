@@ -235,3 +235,5 @@ export type { VxLightingProps, VxShadowQuality } from './three/lighting/LiveLigh
 
 export { MeshNode } from './nodes/MeshNode.js';
 export type { MeshNodeStage, MeshState } from './nodes/MeshNode.js';
+
+export { createElementConfig, isVuetrexElement } from './compiler.js';

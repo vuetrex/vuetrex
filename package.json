@@ -37,6 +37,10 @@
     ".": {
       "types": "./dist_types/src/lib-components/index.d.ts",
       "import": "./dist/vuetrex.es.js"
+    },
+    "./compiler": {
+      "types": "./dist_types/src/lib-components/compiler.d.ts",
+      "import": "./dist/compiler.js"
     }
   },
   "repository": {
