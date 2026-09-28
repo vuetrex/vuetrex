@@ -130,6 +130,7 @@ export type {
     GeometryHit,
     GeometryItemKey,
     GeometryMaterialChannels,
+    GeometryEffectChannels,
     GeometryOutputMap,
     GeometryOutputs,
     GeometryOutputsFactory,
@@ -233,7 +234,9 @@ export type { VxTexturePurpose, VxCanvasTextureOptions } from './styling/texture
 export type { VxEnvironmentProps, VxCameraProps, VxFloorProps } from './scene/declarations.js';
 export { mergeComposerOptions, resolveComposerOptions, resolveNodeEffects } from './scene/composer.js';
 export type { VxComposerOptions, VxComposerPreset, VxComposerQuality, VxToneMapping, VxAntialias,
-    VxBloomMode, VxBloomOptions, VxEffectOption, VxNodeEffects, VxResolvedComposerOptions } from './scene/composer.js';
+    VxBloomMode, VxBloomOptions, VxAmbientOcclusionOptions, VxGradingOptions, VxVignetteOptions,
+    VxDepthOfFieldOptions, VxOutlineOptions, VxLutOptions, VxEffectOption, VxNodeEffects,
+    VxResolvedComposerOptions } from './scene/composer.js';
 export type { ComposerDiagnostics } from './three/postprocessing/ComposerController.js';
 
 export type { VxLightingProps, VxShadowQuality } from './three/lighting/LiveLighting.js';

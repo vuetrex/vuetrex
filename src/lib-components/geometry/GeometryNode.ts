@@ -29,15 +29,18 @@ import type {
 import { isGeometrySource } from '@/lib-components/geometry/graph.js'
 import { Node } from '@/lib-components/nodes/Node.js'
 import type { VuetrexStage } from '@/lib-components/three/stage.js'
+import { resolveNodeEffects, type VxNodeEffects } from '../scene/composer.js'
 
 export type GeometryAnchor = 'base' | 'center' | 'origin'
 export type GeometryMaterialChannels = Readonly<Record<string, VxMaterialBinding>>
+export type GeometryEffectChannels = Readonly<Record<string, VxNodeEffects>>
 
 interface ProceduralGeometryState {
     graph?: GeometrySource
     parameters: GeometryParameterValues
     material?: VxMaterialBinding
     materials: GeometryMaterialChannels
+    materialEffects: GeometryEffectChannels
     anchor: GeometryAnchor
     text: string
 }
@@ -77,6 +80,7 @@ export class GeometryNode extends Node {
             parameters: {},
             material: undefined,
             materials: {},
+            materialEffects: {},
             anchor: 'base',
             text: '',
         })
@@ -102,14 +106,17 @@ export class GeometryNode extends Node {
             this.state.graph = value ? markRaw(value as GeometrySource) : undefined
             return
         }
-        if (normalized === 'parameters' || normalized === 'materials') {
+        if (normalized === 'parameters' || normalized === 'materials' || normalized === 'materialEffects') {
             if (value !== undefined && value !== null && (typeof value !== 'object' || Array.isArray(value))) {
                 throw new TypeError(`vx-geometry ${normalized} must be an object.`)
             }
             if (normalized === 'parameters') {
                 this.state.parameters = (value ?? {}) as GeometryParameterValues
-            } else {
+            } else if (normalized === 'materials') {
                 this.state.materials = (value ?? {}) as GeometryMaterialChannels
+            } else {
+                this.state.materialEffects = Object.freeze(Object.fromEntries(Object.entries(value ?? {}).map(([name, effects]) =>
+                    [name, resolveNodeEffects(effects) ?? Object.freeze({})])))
             }
             return
         }
@@ -200,6 +207,7 @@ export class GeometryNode extends Node {
             const binding = resolveMaterialBinding(styles, this.state.material)
             this.materialController.update(binding.layers)
             this.realizer.updateMaterials(this.state.materials, binding.layers, styles)
+            this.realizer.updateEffects(this.state.materialEffects)
         }, { flush: 'post' })
 
         this.placementStopHandle = watchSceneEffect(this, () => {

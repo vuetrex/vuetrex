@@ -11,6 +11,7 @@ import type {
 import { applyResolvedMaterial, readMaterial } from '@/lib-components/nodes/material.js'
 import type { VxMaterialProps } from '@/lib-components/styling/types.js'
 import { resolveMaterial } from '@/lib-components/styling/resolveMaterial.js'
+import type { VxNodeEffects } from '../../scene/composer.js'
 
 const hiddenMatrix = new THREE.Matrix4().makeScale(0, 0, 0)
 
@@ -48,6 +49,7 @@ export class GeometryRealizer {
     private readonly defaults: VxMaterialProps
     private baseLayers: readonly VxMaterialProps[] = []
     private styles: MaterialStyles = {}
+    private materialEffects: Readonly<Record<string, VxNodeEffects>> = {}
 
     constructor(
         readonly group: THREE.Group,
@@ -140,6 +142,12 @@ export class GeometryRealizer {
         this.updateLineMaterials()
     }
 
+    updateEffects(channels: Readonly<Record<string, VxNodeEffects>> = {}): void {
+        this.materialEffects = channels
+        for (const batch of this.batches.values()) batch.mesh.userData.vxBloomEffects = channels[batch.materialKey]
+        for (const entry of this.lines.values()) entry.line.userData.vxBloomEffects = channels[entry.materialKey]
+    }
+
     private updateChannel(key: string, controller: MaterialController): void {
         const binding = this.materialChannels[key] ?? (Object.hasOwn(this.styles, key) ? key : undefined)
         controller.update([...this.baseLayers, ...resolveMaterialBinding(this.styles, binding).layers])
@@ -155,6 +163,7 @@ export class GeometryRealizer {
         mesh.castShadow = this.shadowsEnabled()
         mesh.receiveShadow = this.shadowsEnabled()
         this.group.add(mesh)
+        mesh.userData.vxBloomEffects = this.materialEffects[materialKey]
         const batch: MeshBatch = {
             prototype,
             materialKey,
@@ -235,6 +244,7 @@ export class GeometryRealizer {
             entry = { line, material, materialKey: record.materialKey, recordColor: record.color.clone() }
             this.lines.set(key, entry)
         }
+        entry.line.userData.vxBloomEffects = this.materialEffects[record.materialKey]
         this.lineHitByObject.set(entry.line, {
             id: semanticId(record),
             item: record.context.item,

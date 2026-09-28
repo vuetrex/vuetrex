@@ -5,28 +5,26 @@
       <vuetrex height="79vh" width="100%" :settings="settings" :camera="{ orbit }" :sheets="[styles]"
                @ready="initStage">
         <vx-composer
-            preset="editorial"
+            preset="studio"
             quality="high"
             :bloom="{ mode: 'selected', strength: 0.35, radius: 0.3, threshold: 0 }"
         />
         <vx-layer elevation="0.1">
           <vx-row>
-            <VNode :body="text" header="Camera" :footer="footer1" id="node1"
-                   :effects="{ bloom: 'include' }">
+            <VNode :body="text" header="Camera" :footer="footer1" id="node1">
               <vx-port name="trigger" face="front" :at="[0.5, 0.1]"/>
               <vx-edge key="n1-n2" from="node1.output" to="node2.input" appearance="primary"/>
             </VNode>
-            <VNode body="" header="Config" :footer="footer2" id="node2"
-                   :effects="{ bloom: 'include' }">
+            <VNode body="" header="Config" :footer="footer2" id="node2">
               <vx-port name="trigger" face="front" :at="[0.5, 0.1]"/>
             </VNode>
-            <VNode body="" header="Composer" id="node3" :effects="{ bloom: 'include' }"/>
+            <VNode body="" header="Composer" id="node3"/>
           </vx-row>
           <vx-row :gap="1.4">
             <VColumns id="c1">
               <vx-port name="left" face="left" :at="[0.5, 0.1]"/>
               <vx-port name="back" face="back" :at="[0.5, 0.1]"/>
-              <vx-particles :graph="torusParticles" anchor="origin" :participates-in-layout="false"/>
+              <vx-particles :graph="saturnRings" anchor="origin" :participates-in-layout="false"/>
             </VColumns>
           </vx-row>
 
@@ -141,7 +139,7 @@ const saturnRings = particles.paths([1.15, 1.35, 1.75].map((radius, i) => ({
       points: ringPoints(radius),
       closed: true,
     })),
-    {count: 1024, spread: 0.145, distribution: 'random', seed: 42},
+    {count: 128, spread: 0.145, distribution: 'random', seed: 42},
 );
 
 const torusParticles = particles.path(ringPoints(1.3), {closed: true, count: 10000, spread: 0.22})

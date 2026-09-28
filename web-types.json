@@ -729,7 +729,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
-                "offset": 537
+                "offset": 1271
               }
             },
             {
@@ -741,7 +741,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
-                "offset": 567
+                "offset": 1301
               }
             },
             {
@@ -753,7 +753,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
-                "offset": 589
+                "offset": 1323
               }
             },
             {
@@ -765,7 +765,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
-                "offset": 621
+                "offset": 1355
               }
             },
             {
@@ -777,7 +777,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
-                "offset": 648
+                "offset": 1382
               }
             },
             {
@@ -789,7 +789,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
-                "offset": 688
+                "offset": 1422
               }
             },
             {
@@ -801,7 +801,91 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
-                "offset": 762
+                "offset": 1496
+              }
+            },
+            {
+              "name": "ambient-occlusion",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "VxEffectOption<VxAmbientOcclusionOptions>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
+                "offset": 1539
+              }
+            },
+            {
+              "name": "grading",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "VxEffectOption<VxGradingOptions>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
+                "offset": 1604
+              }
+            },
+            {
+              "name": "vignette",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "VxEffectOption<VxVignetteOptions>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
+                "offset": 1651
+              }
+            },
+            {
+              "name": "depth-of-field",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "VxEffectOption<VxDepthOfFieldOptions>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
+                "offset": 1700
+              }
+            },
+            {
+              "name": "outlines",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "VxEffectOption<VxOutlineOptions>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
+                "offset": 1757
+              }
+            },
+            {
+              "name": "lut",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "false | Readonly<Partial<VxLutOptions> & Pick<VxLutOptions, 'texture'>>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
+                "offset": 1805
+              }
+            },
+            {
+              "name": "protect-annotations",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
+                "offset": 1982
               }
             },
             {
@@ -813,7 +897,7 @@
               },
               "source": {
                 "file": "dist_types/src/lib-components/scene/composer-api.d.ts",
-                "offset": 805
+                "offset": 2015
               }
             }
           ]

@@ -4,8 +4,21 @@
 
     <section class="scene-card" aria-label="Data infrastructure diagram">
       <vuetrex height="76vh" width="100%" :settings="settings" :elements="elements" :camera="cameraView">
-        <vx-lighting :key-intensity="3" :fill-intensity="0.8" shadow-quality="medium" />
-        <vx-environment preset="studio" :intensity="0.3" :rotation="0.3" />
+        <vx-composer v-if="effectsEnabled"
+          preset="studio"
+          quality="high"
+          :max-pixel-ratio="2"
+          :output="{ toneMapping: 'aces', exposure: 1 }"
+          :ambient-occlusion="{ intensity: 0.32, radius: 0.28 }"
+          :grading="{ contrast: 1.025, saturation: 0.96 }"
+          :vignette="{ strength: 0.08, offset: 0.95 }"
+          :bloom="{ mode: 'selected', strength: 0.22, radius: 0.24, threshold: 0 }"
+          :depth-of-field="{ focus: monitorOpen ? 'hub' : 'core', aperture: 0.00008, maxBlur: 0.003 }"
+          :outlines="false"
+          :protect-annotations="true"
+        />
+        <vx-lighting :key-intensity="2.7" :fill-intensity="0.65" shadow-quality="high" />
+        <vx-environment preset="studio" :intensity="0.48" :rotation="0.65" />
         <vx-floor
           finish="matte"
           :color="0xf3f4f6"
@@ -22,13 +35,18 @@
           <vx-workshop-plinth :size="9.6" :depth="8" :height="platformTop" :material="platformMaterial" />
         </vx-group>
 
+        <RearDisplay :platform-top="platformTop" />
+
         <!-- Central stacked data store. -->
-        <vx-stack id="core" :placement="at(0.1, platformTop, -1.25)" :gap="0.008">
+        <vx-stack id="core" :placement="at(0.1, platformTop, -1.25)" :gap="0.008"
+                  :effects="{ outline: 'include' }">
           <vx-cylinder :size="1.2" :height="0.13" :material="materials.darkBase" />
           <vx-cylinder :size="1.12" :height="0.25" :material="materials.blue" />
-          <vx-cylinder :size="1.12" :height="0.025" :material="materials.whiteBand" />
+          <vx-cylinder :size="1.12" :height="0.025" :material="materials.whiteBand"
+                       :effects="{ bloom: 'include', bloomGain: 0.55 }" />
           <vx-cylinder :size="1.12" :height="0.25" :material="materials.blue" />
-          <vx-cylinder :size="1.12" :height="0.025" :material="materials.whiteBand" />
+          <vx-cylinder :size="1.12" :height="0.025" :material="materials.whiteBand"
+                       :effects="{ bloom: 'include', bloomGain: 0.55 }" />
           <vx-cylinder :size="1.12" :height="0.25" :material="materials.blue" />
           <vx-cylinder :size="1.02" :height="0.12" :material="materials.white" />
           <vx-cylinder :size="0.68" :height="0.055" :material="materials.blueTop" />
@@ -48,6 +66,15 @@
           <vx-box :size="0.61" :depth="0.61" :height="0.06" :material="materials.whiteTop" />
           <FloorPorts :width="0.92" :depth="0.74" />
         </vx-stack>
+
+        <vx-group v-for="server in servers" :key="`${server.id}-details`" :placement="at(server.x, platformTop, server.z)" fit="none">
+          <vx-group v-for="slot in 5" :key="slot" :placement="at(0, 0.24 + slot * 0.095, 0.345)">
+            <vx-box :size="0.47" :height="0.017" :depth="0.012" :material="materials.vent" />
+          </vx-group>
+          <vx-group :placement="at(0.22, 0.81, 0.35)">
+            <vx-box :size="0.035" :height="0.035" :depth="0.012" :material="materials.status" :effects="{ bloom: 'include', bloomGain: 0.35 }" />
+          </vx-group>
+        </vx-group>
 
         <!-- Compact metallic processing hub unfolds into a three-part monitor. -->
         <MonitorHub :platform-top="platformTop" :open="monitorOpen" @toggle="monitorOpen = !monitorOpen" />
@@ -93,7 +120,15 @@
         <vx-connectors scope="workshop-2" :graph="diagram" />
       </vuetrex>
 
-      <div class="caption" style="padding-top: 2em">DATA FLOOR</div>
+      <div class="scene-footer">
+        <div><div class="eyebrow">WORKSHOP 02 / INFRASTRUCTURE</div><h1 class="caption">The data floor.</h1></div>
+        <button class="effects-toggle" type="button" role="switch" :aria-checked="effectsEnabled"
+                aria-label="Composer effects" @click="effectsEnabled = !effectsEnabled">
+          <span class="switch-track" aria-hidden="true"><span /></span>
+          Composer effects <strong>{{ effectsEnabled ? 'On' : 'Off' }}</strong>
+        </button>
+      </div>
+      <p class="comparison-note">{{ effectsEnabled ? 'Studio finish · contact shading, subtle glow and lens depth.' : 'Original rendering · all composer passes removed.' }}</p>
       <button class="monitor-toggle" type="button" :aria-expanded="monitorOpen" @click="monitorOpen = !monitorOpen">
         {{ monitorOpen ? 'Close hub monitor' : 'Open hub monitor' }}
       </button>
@@ -112,10 +147,12 @@ import { workshopElements } from './elements.config.js'
 import { Plinth } from './things/Plinth.js'
 import FloorPorts from './things/FloorPorts.vue'
 import MonitorHub from './things/MonitorHub.vue'
+import RearDisplay from './things/RearDisplay.vue'
 
+const effectsEnabled = ref(true)
 const monitorOpen = ref(false)
 // Animate one complete camera pose instead of refitting changing monitor bounds.
-const overview = { x: 0, y: 0.45, z: 0, height: 11, radius: 14, azimuth: 35 }
+const overview = { x: 0, y: 0.75, z: -0.3, height: 9.5, radius: 14, azimuth: 25 }
 const closeup = { x: -0.35, y: 0.8, z: 1.4, height: 2.7, radius: 3.4, azimuth: 0 }
 const cameraPose = reactive({ ...overview })
 const cameraView = computed(() => ({ orbit: {
@@ -155,8 +192,10 @@ const settings: VxSettings = {
 }
 
 const materials = {
-  darkBase: { color: 0x9da4ac, roughness: 0.54, metalness: 0.24 },
-  metal: { color: 0xaeb8c4, roughness: 0.34, metalness: 0.48 },
+  vent: { color: 0x24323d, roughness: 0.65, metalness: 0.35 },
+  status: { color: 0x79e8c4, emissive: 0x35dba4, emissiveIntensity: 0.7, roughness: 0.4 },
+  darkBase: { color: 0x667582, roughness: 0.4, metalness: 0.65 },
+  metal: { color: 0xb3bcc5, roughness: 0.28, metalness: 0.78 },
   white: { color: 0xf2f3f4, roughness: 0.68, metalness: 0.04 },
   whiteTop: { color: 0xffffff, roughness: 0.48, metalness: 0.03 },
   whiteBand: { color: 0xc9eeff, emissive: 0x18aaff, emissiveIntensity: 0.55, roughness: 0.46, metalness: 0.08 },
@@ -170,12 +209,12 @@ const materials = {
 
 const gridTexture = useCanvasTexture(ctx => {
   const size = ctx.canvas.width
-  ctx.fillStyle = '#e5e3e0'
+  ctx.fillStyle = '#d8dde0'
   ctx.fillRect(0, 0, size, size)
-  ctx.strokeStyle = '#c6c4c2'
+  ctx.strokeStyle = '#bdc6cc'
   // Keep the authored grid spacing and weight as texture resolution increases.
   const textureScale = size / 256
-  ctx.lineWidth = textureScale
+  ctx.lineWidth = textureScale * 0.45
   for (let point = 0; point <= size; point += 12 * textureScale) {
     ctx.beginPath()
     ctx.moveTo(point, 0)
@@ -186,13 +225,26 @@ const gridTexture = useCanvasTexture(ctx => {
     ctx.lineTo(size, point)
     ctx.stroke()
   }
-}, { width: 1024, height: 1024, purpose: 'color' })
+}, { width: 2048, height: 2048, purpose: 'color' })
+
+// Deterministic fine grain gives grazing highlights a subtle machined finish.
+const grainTexture = useCanvasTexture(ctx => {
+  const { width, height } = ctx.canvas
+  for (let y = 0; y < height; y++) {
+    const shade = 170 + ((y * 73 + 19) % 53)
+    ctx.fillStyle = `rgb(${shade},${shade},${shade})`
+    ctx.fillRect(0, y, width, 1)
+  }
+}, { width: 512, height: 512, purpose: 'bump' })
+watch(gridTexture, texture => { if (texture) texture.anisotropy = 8 })
 
 const platformMaterial = computed(() => ({
   color: 0xffffff,
   map: gridTexture.value,
-  roughness: 0.86,
-  metalness: 0.02,
+  roughness: 0.72,
+  metalness: 0.12,
+  bumpMap: grainTexture.value,
+  bumpScale: 0.003,
 }))
 
 const servers = [
@@ -274,8 +326,18 @@ const diagram = connectors
   margin: 0 auto;
 }
 
+.scene-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.eyebrow { color: #65717b; font-size: 0.7rem; letter-spacing: 0.16em; font-weight: 700; }
+.effects-toggle { display: flex; align-items: center; gap: 0.65rem; padding: 0.75rem 1rem; border: 1px solid #cad2d8; border-radius: 2rem; background: #fff; color: #243b4b; font: inherit; cursor: pointer; }
+.effects-toggle strong { min-width: 1.7rem; font-size: 0.8rem; }
+.switch-track { width: 2rem; height: 1.15rem; border-radius: 1rem; background: #a2adb5; padding: 0.15rem; box-sizing: border-box; }
+.switch-track span { display: block; width: 0.85rem; height: 0.85rem; border-radius: 50%; background: #fff; transition: transform 150ms; }
+[aria-checked="true"] .switch-track { background: #187fb0; }
+[aria-checked="true"] .switch-track span { transform: translateX(0.85rem); }
+.effects-toggle:focus-visible { outline: 2px solid #168bdf; outline-offset: 3px; }
+.comparison-note { color: #65717b; font-size: 0.85rem; margin: 0.3rem 0; }
 .caption {
-  margin-top: -0.3rem;
+  margin: 0.35rem 0;
   color: #18232c;
   font-size: clamp(1.4rem, 2.4vw, 2rem);
   font-weight: 800;
@@ -298,5 +360,7 @@ const diagram = connectors
 @media (max-width: 700px) {
   .workshop { padding-inline: 0; }
   .back { left: 0.8rem; }
+  .scene-footer { flex-wrap: wrap; }
+  .scene-footer, .comparison-note { padding-inline: 1rem; }
 }
 </style>

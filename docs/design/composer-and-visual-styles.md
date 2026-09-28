@@ -6,20 +6,20 @@ outline: deep
 
 # Composer and visual styles
 
-**Status: foundation and bloom milestone implemented, September 27, 2026.** The controller/ownership,
-declarative configuration and stylesheet resolution, output/AA, and selective/luminance bloom phases are available.
-Depth/annotation handling, ambient occlusion, restrained grading/vignette, and the later-stage features remain deferred.
-Authored controls for those deferred effects are rejected with their property path rather than silently ignored.
+**Status: implemented, September 27, 2026.** The stage-owned pipeline supports declarative output/AA,
+semantic/luminance bloom, AO, grading/vignette, depth-aware annotation protection, focus-aware DOF,
+semantic outlines, borrowed 3D LUTs, geometry-channel policies, and per-instance bloom masks.
 
 ### Current support
 
-| Area | Support |
-|---|---|
-| Controller lifecycle | Stage-owned controller, legacy fallback, keyed reconciliation, resize/DPR handling, idempotent disposal, diagnostics/status event |
-| Configuration | `vx-composer`, stylesheet `composer`, presets, validation, reduced-effects policy |
-| Output | None/Neutral/ACES/AgX tone mapping, exposure, terminal output conversion, FXAA/off/auto |
-| Bloom | Luminance and semantic selected modes, inherited node gain/policy, opaque occlusion, screens and connector strokes |
-| Deferred | Depth/annotation protection, AO, grading/vignette, DOF, outlines, LUTs, per-instance masks |
+| Area                  | Support                                                                                                                           |
+|-----------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| Controller lifecycle  | Stage-owned controller, legacy fallback, keyed reconciliation, resize/DPR handling, idempotent disposal, diagnostics/status event |
+| Configuration         | `vx-composer`, stylesheet `composer`, presets, validation, reduced-effects policy                                                 |
+| Output                | None/Neutral/ACES/AgX tone mapping, exposure, terminal output conversion, FXAA/off/auto                                           |
+| Bloom                 | Luminance and semantic selected modes, inherited node gain/policy, opaque occlusion, screens and connector strokes                |
+| Depth/image treatment | GTAO, grading/vignette, focus-aware DOF, semantic outlines, depth-correct protected world labels                                  |
+| Advanced masks/color  | Borrowed linear `Data3DTexture` LUTs, geometry material-channel policies, keyed per-instance bloom masks                          |
 
 ## Purpose
 
@@ -31,9 +31,10 @@ Legibility is the primary constraint. Styling must preserve meaningful colors, v
 
 ## Current foundation
 
-`three/scene.ts` owns an `EffectComposer` with one `RenderPass`, renders it each frame, resizes it with the viewport, and disposes both on destruction. The renderer uses ACES filmic tone mapping, exposure 1, and sRGB output. There is no public effect configuration.
-
-Existing scene declarations extend the host-only `StageDeclaration`; stylesheets resolve common and light/dark material and connector styles. Extend those mechanisms. Do not introduce a second renderer or put passes into the spatial node tree. See [Architecture](/architecture).
+`three/scene.ts` owns one `ComposerController`, which reconciles keyed pass topology, renders it each frame, resizes it
+with the viewport/DPR, and disposes owned targets and passes on replacement or teardown. `vx-composer` is a host-only
+`StageDeclaration`; stylesheet and inline inputs resolve through the same immutable option pipeline. Passes never enter
+the spatial node tree. See [Architecture](/architecture).
 
 ## Authoring experience
 
@@ -97,12 +98,30 @@ interface VxComposerOptions {
     radius: number
     threshold: number
   }>
+  ambientOcclusion?: VxEffectOption<{ intensity: number; radius: number }>
+  grading?: VxEffectOption<{ contrast: number; saturation: number }>
+  vignette?: VxEffectOption<{ strength: number; offset: number }>
+  depthOfField?: VxEffectOption<{
+    focus: number | string | readonly [number, number, number]
+    aperture: number
+    maxBlur: number
+  }>
+  outlines?: VxEffectOption<{
+    color: number | string
+    hiddenColor: number | string
+    strength: number
+    thickness: number
+    glow: number
+  }>
+  lut?: false | { texture: Data3DTexture; intensity?: number }
+  protectAnnotations?: boolean
   antialias?: 'auto' | 'off' | 'fxaa'
 }
 
 interface VxNodeEffects {
   bloom?: 'auto' | 'include' | 'exclude'
   bloomGain?: number // 0–4; default 1; mask contribution only, never beauty brightness
+  outline?: 'auto' | 'include' | 'exclude'
 }
 ```
 
@@ -130,11 +149,11 @@ Profiles are versioned immutable parameter bundles, with documented values and p
 | Profile | Intended use | Composer treatment | Companion scene choices |
 |---|---|---|---|
 | `technical` | Dense topology and operational dashboards | Neutral tone mapping, exposure 1; bloom/AO/grading/vignette off | Clear palettes, matte surfaces, explicit selection cues |
-| `studio` | Physical data models and workshop2 | Neutral, exposure 1; effects off (AO target deferred) | Pale floor, soft lighting, restrained rough materials |
+| `studio` | Physical data models and workshop2 | Neutral, exposure 1; AO intensity 0.15 / radius 0.25 | Pale floor, soft lighting, restrained rough materials |
 | `luminous` | Activity and network flow | ACES, exposure 1; selected bloom strength 0.3 / radius 0.3 / threshold 0; other effects off | Dark floor, explicit emitters, subdued inactive objects |
-| `editorial` | Illustrative presentation | Neutral, exposure 1; effects off (AO/grading target deferred) | Warm neutrals, simplified geometry, strong silhouettes |
+| `editorial` | Illustrative presentation | Neutral, exposure 1; contrast 1.05 / saturation 0.95; vignette 0.08 | Warm neutrals, simplified geometry, strong silhouettes |
 
-All profiles start with balanced quality, automatic AA, and system reduced-effects handling. Higher quality changes resolution/sampling, not palette or effect strength. Vignette remains deferred. No preset enables depth of field, grain, chromatic aberration, or animated effects.
+All profiles start with balanced quality, automatic AA, and system reduced-effects handling. Higher quality changes resolution/sampling, not palette or effect strength. No preset enables depth of field, outlines, LUT grading, grain, chromatic aberration, or animated effects.
 
 For workshop2, combine `studio` with restrained selected bloom on database bands and active links. AO does not replace soft lighting: the separate studio-light proposal owns shadow baking. Publish light and dark examples for every profile, not only attractive dark screenshots.
 
@@ -269,16 +288,22 @@ No random flicker, pulsing, or scanlines by default. If users bind emission to a
 The library determines pass order. Arbitrary user pass arrays are out of scope initially.
 
 ```text
-world beauty (linear HDR)
+world beauty (linear HDR) + scene depth/normal evaluation
+  → optional AO
   → optional semantic/luminance bloom extraction, blur, and composition
+  → optional DOF
+  → optional grading/vignette and linear 3D LUT
+  → optional semantic outlines
+  → optional protected world annotations with a fresh depth-only occlusion render
   → one output tone-map and sRGB conversion
   → FXAA if selected (display-space input)
   → canvas; DOM overlays remain outside the composer
 ```
 
-Depth/normal inputs, AO, grading/vignette, and protected annotation composition are the deferred next stage.
-
-This is a dependency plan, not one full-size target per stage. Skip identity effects and share compatible inputs. AO must not darken emission, halos, or labels. An adapter that cannot separate those contributions must document its limitation before adoption.
+Identity effects allocate no pass. Balanced quality renders bloom and AO auxiliaries at half resolution; high uses full
+resolution; low disables AO with an observable fallback. Protected annotations are omitted from image effects and
+redrawn before output conversion against freshly rendered world depth. Transparent surfaces retain their authored
+`depthWrite` behavior during that occlusion render.
 
 Keep intermediate colors linear and HDR-capable. Tone-map and convert for display exactly once. Three.js documents `OutputPass` for terminal tone mapping/color conversion, with sRGB-input effects such as FXAA following it. It reads renderer settings, so one controller owns/restores them; do not apply exposure again in each pass. See [OutputPass](https://threejs.org/docs/pages/OutputPass.html).
 
@@ -292,7 +317,9 @@ The managed HDR path may differ from the current single-pass output. Capture bas
 
 DOM text remains untouched. Render owned world-label contributions after blur/grading, using world depth to preserve occlusion, before output conversion. Preserve alpha edges and camera alignment. Do not merely draw every label on top. Unsupported custom annotation renderers remain in the world pass and report a limitation when protection is requested.
 
-Depth of field is a later opt-in focus tool, not a preset default. A future API should derive camera-space focus distance from a selected node, connector hit, or world anchor. Define behavior for removed targets, camera motion, transparent surfaces, and reduced motion before shipping it. Maintain recognizable context and an independent selection cue.
+Depth of field is opt-in and never enabled by a preset. `focus` accepts a positive camera-space distance, semantic
+node ID/name, or world anchor. It is resolved every frame so camera motion and reactive targets remain current; a
+missing semantic target reports a fallback and uses distance 10 until it reappears. Reduced-effects mode disables DOF.
 
 `reducedEffects: 'system'` follows `prefers-reduced-motion` as a conservative opt-out from decorative effects. This is a Vuetrex policy, not a claim that static bloom is motion. Disable bloom, vignette, future blur/noise, and effect transitions while preserving AA and selection cues. `true` forces that policy; `false` opts out of automatic reduction. Scheme changes are immediate initially. Future transitions must not animate semantic colors through ambiguous intermediate states.
 

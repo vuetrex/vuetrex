@@ -144,6 +144,58 @@ describe('InstanceNode', () => {
         expect(node.instanceHitAt(1)).toBeUndefined()
     })
 
+    it('writes keyed per-instance bloom masks without changing geometry topology', async () => {
+        const { node } = fixture()
+        node.setStateValue('items', [
+            { id: 'dark', x: 0, color: 0xffffff },
+            { id: 'bright', x: 1, color: 0xffffff },
+        ])
+        node.setStateValue('encoding', {
+            ...encoding,
+            effects: item => item.id === 'bright' ? { bloom: 'include', bloomGain: 0.4 } : { bloom: 'exclude' },
+        } satisfies InstanceEncoding<Item>)
+        node.syncWithThree()
+        await nextTick()
+
+        const mesh = node.element.mesh as THREE.InstancedMesh
+        const mask = mesh.userData.vxInstanceBloomMask as { texture: THREE.DataTexture; size: number; any: boolean }
+        expect(mask.any).toBe(true)
+        expect(mask.size).toBe(2)
+        const values = mask.texture.image.data as Float32Array
+        expect(values[0]).toBe(0)
+        expect(values[1]).toBeCloseTo(0.4)
+        expect(mesh.geometry.getAttribute('vxBloomMask')).toBeUndefined()
+    })
+
+    it('refreshes inherited bloom policy and gain without replacing mesh or mask texture', async () => {
+        const { node, parent } = fixture()
+        parent.setStateValue('effects', { bloom: 'include', bloomGain: 0.5 })
+        node.setStateValue('items', [{ id: 'one', x: 0, color: 0xffffff }])
+        node.setStateValue('encoding', { ...encoding, effects: () => ({}) })
+        node.syncWithThree()
+        await nextTick()
+        const mesh = node.element.mesh as THREE.InstancedMesh
+        const texture = mesh.userData.vxInstanceBloomMask.texture as THREE.DataTexture
+        const value = () => (texture.image.data as Float32Array)[0]
+        expect(value()).toBe(0.5)
+        parent.setStateValue('effects', { bloom: 'include', bloomGain: 0.25 })
+        await nextTick()
+        expect(value()).toBe(0.25)
+        node.setStateValue('effects', { bloomGain: 0.75 })
+        await nextTick()
+        expect(value()).toBe(0.75)
+        node.setStateValue('effects', undefined)
+        await nextTick()
+        expect(value()).toBe(0.25)
+        parent.setStateValue('effects', { bloom: 'exclude' })
+        await nextTick()
+        expect(value()).toBe(0)
+        expect(mesh.userData.vxInstanceBloomMask.any).toBe(false)
+        expect(node.element.mesh).toBe(mesh)
+        expect(mesh.userData.vxInstanceBloomMask.texture).toBe(texture)
+        node.onRemoved()
+    })
+
     it('resolves semantic instances to world-space bounds', async () => {
         const { node, parent } = fixture()
         node.setStateValue('items', [{ id: 'pod-a', x: 1, color: 0xffffff }])

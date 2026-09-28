@@ -47,6 +47,7 @@
       :label-font-size="0.22"
 
       :material="{ color: 0x2f7a3a, roughness: 0.45, metalness: 0.05 }"
+      :effects="{ bloom: 'include' }"
       :hover="{ color: 0x49a457, transition: 0.2 }"
     />
     <vx-port name="input" face="left" />

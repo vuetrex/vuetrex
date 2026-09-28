@@ -775,6 +775,7 @@ export class VuetrexStage extends Scene implements VxStage {
                 label.name = `vx-diagnostic-id-${id}`
                 label.userData.vxDiagnostic = 'node-id'
                 label.userData.vxBloomEffects = { bloom: 'exclude', bloomGain: 0 }
+                label.userData.vxBloomRole = 'annotation'
                 label.renderOrder = 1004
                 label.material.depthTest = false
                 label.sync()

@@ -1,26 +1,40 @@
 import type { VxBloomOptions, VxComposerOptions, VxComposerPreset, VxNodeEffects, VxResolvedComposerOptions, VxToneMapping } from './composer-api.js'
+import { Data3DTexture, NoColorSpace } from 'three'
 export type * from './composer-api.js'
 
 type ComposerLayer = Readonly<VxComposerOptions> | undefined
 
 const PRESETS: Readonly<Record<VxComposerPreset, VxResolvedComposerOptions>> = Object.freeze({
     technical: profile('technical', 'neutral', false),
-    // AO and grading are deliberately deferred. These profiles retain their documented
-    // output treatment without pretending those later passes are active.
-    studio: profile('studio', 'neutral', false),
+    studio: profile('studio', 'neutral', false, { intensity: 0.15, radius: 0.25 }),
     luminous: profile('luminous', 'aces', { mode: 'selected', strength: 0.3, radius: 0.3, threshold: 0 }),
-    editorial: profile('editorial', 'neutral', false),
+    editorial: profile('editorial', 'neutral', false, false, { contrast: 1.05, saturation: 0.95 }, { strength: 0.08, offset: 0.8 }),
 })
 
-function profile(preset: VxComposerPreset, toneMapping: VxToneMapping, bloom: false | VxBloomOptions): VxResolvedComposerOptions {
+function profile(preset: VxComposerPreset, toneMapping: VxToneMapping, bloom: false | VxBloomOptions,
+    ambientOcclusion: VxResolvedComposerOptions['ambientOcclusion'] = false,
+    grading: VxResolvedComposerOptions['grading'] = false,
+    vignette: VxResolvedComposerOptions['vignette'] = false): VxResolvedComposerOptions {
     return Object.freeze({ preset, enabled: true, quality: 'balanced', maxPixelRatio: 1.5,
         reducedEffects: 'system', output: Object.freeze({ toneMapping, exposure: 1 }),
-        bloom: bloom === false ? false : Object.freeze({ ...bloom }), antialias: 'auto' })
+        bloom: bloom === false ? false : Object.freeze({ ...bloom }),
+        ambientOcclusion: ambientOcclusion === false ? false : Object.freeze({ ...ambientOcclusion }),
+        grading: grading === false ? false : Object.freeze({ ...grading }),
+        vignette: vignette === false ? false : Object.freeze({ ...vignette }),
+        depthOfField: false, outlines: false, lut: false, protectAnnotations: false, antialias: 'auto' })
 }
 
-const allowed = new Set(['preset', 'enabled', 'quality', 'maxPixelRatio', 'reducedEffects', 'output', 'bloom', 'antialias'])
+const effectKeys = ['bloom', 'ambientOcclusion', 'grading', 'vignette', 'depthOfField', 'outlines'] as const
+const allowed = new Set(['preset', 'enabled', 'quality', 'maxPixelRatio', 'reducedEffects', 'output', ...effectKeys, 'lut', 'protectAnnotations', 'antialias'])
 const allowedOutput = new Set(['toneMapping', 'exposure'])
-const allowedBloom = new Set(['mode', 'strength', 'radius', 'threshold'])
+const allowedNested: Record<(typeof effectKeys)[number], ReadonlySet<string>> = {
+    bloom: new Set(['mode', 'strength', 'radius', 'threshold']),
+    ambientOcclusion: new Set(['intensity', 'radius']),
+    grading: new Set(['contrast', 'saturation']),
+    vignette: new Set(['strength', 'offset']),
+    depthOfField: new Set(['focus', 'aperture', 'maxBlur']),
+    outlines: new Set(['color', 'hiddenColor', 'strength', 'thickness', 'glow']),
+}
 
 /** Merge authored composer layers. Undefined fields do not contribute; effect false clears prior fields. */
 export function mergeComposerOptions(...layers: ComposerLayer[]): VxComposerOptions | undefined {
@@ -37,12 +51,18 @@ export function mergeComposerOptions(...layers: ComposerLayer[]): VxComposerOpti
                 assertObject('composer.output', value)
                 for (const nested of Object.keys(value)) if (!allowedOutput.has(nested)) unsupported(`composer.output.${nested}`)
                 result.output = mergeDefined(result.output as object | undefined, value)
-            } else if (key === 'bloom') {
+            } else if ((effectKeys as readonly string[]).includes(key)) {
                 if (value !== true && value !== false) {
-                    assertObject('composer.bloom', value)
-                    for (const nested of Object.keys(value)) if (!allowedBloom.has(nested)) unsupported(`composer.bloom.${nested}`)
-                    result.bloom = mergeDefined(typeof result.bloom === 'object' ? result.bloom as object : undefined, value)
-                } else result.bloom = value
+                    assertObject(`composer.${key}`, value)
+                    for (const nested of Object.keys(value)) if (!allowedNested[key as keyof typeof allowedNested].has(nested)) unsupported(`composer.${key}.${nested}`)
+                    result[key] = mergeDefined(typeof result[key] === 'object' ? result[key] as object : undefined, value)
+                } else result[key] = value
+            } else if (key === 'lut') {
+                if (value !== false) {
+                    assertObject('composer.lut', value)
+                    for (const nested of Object.keys(value)) if (!['texture', 'intensity'].includes(nested)) unsupported(`composer.lut.${nested}`)
+                    result.lut = mergeDefined(typeof result.lut === 'object' ? result.lut as object : undefined, value)
+                } else result.lut = false
             } else result[key] = value
         }
     }
@@ -70,8 +90,50 @@ export function resolveComposerOptions(...layers: ComposerLayer[]): VxResolvedCo
     const antialias = merged.antialias ?? base.antialias
     enumValue('composer.antialias', antialias, ['auto', 'off', 'fxaa'])
     const bloom = resolveBloom(merged.bloom, base.bloom)
+    const ambientOcclusion = resolveSimpleEffect('ambientOcclusion', merged.ambientOcclusion, base.ambientOcclusion,
+        { intensity: 0.2, radius: 0.25 }, fields => ({ intensity: bounded('composer.ambientOcclusion.intensity', fields.intensity, 0.2, 0, 1), radius: positive('composer.ambientOcclusion.radius', fields.radius, 0.25) }))
+    const grading = resolveSimpleEffect('grading', merged.grading, base.grading,
+        { contrast: 1, saturation: 1 }, fields => ({ contrast: bounded('composer.grading.contrast', fields.contrast, 1, 0, 2), saturation: bounded('composer.grading.saturation', fields.saturation, 1, 0, 2) }))
+    const vignette = resolveSimpleEffect('vignette', merged.vignette, base.vignette,
+        { strength: 0.1, offset: 0.8 }, fields => ({ strength: bounded('composer.vignette.strength', fields.strength, 0.1, 0, 0.3), offset: bounded('composer.vignette.offset', fields.offset, 0.8, 0, 1) }))
+    const depthOfField = resolveSimpleEffect('depthOfField', merged.depthOfField, base.depthOfField,
+        { focus: 10, aperture: 0.0002, maxBlur: 0.008 }, fields => ({ focus: focusValue(fields.focus ?? 10), aperture: bounded('composer.depthOfField.aperture', fields.aperture, 0.0002, 0, 0.1), maxBlur: bounded('composer.depthOfField.maxBlur', fields.maxBlur, 0.008, 0, 0.05) }))
+    const outlines = resolveSimpleEffect('outlines', merged.outlines, base.outlines,
+        { color: 0xffffff, hiddenColor: 0x190a05, strength: 2, thickness: 1, glow: 0 }, fields => ({ color: colorValue('composer.outlines.color', fields.color, 0xffffff), hiddenColor: colorValue('composer.outlines.hiddenColor', fields.hiddenColor, 0x190a05), strength: bounded('composer.outlines.strength', fields.strength, 2, 0, 10), thickness: bounded('composer.outlines.thickness', fields.thickness, 1, 0, 10), glow: bounded('composer.outlines.glow', fields.glow, 0, 0, 4) }))
+    const lut = resolveLut(merged.lut, base.lut)
+    const protectAnnotations = booleanValue('composer.protectAnnotations', merged.protectAnnotations, base.protectAnnotations)
     return Object.freeze({ preset, enabled, quality, maxPixelRatio: Math.min(maxPixelRatio, qualityCap), reducedEffects,
-        output: Object.freeze({ toneMapping, exposure }), bloom, antialias })
+        output: Object.freeze({ toneMapping, exposure }), bloom, ambientOcclusion, grading, vignette,
+        depthOfField, outlines, lut, protectAnnotations, antialias })
+}
+
+function resolveSimpleEffect<T extends object>(name: string, value: false | true | Readonly<Partial<T>> | undefined,
+    base: false | Readonly<T>, defaults: T, validate: (fields: Record<string, any>) => T): false | Readonly<T> {
+    if (value === false) return false
+    if (value === undefined && base === false) return false
+    const fields = Object.assign({}, base === false ? defaults : base, value === true || value === undefined ? {} : value)
+    return Object.freeze(validate(fields))
+}
+
+function resolveLut(value: VxComposerOptions['lut'], base: VxResolvedComposerOptions['lut']): VxResolvedComposerOptions['lut'] {
+    if (value === false || (value === undefined && base === false)) return false
+    const fields = Object.assign({}, base === false ? {} : base, value)
+    if (!(fields.texture instanceof Data3DTexture)) fail('composer.lut.texture', 'must be a Three.js Data3DTexture')
+    if (fields.texture.colorSpace !== NoColorSpace) fail('composer.lut.texture.colorSpace', 'must be NoColorSpace linear LUT data')
+    return Object.freeze({ texture: fields.texture, intensity: bounded('composer.lut.intensity', fields.intensity, 1, 0, 1) })
+}
+
+function focusValue(value: unknown): number | string | readonly [number, number, number] {
+    if (typeof value === 'number') return positive('composer.depthOfField.focus', value, 10)
+    if (typeof value === 'string' && value.length) return value
+    if (Array.isArray(value) && value.length === 3 && value.every(item => typeof item === 'number' && Number.isFinite(item))) return Object.freeze([...value]) as readonly [number, number, number]
+    return fail('composer.depthOfField.focus', 'must be a positive distance, node ID/name, or three-number world anchor')
+}
+
+function colorValue(path: string, value: unknown, fallback: number): number | string {
+    const result = value ?? fallback
+    if (typeof result !== 'number' && typeof result !== 'string') fail(path, 'must be a numeric or string color')
+    return result
 }
 
 function resolveBloom(value: VxComposerOptions['bloom'], base: VxResolvedComposerOptions['bloom']): VxResolvedComposerOptions['bloom'] {
@@ -95,11 +157,12 @@ function resolveBloom(value: VxComposerOptions['bloom'], base: VxResolvedCompose
 export function resolveNodeEffects(value: unknown): Readonly<VxNodeEffects> | undefined {
     if (value == null) return undefined
     assertObject('effects', value)
-    for (const key of Object.keys(value)) if (key !== 'bloom' && key !== 'bloomGain') unsupported(`effects.${key}`)
+    for (const key of Object.keys(value)) if (key !== 'bloom' && key !== 'bloomGain' && key !== 'outline') unsupported(`effects.${key}`)
     const effects = value as VxNodeEffects
     if (effects.bloom !== undefined) enumValue('effects.bloom', effects.bloom, ['auto', 'include', 'exclude'])
+    if (effects.outline !== undefined) enumValue('effects.outline', effects.outline, ['auto', 'include', 'exclude'])
     const bloomGain = effects.bloomGain === undefined ? undefined : bounded('effects.bloomGain', effects.bloomGain, 1, 0, 4)
-    return Object.freeze(Object.fromEntries(Object.entries({ bloom: effects.bloom, bloomGain })
+    return Object.freeze(Object.fromEntries(Object.entries({ bloom: effects.bloom, bloomGain, outline: effects.outline })
         .filter(([, field]) => field !== undefined)))
 }
 

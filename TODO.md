@@ -1,6 +1,6 @@
 # Roadmap
 
-Reviewed September 26, 2026 against the implementation and workshop2 findings.
+Reviewed September 27, 2026 against the implementation and workshop2 findings.
 Delivered means present in this checkout, including current local changes; it does
 not imply a published package release. Proposed designs are identified separately
 from implemented runtime features.
@@ -34,9 +34,15 @@ from implemented runtime features.
   material updates, and component-owned canvas textures.
 - Declarative environment, camera, and floor configuration, including studio
   environment lighting and matte/reflective floors.
-- [Composer and visual styles design](docs/design/composer-and-visual-styles.md)
-  written and linked from the docs. **Design delivered; composer effects and
-  aesthetic presets are not implemented.**
+- [Composer and visual styles](docs/design/composer-and-visual-styles.md):
+  stage-owned controller, reactive declarative configuration and stylesheet
+  resolution, output/AA, luminance and selective bloom, annotation protection,
+  ambient occlusion, grading/vignette, depth of field, semantic outlines, LUTs,
+  and per-instance/material-channel masks.
+- Technical, studio, luminous, and editorial profiles now apply their advertised
+  runtime treatments. Quality scaling, reduced-effects behavior, capability
+  fallbacks, diagnostics, resource disposal, and reactive reconfiguration are
+  covered by the composer implementation and tests.
 
 ### Workshop2 and verification
 
@@ -73,17 +79,21 @@ from implemented runtime features.
   thin connectors/arrows, labels, nested placement, and reflective floors. Manual
   screenshot inspection is not a substitute for this coverage.
 
-### 2. Implement visualization-focused composer controls
+### 2. Complete visualization-focused composer examples and regression coverage
 
-- [ ] Implement the [composer design](docs/design/composer-and-visual-styles.md)
-  in its documented phases: controller/ownership, declarative configuration and
-  stylesheet resolution, output/AA, selective bloom, depth/annotation handling,
-  ambient occlusion, and restrained grading.
-- [ ] Ship technical, studio, luminous, and editorial profiles only when their
-  advertised effects work; provide light/dark examples and effects-off comparisons.
-- [ ] Keep labels, semantic palettes, selection, and thin routes readable. Add
-  reduced-effects behavior, quality limits, capability fallbacks, diagnostics, and
-  disposal tests. Emissive materials alone do not provide bloom or physical spill.
+- [x] Implement the [composer design](docs/design/composer-and-visual-styles.md):
+  controller/ownership, declarative configuration and stylesheet resolution,
+  output/AA, selective bloom, depth/annotation protection, ambient occlusion,
+  restrained grading/vignette, depth of field, outlines, LUTs, and per-instance
+  masks.
+- [x] Ship technical, studio, luminous, and editorial profiles with their
+  advertised runtime treatments.
+- [x] Protect labels and semantic overlays; support reduced effects, quality
+  limits, capability fallbacks, diagnostics, reactive updates, and owned resource
+  disposal.
+- [ ] Add maintained light/dark examples and effects-off comparisons, then include
+  them in browser and visual regression coverage. Bloom remains a screen-space
+  treatment rather than physical light spill.
 
 ### 3. Expose lighting and camera controls for illustrative scenes
 
@@ -117,8 +127,8 @@ from implemented runtime features.
   keep arrowheads readable.
 - [ ] Add controllable rounded orthogonal bends while preserving endpoints,
   obstacle clearance, route identity, and hit testing.
-- [ ] Connect semantic glow/emission styling to the composer design, keeping
-  presentation changes independent of route topology.
+- [x] Connect semantic glow/emission styling to the composer without changing
+  route topology; connector effect overrides preserve inherited membership.
 - [ ] Document ground-level ports outside object bases and when to use automatic
   versus manual routes. Workshop2's authored world-space bends reproduce a fixed
   illustration but need updating when its object layout changes.
@@ -146,12 +156,13 @@ from implemented runtime features.
   the fit API without a demonstrated need.
 - [ ] Publish test coverage reporting. A local coverage command exists, but the
   current CI workflow does not generate or publish a report.
-- [ ] Keep depth of field, per-instance bloom masks, and advanced effects behind
-  the composer design's later phases; prioritize legible baseline rendering first.
+- [x] Deliver depth of field, per-instance bloom masks, outlines, LUTs, and other
+  advanced effects as opt-in composer features; baseline profiles remain legible
+  without enabling them.
 
 See [workshop2's evaluation notes](workshops/workshop2/README.md) for the reference
-comparison and remaining visual approximations, including soft shadows, glow, and
-simplified model details.
+comparison and remaining visual approximations, including physically accurate
+light spill, soft shadows, and simplified model details.
 
 ## Testing a source build in another project
 

@@ -1,7 +1,7 @@
 import { Base } from '@/lib-components/nodes/Base.js';
 import { Element3d, VxEventMap } from '@/lib-components/three/element3d.js';
 import { VuetrexStage } from '@/lib-components/three/stage.js';
-import { reactive, computed, ComputedRef } from 'vue';
+import { reactive, computed, ComputedRef, shallowRef } from 'vue';
 import * as THREE from 'three';
 import type { ConnectorPortDefinition } from '@/lib-components/connectors/types.js';
 import { resolveNodeEffects, type VxNodeEffects } from '../scene/composer.js'
@@ -36,7 +36,7 @@ export abstract class Node extends Base {
         disabled: false,
         participatesInLayout: true,
     });
-    private nodeEffects: Readonly<VxNodeEffects> | undefined
+    private readonly nodeEffects = shallowRef<Readonly<VxNodeEffects>>()
     protected subscribed: boolean = false;
     public readonly type: string = 'Node';
 
@@ -214,20 +214,22 @@ export abstract class Node extends Base {
         return this.visible;
     }
 
-    /** Resolve bloom membership and gain independently through logical ownership. */
-    resolvedNodeEffects(): { bloom: 'auto' | 'include' | 'exclude'; bloomGain: number } {
+    /** Resolve contribution policies independently through logical ownership. */
+    resolvedNodeEffects(): { bloom: 'auto' | 'include' | 'exclude'; bloomGain: number; outline: 'auto' | 'include' | 'exclude' } {
         let bloom: 'auto' | 'include' | 'exclude' | undefined
         let bloomGain: number | undefined
+        let outline: 'auto' | 'include' | 'exclude' | undefined
         let current: Base | null = this
         while (current) {
             if (current instanceof Node) {
-                bloom ??= current.nodeEffects?.bloom
-                bloomGain ??= current.nodeEffects?.bloomGain
+                bloom ??= current.nodeEffects.value?.bloom
+                bloomGain ??= current.nodeEffects.value?.bloomGain
+                outline ??= current.nodeEffects.value?.outline
             }
-            if (bloom !== undefined && bloomGain !== undefined) break
+            if (bloom !== undefined && bloomGain !== undefined && outline !== undefined) break
             current = current.parent.value
         }
-        return { bloom: bloom ?? 'auto', bloomGain: bloomGain ?? 1 }
+        return { bloom: bloom ?? 'auto', bloomGain: bloomGain ?? 1, outline: outline ?? 'auto' }
     }
 
     /** Apply common visibility and interaction state to a newly-created object. */
@@ -272,7 +274,7 @@ export abstract class Node extends Base {
         if (normalized === 'visible') { this.setVisible(value); return; }
         if (normalized === 'disabled') { this.setDisabled(value); return; }
         if (normalized === 'participatesInLayout') { this.setLayoutParticipation(value); return; }
-        if (normalized === 'effects') { this.nodeEffects = resolveNodeEffects(value); return; }
+        if (normalized === 'effects') { this.nodeEffects.value = resolveNodeEffects(value); return; }
         super.setStateValue(key, value);
     }
 

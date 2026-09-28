@@ -1,8 +1,9 @@
 # Data floor: trying Vuetrex from a reference
 
 Open `/workshops/workshop2/` with `pnpm dev:demos` running. The scene recreates
-the reference's floor only: gridded rounded plinth, two white servers, blue
-database, processing hub, three bars, coral terminal, and two satellite stores.
+a studio presentation of the data floor: a finely textured rounded plinth,
+vented servers, blue database, folding processing hub, metric columns, satellite
+stores, and a rear operations display with illustrative telemetry.
 Drag to orbit and scroll to zoom. Click the metallic hub (or the monitor button)
 to raise its packed screens, rotate around the rear X hinge, then unfold the outer
 and inner wings around the center screen's side Y hinges. Click again to close;
@@ -17,6 +18,21 @@ scene's `elements` prop; it uses the standard renderer lifecycle and material
 ownership. Its UVs project the canvas grid across the top. `things/FloorPorts.vue`
 shares four explicit ports outside each object's base. A few manually authored
 bends reproduce an illustration rather than an automatically arranged diagram.
+
+## Studio comparison
+
+The **Composer effects** switch mounts/removes `vx-composer` without resetting the
+camera or monitor. Off returns to the legacy renderer, including its output and
+antialiasing behavior; lighting, materials, and display content stay identical.
+On uses high quality, DPR capped at 2, ACES output, contact AO, restrained selected
+bloom, subtle grading/vignette, and depth of field focused on the core or open hub.
+Outlines are disabled for the photographic presentation. System reduced-motion
+preferences still disable decorative bloom, vignette, and depth of field.
+
+High-quality shadows, key/fill intensities 2.7/0.65, and studio environment 0.48
+provide surface definition. The 2048² plinth grid uses anisotropic filtering and
+a small, deterministic bump texture. `RearDisplay.vue` paints a 2560×768 canvas;
+it is excluded from bloom to preserve small text and chart contrast.
 
 ## Problems found and corrected
 
@@ -39,8 +55,8 @@ bends reproduce an illustration rather than an automatically arranged diagram.
 
 ## Improvements I would want as a new user
 
-1. **Visible scene errors.** An invalid declaration currently produces a blank
-   canvas and a console exception. Show a useful development error in the scene.
+1. **Visible scene errors.** Implemented: development errors identify the failing
+   declaration and remain observable through the `scene-error` event.
 2. **A rounded platform primitive.** Box corner rounding is fixed and does not
    provide the wide planar corner radius in this reference. This extension
    uses the supported public `MeshNode` entry point. Its `elements.config.ts` shares
@@ -49,18 +65,16 @@ bends reproduce an illustration rather than an automatically arranged diagram.
 3. **Clearer vertical alignment.** `start` shifts each child down by half its
    height; it does not mean “put the base on the floor.” Name or document this
    distinction prominently and show unequal-height bars in examples.
-4. **Soft contact shading and orthographic camera.** The scene now uses
-   `vx-lighting` with key intensity 3, fill 0.8, and medium shadows, plus studio
-   environment intensity 0.3 to reduce washed-out surfaces. The reference's softer
-   contact shading and near-isometric projection remain future improvements.
+4. **Contact shading and camera.** Composer AO now adds contact shading.
+   Baked soft lighting and an orthographic camera remain separate future work.
 5. **Connector presentation controls.** Independent arrowhead size, rounded bends,
    and an optional glow would make thin blue data routes easier to reproduce.
-   The current bright bands are emissive, but do not create the reference's bloom.
+   The database bands now contribute restrained selected bloom.
 6. **Example checks in CI.** Include workshops in typechecking and add a browser
    smoke check that catches mount errors and blank canvases.
 
 The result is an approximation, not a pixel match. The reference's beveled hub
-details, luminous line halos, and soft ambient occlusion remain simplified.
+details and luminous line halos remain simplified; AO is a screen-space effect.
 Manual waypoint coordinates would also need updating if the object layout changes.
 
 ## Folding monitor and animation API findings

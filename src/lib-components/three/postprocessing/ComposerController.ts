@@ -5,7 +5,12 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js'
+import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js'
+import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js'
+import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js'
+import { LUTPass } from 'three/examples/jsm/postprocessing/LUTPass.js'
 import { resolveComposerOptions, type VxComposerOptions, type VxResolvedComposerOptions, type VxToneMapping } from '../../scene/composer.js'
+import { AnnotationPass } from './AnnotationPass.js'
 
 export interface ComposerDiagnostics {
     readonly requested?: VxResolvedComposerOptions
@@ -13,7 +18,9 @@ export interface ComposerDiagnostics {
     readonly passKeys: readonly string[]
     readonly targetSize: Readonly<{ width: number; height: number; pixelRatio: number }>
     readonly estimatedOwnedBytes: number
-    readonly supportedFeatures: Readonly<{ output: true; fxaa: true; luminanceBloom: true; selectedBloom: true }>
+    readonly supportedFeatures: Readonly<{ output: true; fxaa: true; luminanceBloom: true; selectedBloom: true;
+        depth: true; annotations: true; ambientOcclusion: true; grading: true; vignette: true;
+        depthOfField: true; outlines: true; lut: true; perInstanceMasks: true }>
     readonly fallbackReasons: readonly string[]
     readonly allocations: number
     readonly updates: number
@@ -27,6 +34,23 @@ const CompositeShader = {
         void main() { gl_FragColor = texture2D(tDiffuse, vUv) + texture2D(tBloom, vUv); }`,
 }
 
+const GradeVignetteShader = {
+    uniforms: { tDiffuse: { value: null }, contrast: { value: 1 }, saturation: { value: 1 },
+        vignetteStrength: { value: 0 }, vignetteOffset: { value: 0.8 } },
+    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform sampler2D tDiffuse; uniform float contrast; uniform float saturation;
+        uniform float vignetteStrength; uniform float vignetteOffset; varying vec2 vUv;
+        void main() {
+            vec4 source = texture2D(tDiffuse, vUv);
+            vec3 color = (source.rgb - 0.5) * contrast + 0.5;
+            float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+            color = mix(vec3(luma), color, saturation);
+            float distanceFromCenter = length(vUv - 0.5) * 1.41421356;
+            float vignette = smoothstep(vignetteOffset, 1.0, distanceFromCenter) * vignetteStrength;
+            gl_FragColor = vec4(color * (1.0 - vignette), source.a);
+        }`,
+}
+
 type ManagedPipeline = {
     composer: EffectComposer
     renderPass: RenderPass
@@ -34,6 +58,12 @@ type ManagedPipeline = {
     bloomRenderPass?: RenderPass
     bloomPass?: UnrealBloomPass
     compositePass?: ShaderPass
+    aoPass?: GTAOPass
+    dofPass?: BokehPass
+    gradePass?: ShaderPass
+    lutPass?: LUTPass
+    outlinePass?: OutlinePass
+    annotationPass?: AnnotationPass
     outputPass: OutputPass
     fxaaPass?: ShaderPass
     topology: string
@@ -95,16 +125,22 @@ export class ComposerController {
     private reconcileEffective(): void {
         const requested = this.requested
         const reduce = requested?.reducedEffects === true || (requested?.reducedEffects === 'system' && this.media?.matches)
-        this.effective = requested && reduce && requested.bloom !== false
-            ? Object.freeze({ ...requested, bloom: false })
+        const policyReasons: string[] = []
+        let effective = requested && reduce
+            ? Object.freeze({ ...requested, bloom: false, vignette: false, depthOfField: false })
             : requested
+        if (effective?.enabled && effective.quality === 'low' && effective.ambientOcclusion !== false) {
+            effective = Object.freeze({ ...effective, ambientOcclusion: false })
+            policyReasons.push('Ambient occlusion is disabled at low quality')
+        }
+        this.effective = effective
         try {
             if (!this.effective) {
                 this.disposeManaged()
                 this.restoreRenderer()
                 this.resize(this.width, this.height, this.sourcePixelRatio)
                 this.lastError = undefined
-                this.fallbackReasons = []
+                this.fallbackReasons = policyReasons
                 this.publishStatus()
                 return
             }
@@ -122,7 +158,7 @@ export class ComposerController {
             this.updates += 1
             this.lastWorking = this.effective
             this.lastError = undefined
-            this.fallbackReasons = []
+            this.fallbackReasons = policyReasons
             this.publishStatus()
         } catch (cause) {
             this.lastError = cause instanceof Error ? cause.message : String(cause)
@@ -136,16 +172,26 @@ export class ComposerController {
 
     private topology(options: VxResolvedComposerOptions): string {
         const bloom = options.enabled ? options.bloom : false
-        const aa = options.antialias === 'fxaa' || options.antialias === 'auto'
-        return `output|bloom:${bloom === false ? 'off' : bloom.mode}|aa:${aa ? 'fxaa' : 'off'}|quality:${options.quality}`
+        return `output|bloom:${bloom === false ? 'off' : bloom.mode}|ao:${options.enabled && options.ambientOcclusion !== false ? 'on' : 'off'}`
+            + `|dof:${options.enabled && options.depthOfField !== false ? 'on' : 'off'}|grade:${options.enabled && (options.grading !== false || options.vignette !== false) ? 'on' : 'off'}`
+            + `|lut:${options.enabled && options.lut !== false ? 'on' : 'off'}|outline:${options.enabled && options.outlines !== false ? 'on' : 'off'}`
+            + `|annotations:${options.enabled && options.protectAnnotations ? 'on' : 'off'}|aa:${options.antialias}|quality:${options.quality}`
     }
 
     private createManaged(options: VxResolvedComposerOptions, topology: string): ManagedPipeline {
         const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: true })
+        // Canvas antialiasing does not apply to offscreen composer targets.
+        // Keep FXAA for postprocess edges; MSAA preserves thin scene geometry.
+        target.samples = options.antialias === 'auto' && options.quality === 'high'
+            ? Math.min(4, this.renderer.capabilities?.maxSamples ?? 0) : 0
         const composer = new EffectComposer(this.renderer, target)
         const renderPass = new RenderPass(this.scene, this.camera)
         composer.addPass(renderPass)
         const pipeline: ManagedPipeline = { composer, renderPass, outputPass: new OutputPass(), topology }
+        if (options.enabled && options.ambientOcclusion !== false && options.quality !== 'low') {
+            pipeline.aoPass = new GTAOPass(this.scene, this.camera, 1, 1)
+            composer.addPass(pipeline.aoPass)
+        }
         const bloom = options.enabled ? options.bloom : false
         if (bloom !== false) {
             const bloomTarget = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: true })
@@ -158,6 +204,26 @@ export class ComposerController {
             pipeline.compositePass = new ShaderPass(CompositeShader)
             pipeline.compositePass.uniforms.tBloom.value = pipeline.bloomPass.renderTargetsHorizontal[0].texture
             composer.addPass(pipeline.compositePass)
+        }
+        if (options.enabled && options.depthOfField !== false) {
+            pipeline.dofPass = new BokehPass(this.scene, this.camera, { focus: 10, aperture: 0.0002, maxblur: 0.008 })
+            composer.addPass(pipeline.dofPass)
+        }
+        if (options.enabled && (options.grading !== false || options.vignette !== false)) {
+            pipeline.gradePass = new ShaderPass(GradeVignetteShader)
+            composer.addPass(pipeline.gradePass)
+        }
+        if (options.enabled && options.lut !== false) {
+            pipeline.lutPass = new LUTPass()
+            composer.addPass(pipeline.lutPass)
+        }
+        if (options.enabled && options.outlines !== false) {
+            pipeline.outlinePass = new OutlinePass(new THREE.Vector2(1, 1), this.scene, this.camera)
+            composer.addPass(pipeline.outlinePass)
+        }
+        if (options.enabled && options.protectAnnotations) {
+            pipeline.annotationPass = new AnnotationPass(this.scene, this.camera)
+            composer.addPass(pipeline.annotationPass)
         }
         composer.addPass(pipeline.outputPass)
         if (options.antialias === 'fxaa' || options.antialias === 'auto') {
@@ -175,6 +241,32 @@ export class ComposerController {
             // Selected adapters apply threshold before their independent gain.
             pipeline.bloomPass.threshold = options.bloom.mode === 'selected' ? 0 : options.bloom.threshold
         }
+        if (pipeline.aoPass && options.ambientOcclusion !== false) {
+            pipeline.aoPass.blendIntensity = options.ambientOcclusion.intensity
+            pipeline.aoPass.updateGtaoMaterial({ radius: options.ambientOcclusion.radius })
+        }
+        if (pipeline.dofPass && options.depthOfField !== false) {
+            const uniforms = pipeline.dofPass.uniforms as Record<string, THREE.IUniform>
+            uniforms.aperture.value = options.depthOfField.aperture
+            uniforms.maxblur.value = options.depthOfField.maxBlur
+        }
+        if (pipeline.gradePass) {
+            pipeline.gradePass.uniforms.contrast.value = options.grading === false ? 1 : options.grading.contrast
+            pipeline.gradePass.uniforms.saturation.value = options.grading === false ? 1 : options.grading.saturation
+            pipeline.gradePass.uniforms.vignetteStrength.value = options.vignette === false ? 0 : options.vignette.strength
+            pipeline.gradePass.uniforms.vignetteOffset.value = options.vignette === false ? 0.8 : options.vignette.offset
+        }
+        if (pipeline.lutPass && options.lut !== false) {
+            pipeline.lutPass.lut = options.lut.texture
+            pipeline.lutPass.intensity = options.lut.intensity
+        }
+        if (pipeline.outlinePass && options.outlines !== false) {
+            pipeline.outlinePass.visibleEdgeColor.set(options.outlines.color)
+            pipeline.outlinePass.hiddenEdgeColor.set(options.outlines.hiddenColor)
+            pipeline.outlinePass.edgeStrength = options.outlines.strength
+            pipeline.outlinePass.edgeThickness = options.outlines.thickness
+            pipeline.outlinePass.edgeGlow = options.outlines.glow
+        }
     }
 
     render(): void {
@@ -184,16 +276,20 @@ export class ComposerController {
         if (!this.managed || !this.effective) { this.legacyComposer.render(); return }
         try {
             const bloom = this.effective.enabled ? this.effective.bloom : false
-            if (bloom !== false && this.managed.bloomComposer) {
-                const restore = this.prepareBloom(bloom.mode, bloom.threshold)
-                try { this.managed.bloomComposer.render() } finally { restore() }
-                if (this.managed.compositePass && this.managed.bloomPass) {
-                    // Composite only the blurred contribution, never the sharp extraction source;
-                    // the sharp core is already present in the beauty pass.
-                    this.managed.compositePass.uniforms.tBloom.value = this.managed.bloomPass.renderTargetsHorizontal[0].texture
+            this.updateDynamicPasses()
+            const restoreAnnotations = this.managed.annotationPass?.hideAnnotations()
+            try {
+                if (bloom !== false && this.managed.bloomComposer) {
+                    const restore = this.prepareBloom(bloom.mode, bloom.threshold)
+                    try { this.managed.bloomComposer.render() } finally { restore() }
+                    if (this.managed.compositePass && this.managed.bloomPass) {
+                        // Composite only the blurred contribution, never the sharp extraction source;
+                        // the sharp core is already present in the beauty pass.
+                        this.managed.compositePass.uniforms.tBloom.value = this.managed.bloomPass.renderTargetsHorizontal[0].texture
+                    }
                 }
-            }
-            this.managed.composer.render()
+                this.managed.composer.render()
+            } finally { restoreAnnotations?.() }
         } catch (cause) {
             this.lastError = cause instanceof Error ? cause.message : String(cause)
             this.fallbackReasons = [`Configured composer render failed; using basic rendering: ${this.lastError}`]
@@ -215,8 +311,11 @@ export class ComposerController {
         const composer = this.managed?.composer ?? this.legacyComposer
         composer.setPixelRatio(ratio)
         composer.setSize(Math.max(1, width), Math.max(1, height))
+        const auxiliaryScale = this.effective?.quality === 'high' ? 1 : 0.5
         this.managed?.bloomComposer?.setPixelRatio(ratio)
-        this.managed?.bloomComposer?.setSize(Math.max(1, width), Math.max(1, height))
+        this.managed?.bloomComposer?.setSize(Math.max(1, width * auxiliaryScale), Math.max(1, height * auxiliaryScale))
+        this.managed?.aoPass?.setSize(Math.max(1, width * ratio * auxiliaryScale), Math.max(1, height * ratio * auxiliaryScale))
+        this.managed?.outlinePass?.setSize(Math.max(1, width * ratio), Math.max(1, height * ratio))
         if (this.managed?.fxaaPass) {
             this.managed.fxaaPass.uniforms.resolution.value.set(1 / Math.max(1, width * ratio), 1 / Math.max(1, height * ratio))
         }
@@ -226,6 +325,42 @@ export class ComposerController {
         this.renderer.outputColorSpace = THREE.SRGBColorSpace
         this.renderer.toneMapping = toneMapping(options.output.toneMapping)
         this.renderer.toneMappingExposure = options.output.exposure
+    }
+
+    private updateDynamicPasses(): void {
+        if (!this.managed || !this.effective) return
+        if (this.managed.outlinePass) {
+            const selected: THREE.Object3D[] = []
+            this.scene.traverse(object => {
+                if ((object as THREE.Mesh).material && contributionEffect(object).outline === 'include') selected.push(object)
+            })
+            this.managed.outlinePass.selectedObjects = selected
+        }
+        if (this.managed.dofPass && this.effective.depthOfField !== false) {
+            const uniforms = this.managed.dofPass.uniforms as Record<string, THREE.IUniform>
+            uniforms.focus.value = this.focusDistance(this.effective.depthOfField.focus)
+        }
+    }
+
+    private focusDistance(focus: number | string | readonly [number, number, number]): number {
+        if (typeof focus === 'number') return focus
+        const point = new THREE.Vector3()
+        if (typeof focus === 'string') {
+            let target: THREE.Object3D | undefined
+            this.scene.traverse(object => {
+                const node = object.userData.el?.node as { id?: string; name?: string } | undefined
+                if (!target && (node?.id === focus || node?.name === focus)) target = object
+            })
+            const reason = `Depth-of-field focus target "${focus}" was not found; using distance 10`
+            if (!target) {
+                if (!this.fallbackReasons.includes(reason)) { this.fallbackReasons.push(reason); this.publishStatus() }
+                return 10
+            }
+            const index = this.fallbackReasons.indexOf(reason)
+            if (index >= 0) { this.fallbackReasons.splice(index, 1); this.publishStatus() }
+            target.getWorldPosition(point)
+        } else point.fromArray(focus as [number, number, number])
+        return Math.max(0.001, point.applyMatrix4(this.camera.matrixWorldInverse).z * -1)
     }
 
     private restoreRenderer(): void {
@@ -274,6 +409,14 @@ export class ComposerController {
         let result = objectMasks.get(source)
         const anySource = source as THREE.Material & { color?: THREE.Color; emissive?: THREE.Color; emissiveIntensity?: number; emissiveMap?: THREE.Texture | null; map?: THREE.Texture | null; alphaMap?: THREE.Texture | null; opacity?: number; alphaTest?: number; side?: THREE.Side }
         const screen = object.userData.vxScreenStyle as { brightness?: number; bloomMask?: THREE.Texture | null } | undefined
+        const instanceMask = object.userData.vxInstanceBloomMask as { texture: THREE.DataTexture; size: number; any: boolean } | undefined
+        // Mask presence changes shader topology; texture/gain updates do not.
+        if (result && result.userData.vxBloomInstanceMasked !== undefined
+            && result.userData.vxBloomInstanceMasked !== Boolean(instanceMask)) {
+            result.dispose()
+            objectMasks.delete(source)
+            result = undefined
+        }
         const troikaText = source as THREE.Material & { isTroikaTextMaterial?: boolean }
         if (troikaText.isTroikaTextMaterial && typeof (object as any).createDerivedMaterial === 'function') {
             if (!result) {
@@ -332,22 +475,34 @@ export class ComposerController {
             if ((object as THREE.Points).isPoints) result = new THREE.PointsMaterial({ size: (source as THREE.PointsMaterial).size ?? 1 })
             else if ((object as THREE.Line).isLine) result = new THREE.LineBasicMaterial()
             else result = new THREE.MeshBasicMaterial()
-            const uniforms = { threshold: { value: threshold }, gain: { value: gain } }
+            const uniforms = { threshold: { value: threshold }, gain: { value: gain },
+                instanceMask: { value: instanceMask?.texture ?? null }, instanceMaskSize: { value: instanceMask?.size ?? 1 } }
             result.userData.vxBloomUniforms = uniforms
+            result.userData.vxBloomInstanceMasked = Boolean(instanceMask)
             result.onBeforeCompile = shader => {
                 shader.uniforms.vxBloomThreshold = uniforms.threshold
                 shader.uniforms.vxBloomGain = uniforms.gain
+                shader.uniforms.vxInstanceBloomMask = uniforms.instanceMask
+                shader.uniforms.vxInstanceBloomMaskSize = uniforms.instanceMaskSize
+                if (instanceMask) {
+                    shader.vertexShader = `uniform sampler2D vxInstanceBloomMask; uniform float vxInstanceBloomMaskSize; varying float vxInstanceBloomGain;\n${shader.vertexShader}`
+                        .replace('void main() {', 'void main() { vxInstanceBloomGain = texture2D(vxInstanceBloomMask, vec2((float(gl_InstanceID) + 0.5) / vxInstanceBloomMaskSize, 0.5)).r;')
+                }
                 shader.fragmentShader = `uniform float vxBloomThreshold; uniform float vxBloomGain;\n${shader.fragmentShader}`
                     .replace(/(vec3 outgoingLight = [^;]+;)/,
-                        '$1 float vxLuminance = dot(outgoingLight, vec3(0.2126, 0.7152, 0.0722)); outgoingLight = vxLuminance >= vxBloomThreshold ? outgoingLight * vxBloomGain : vec3(0.0);')
+                        `$1 float vxLuminance = dot(outgoingLight, vec3(0.2126, 0.7152, 0.0722)); outgoingLight = vxLuminance >= vxBloomThreshold ? outgoingLight * vxBloomGain${instanceMask ? ' * vxInstanceBloomGain' : ''} : vec3(0.0);`)
+                if (instanceMask) shader.fragmentShader = `varying float vxInstanceBloomGain;\n${shader.fragmentShader}`
             }
-            result.customProgramCacheKey = () => 'vuetrex-selected-bloom-v1'
+            result.customProgramCacheKey = () => `vuetrex-selected-bloom-v2:${instanceMask ? 'instances' : 'whole'}`
             objectMasks.set(source, result)
         }
         const target = result as THREE.MeshBasicMaterial | THREE.LineBasicMaterial | THREE.PointsMaterial
-        const uniforms = target.userData.vxBloomUniforms as { threshold: { value: number }; gain: { value: number } }
+        const uniforms = target.userData.vxBloomUniforms as { threshold: { value: number }; gain: { value: number };
+            instanceMask: { value: THREE.DataTexture | null }; instanceMaskSize: { value: number } }
         uniforms.threshold.value = threshold
-        uniforms.gain.value = gain
+        uniforms.gain.value = instanceMask ? 1 : gain
+        uniforms.instanceMask.value = instanceMask?.texture ?? null
+        uniforms.instanceMaskSize.value = instanceMask?.size ?? 1
         const color = anySource.emissive ?? anySource.color ?? new THREE.Color(0)
         target.color.copy(color).multiplyScalar(anySource.emissive ? anySource.emissiveIntensity ?? 1 : 1)
         if ('map' in target) {
@@ -413,10 +568,14 @@ export class ComposerController {
         // composer pair, bright target, and horizontal/vertical mip chain.
         const mainBytesPerPixel = 24
         const bloomBytesPerPixel = this.managed?.bloomComposer ? 32 : 0
+        const depthEffectBytesPerPixel = (this.managed?.aoPass ? 24 : 0) + (this.managed?.dofPass ? 12 : 0)
+            + (this.managed?.outlinePass ? 36 : 0)
         return Object.freeze({ requested: this.requested, effective: this.effective,
             passKeys: Object.freeze(passKeys), targetSize: Object.freeze({ width: this.width, height: this.height, pixelRatio: ratio }),
-            estimatedOwnedBytes: pixels * (mainBytesPerPixel + bloomBytesPerPixel),
-            supportedFeatures: Object.freeze({ output: true, fxaa: true, luminanceBloom: true, selectedBloom: true }),
+            estimatedOwnedBytes: pixels * (mainBytesPerPixel + bloomBytesPerPixel + depthEffectBytesPerPixel),
+            supportedFeatures: Object.freeze({ output: true, fxaa: true, luminanceBloom: true, selectedBloom: true,
+                depth: true, annotations: true, ambientOcclusion: true, grading: true, vignette: true,
+                depthOfField: true, outlines: true, lut: true, perInstanceMasks: true }),
             fallbackReasons: Object.freeze([...this.fallbackReasons]), allocations: this.allocations, updates: this.updates,
             lastError: this.lastError })
     }
@@ -453,31 +612,34 @@ export class ComposerController {
     private disposePipeline(pipeline?: ManagedPipeline): void {
         if (!pipeline) return
         pipeline.renderPass.dispose(); pipeline.bloomRenderPass?.dispose(); pipeline.bloomPass?.dispose()
-        pipeline.compositePass?.dispose(); pipeline.outputPass.dispose(); pipeline.fxaaPass?.dispose()
+        pipeline.compositePass?.dispose(); pipeline.aoPass?.dispose(); pipeline.dofPass?.dispose()
+        pipeline.gradePass?.dispose(); pipeline.lutPass?.dispose(); pipeline.outlinePass?.dispose(); pipeline.annotationPass?.dispose()
+        pipeline.outputPass.dispose(); pipeline.fxaaPass?.dispose()
         pipeline.bloomComposer?.dispose(); pipeline.composer.dispose()
     }
 }
 
-function contributionEffect(object: THREE.Object3D): { bloom: 'auto' | 'include' | 'exclude'; bloomGain: number } {
-    const direct = object.userData.vxBloomEffects as { bloom?: 'auto' | 'include' | 'exclude'; bloomGain?: number } | undefined
-    if (direct) return { bloom: direct.bloom ?? 'auto', bloomGain: direct.bloomGain ?? 1 }
+function contributionEffect(object: THREE.Object3D): { bloom: 'auto' | 'include' | 'exclude'; bloomGain: number; outline: 'auto' | 'include' | 'exclude' } {
+    const instanceMask = object.userData.vxInstanceBloomMask as { any?: boolean } | undefined
+    const direct = object.userData.vxBloomEffects as { bloom?: 'auto' | 'include' | 'exclude'; bloomGain?: number; outline?: 'auto' | 'include' | 'exclude' } | undefined
+    if (direct) return { bloom: instanceMask?.any ? 'include' : direct.bloom ?? 'auto', bloomGain: instanceMask?.any ? 1 : direct.bloomGain ?? 1, outline: direct.outline ?? 'auto' }
     let current: THREE.Object3D | null = object
     while (current) {
-        const node = current.userData.el?.node as { resolvedNodeEffects?: () => { bloom: 'auto' | 'include' | 'exclude'; bloomGain: number } } | undefined
+        const node = current.userData.el?.node as { resolvedNodeEffects?: () => { bloom: 'auto' | 'include' | 'exclude'; bloomGain: number; outline: 'auto' | 'include' | 'exclude' } } | undefined
         if (node?.resolvedNodeEffects) {
             const resolved = node.resolvedNodeEffects()
             // Labels/helpers are non-emitting by default. An explicit inherited
             // include still opts the contribution in, which keeps selected bloom
             // usable for authored luminous text.
             if (object.userData.vxBloomRole === 'annotation' && resolved.bloom === 'auto') {
-                return { bloom: 'exclude', bloomGain: resolved.bloomGain }
+                return { bloom: 'exclude', bloomGain: resolved.bloomGain, outline: resolved.outline }
             }
-            return resolved
+            return instanceMask?.any ? { ...resolved, bloom: 'include', bloomGain: 1 } : resolved
         }
         current = current.parent
     }
-    if (object.userData.vxBloomRole === 'annotation') return { bloom: 'exclude', bloomGain: 1 }
-    return { bloom: 'auto', bloomGain: 1 }
+    if (object.userData.vxBloomRole === 'annotation') return { bloom: 'exclude', bloomGain: 1, outline: 'auto' }
+    return { bloom: 'auto', bloomGain: 1, outline: 'auto' }
 }
 
 function toneMapping(value: VxToneMapping): THREE.ToneMapping {

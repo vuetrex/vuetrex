@@ -35,7 +35,7 @@ export const geo = Object.freeze({
 })
 
 export { GeometryNode } from '@/lib-components/geometry/GeometryNode.js'
-export type { GeometryAnchor, GeometryMaterialChannels } from '@/lib-components/geometry/GeometryNode.js'
+export type { GeometryAnchor, GeometryMaterialChannels, GeometryEffectChannels } from '@/lib-components/geometry/GeometryNode.js'
 export { defineGeometry, defineGeometryOutputs } from '@/lib-components/geometry/modules.js'
 export { field } from '@/lib-components/geometry/fields.js'
 export { parameter, isGeometryParameter } from '@/lib-components/geometry/parameters.js'

@@ -150,7 +150,9 @@ export class LightingDeclaration extends SceneDeclaration {
 export class ComposerDeclaration extends SceneDeclaration {
     constructor(stage: VuetrexStage) {
         super(stage, 'vx-composer', { preset: undefined, enabled: undefined, quality: undefined,
-            maxPixelRatio: undefined, reducedEffects: undefined, output: undefined, bloom: undefined, antialias: undefined })
+            maxPixelRatio: undefined, reducedEffects: undefined, output: undefined, bloom: undefined,
+            ambientOcclusion: undefined, grading: undefined, vignette: undefined, depthOfField: undefined,
+            outlines: undefined, lut: undefined, protectAnnotations: undefined, antialias: undefined })
     }
     protected override setDeclarationProp(key: string, value: unknown): void {
         if (key === 'enabled' && value != null) value = this.booleanProp(key, value)
@@ -161,8 +163,13 @@ export class ComposerDeclaration extends SceneDeclaration {
         // Snapshot through the proxy first so Vue tracks both top-level bindings and
         // parameter-only changes inside the authored output/bloom objects.
         const state = { ...this.state }
-        const output = state.output && typeof state.output === 'object' ? { ...state.output } : state.output
-        const bloom = state.bloom && typeof state.bloom === 'object' ? { ...state.bloom } : state.bloom
-        this.stage.setComposerDeclaration({ ...state, output, bloom } as VxComposerOptions)
+        for (const key of ['output', 'bloom', 'ambientOcclusion', 'grading', 'vignette', 'depthOfField', 'outlines', 'lut']) {
+            const value = state[key]
+            if (value && typeof value === 'object') state[key] = { ...value }
+        }
+        if (state.lut && typeof state.lut === 'object' && 'texture' in state.lut) {
+            state.lut = { ...state.lut, texture: toRaw(state.lut.texture) }
+        }
+        this.stage.setComposerDeclaration({ ...state } as VxComposerOptions)
     }
 }

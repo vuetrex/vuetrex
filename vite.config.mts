@@ -21,8 +21,10 @@ const troikaWorkerUtilsPackageDir = path.dirname(
 )
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
     root: __dirname,
+    // Concurrent docs/tests must not invalidate the live demo dependency cache.
+    cacheDir: path.resolve(__dirname, mode === 'test' ? 'node_modules/.vite-tests' : 'node_modules/.vite-demos'),
     server: {
         port: 5173,
         strictPort: true,
@@ -99,4 +101,4 @@ export default defineConfig({
             }
         }
     }
-})
+}))

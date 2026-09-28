@@ -8,6 +8,7 @@ import { Node } from '@/lib-components/nodes/Node.js'
 import type { VuetrexStage } from '@/lib-components/three/stage.js'
 import type { VxEventMap } from '@/lib-components/three/element3d.js'
 import * as THREEx from '@/lib-components/three/three.imports.js'
+import { resolveNodeEffects, type VxNodeEffects } from '../scene/composer.js'
 
 /** A canonical keyed item for callers that do not already have domain objects with IDs. */
 export interface InstanceItem<T> {
@@ -20,6 +21,8 @@ export interface InstanceEncoding<T> {
     transform(item: T, index: number): THREE.Matrix4
     color(item: T, index: number): THREE.ColorRepresentation | THREE.Color
     visible?(item: T, index: number): boolean
+    /** Optional semantic bloom membership/gain for this keyed instance. */
+    effects?(item: T, index: number): Pick<VxNodeEffects, 'bloom' | 'bloomGain'> | undefined
 }
 
 /** Added to VxMouseEvent when a raycast hits one member of an instance batch. */
@@ -51,6 +54,7 @@ interface EncodedInstance<T> {
     matrix: THREE.Matrix4
     color: THREE.Color
     visible: boolean
+    effects?: Readonly<VxNodeEffects>
 }
 
 const hiddenMatrix = new THREE.Matrix4().makeScale(0, 0, 0)
@@ -85,6 +89,7 @@ export class InstanceNode<T = unknown> extends Node {
     private geometry?: THREE.BufferGeometry
     private geometrySource?: InstanceGeometry
     private ownsGeometry = false
+    private bloomMask?: THREE.DataTexture
 
     private readonly slotById = new Map<string, number>()
     private readonly hitBySlot: Array<InstanceHit<T> | undefined> = []
@@ -249,6 +254,7 @@ export class InstanceNode<T = unknown> extends Node {
                 matrix: encoding?.transform(item, sourceIndex) ?? this.defaultMatrix(sourceIndex),
                 color: new THREE.Color(encoding?.color(item, sourceIndex) ?? 0xffffff),
                 visible: encoding?.visible?.(item, sourceIndex) ?? true,
+                effects: encoding?.effects ? resolveNodeEffects(encoding.effects(item, sourceIndex)) : undefined,
             }
         })
     }
@@ -299,7 +305,32 @@ export class InstanceNode<T = unknown> extends Node {
         this.mesh!.computeBoundingBox()
         this.mesh!.computeBoundingSphere()
         if (this.mesh!.instanceColor) this.mesh!.instanceColor.needsUpdate = true
+        this.writeBloomMask(records)
         this.mesh!.computeBoundingSphere()
+    }
+
+    private writeBloomMask(records: EncodedInstance<T>[]): void {
+        if (!this.state.encoding?.effects) {
+            this.bloomMask?.dispose()
+            this.bloomMask = undefined
+            delete this.mesh!.userData.vxInstanceBloomMask
+            return
+        }
+        const data = new Float32Array(this.capacity)
+        const inherited = this.resolvedNodeEffects()
+        let any = false
+        for (const record of records) {
+            const bloom = record.effects?.bloom ?? inherited.bloom
+            const gain = record.effects?.bloomGain ?? inherited.bloomGain
+            if (record.visible && bloom === 'include') { data[record.slot] = gain; any ||= gain > 0 }
+        }
+        if (!this.bloomMask || this.bloomMask.image.width !== this.capacity) {
+            this.bloomMask?.dispose()
+            this.bloomMask = new THREE.DataTexture(data, this.capacity, 1, THREE.RedFormat, THREE.FloatType)
+            this.bloomMask.minFilter = this.bloomMask.magFilter = THREE.NearestFilter
+        } else this.bloomMask.image.data = data
+        this.bloomMask.needsUpdate = true
+        this.mesh!.userData.vxInstanceBloomMask = { texture: this.bloomMask, size: this.capacity, any }
     }
 
     private encodedBounds(): THREE.Box3 {
@@ -326,6 +357,8 @@ export class InstanceNode<T = unknown> extends Node {
         }
         this.mesh.removeFromParent()
         this.mesh.dispose()
+        this.bloomMask?.dispose()
+        this.bloomMask = undefined
         this.mesh = undefined
         this.element.mesh = null
     }

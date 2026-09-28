@@ -104,12 +104,22 @@ describe('procedural geometry composability extensions', () => {
             bark: { color: 0x704020, roughness: 0.9 },
             foliage: { color: 0x4f9d55, roughness: 0.55 },
         })
+        node.setStateValue('material-effects', {
+            bark: { bloom: 'exclude' },
+            foliage: { bloom: 'include', bloomGain: 0.35 },
+        })
         await flush()
         expect(node.instanceBatchCount).toBe(2)
         const colors = node.group.children
             .map(child => ((child as THREE.Mesh).material as THREE.MeshStandardMaterial).color.getHex())
             .sort((a, b) => a - b)
         expect(colors).toEqual([0x4f9d55, 0x704020].sort((a, b) => a - b))
+        const effectsByColor = Object.fromEntries(node.group.children.map(child => [
+            ((child as THREE.Mesh).material as THREE.MeshStandardMaterial).color.getHexString(),
+            child.userData.vxBloomEffects,
+        ]))
+        expect(effectsByColor['704020']).toEqual({ bloom: 'exclude' })
+        expect(effectsByColor['4f9d55']).toEqual({ bloom: 'include', bloomGain: 0.35 })
     })
 
     it('reuses point, curve, radial, and mapped domains across pipelines', () => {
