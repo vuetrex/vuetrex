@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "rootDir": "../..", "types": ["vite-plugin-glsl/ext", "node"] },
+  "include": ["../../src/**/*.ts", "../../src/**/*.d.ts", "../../src/**/*.vue", "./**/*.ts", "./**/*.vue"]
+}
