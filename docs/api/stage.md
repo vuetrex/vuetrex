@@ -191,6 +191,33 @@ requests fitting; do not combine it with an orbit you want to keep in control.
 
 The underlying Three.js perspective camera is available on the concrete `VuetrexStage` as `renderCamera`.
 
+## Ambient camera motion
+
+Use a camera declaration for subtle stage-owned movement without component lifecycle code:
+
+```vue
+<vx-camera fit="content" motion="sway" />
+<vx-camera fit="content" motion="figure-eight" />
+<vx-camera fit="content" motion="orbit" />
+```
+
+`sway` is the restrained general-purpose default: a 10-degree side-to-side arc over 22 seconds. `figure-eight`
+combines a six-degree horizontal arc with small height and distance offsets over 26 seconds. `orbit` completes one
+continuous revolution every 72 seconds. Configure the shared controls with an object:
+
+```vue
+<vx-camera
+  fit="content"
+  :motion="{ preset: 'sway', amount: 12, duration: 24, resumeAfter: 2.5, fadeDuration: 1.5 }"
+/>
+```
+
+Pointer orbit and wheel input immediately remove the ambient offset. Vuetrex follows the user's new pose while input
+is active, waits `resumeAfter` idle seconds, then fades the preset back in around that pose. Content refitting and
+named focus transitions use the same rebase behavior. Ambient motion follows the stage clock, stops on unmount, and
+remains disabled when the system requests reduced motion. Do not combine a camera declaration with an explicit root
+orbit or a custom camera timeline; those are alternative camera authorities.
+
 ## Settings
 
 Pass settings through the `<Vuetrex :settings>` prop. See the [complete root reference](/api/vuetrex#settings)

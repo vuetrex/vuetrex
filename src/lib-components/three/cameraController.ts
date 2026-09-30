@@ -21,11 +21,137 @@ export interface VxCameraTimelineOptions {
     defaults?: VxCameraTweenOptions
 }
 
+export type VxCameraMotionPreset = 'sway' | 'figure-eight' | 'orbit'
+export interface VxCameraMotionOptions {
+    preset: VxCameraMotionPreset
+    /** Horizontal amplitude in degrees. Ignored by the continuous orbit preset. */
+    amount?: number
+    /** Seconds per complete motion cycle. */
+    duration?: number
+    /** Idle seconds after camera input before ambient motion returns. */
+    resumeAfter?: number
+    /** Seconds used to fade the ambient motion back in. */
+    fadeDuration?: number
+}
+export type VxCameraMotion = VxCameraMotionPreset | VxCameraMotionOptions
+
 export interface CameraHost {
     now(): number
     read(): VxCameraOrbit
     apply(orbit: VxCameraOrbit): void
     onFrame(fn: (time: number) => void): () => void
+    prefersReducedMotion?(): boolean
+}
+
+interface ResolvedCameraMotion {
+    preset: VxCameraMotionPreset
+    amount: number
+    duration: number
+    resumeAfter: number
+    fadeDuration: number
+}
+
+const motionDefaults: Readonly<Record<VxCameraMotionPreset, Pick<ResolvedCameraMotion, 'amount' | 'duration'>>> = {
+    sway: { amount: 10, duration: 22 },
+    'figure-eight': { amount: 6, duration: 26 },
+    orbit: { amount: 0, duration: 72 },
+}
+
+function resolveCameraMotion(motion: VxCameraMotion): ResolvedCameraMotion {
+    const options = typeof motion === 'string' ? { preset: motion } : motion
+    if (!options || !['sway', 'figure-eight', 'orbit'].includes(options.preset)) {
+        throw new TypeError('Camera motion preset must be sway, figure-eight, or orbit')
+    }
+    const defaults = motionDefaults[options.preset]
+    const resolved = {
+        preset: options.preset,
+        amount: options.amount ?? defaults.amount,
+        duration: options.duration ?? defaults.duration,
+        resumeAfter: options.resumeAfter ?? 2.5,
+        fadeDuration: options.fadeDuration ?? 1.5,
+    }
+    if (!Number.isFinite(resolved.amount) || resolved.amount < 0) throw new RangeError('Camera motion amount must be a nonnegative finite number')
+    if (!Number.isFinite(resolved.duration) || resolved.duration <= 0) throw new RangeError('Camera motion duration must be a positive finite number')
+    if (!Number.isFinite(resolved.resumeAfter) || resolved.resumeAfter < 0) throw new RangeError('Camera motion resumeAfter must be a nonnegative finite number')
+    if (!Number.isFinite(resolved.fadeDuration) || resolved.fadeDuration < 0) throw new RangeError('Camera motion fadeDuration must be a nonnegative finite number')
+    return resolved
+}
+
+class VxAmbientCameraMotion {
+    private readonly unsubscribe: () => void
+    private base: VxCameraOrbit
+    private phase = 0
+    private strength = 0
+    private previous: number
+    private interruptedAt: number
+    private killed = false
+
+    constructor(private readonly host: CameraHost, private readonly options: ResolvedCameraMotion) {
+        this.previous = host.now()
+        this.interruptedAt = this.previous
+        this.base = this.copy(host.read())
+        this.unsubscribe = host.onFrame(time => this.tick(time))
+    }
+
+    interrupt(): void {
+        if (this.killed) return
+        this.interruptedAt = this.host.now()
+        this.base = this.copy(this.host.read())
+        this.phase = 0
+        this.strength = 0
+    }
+
+    kill(): void {
+        if (this.killed) return
+        this.killed = true
+        this.unsubscribe()
+    }
+
+    private tick(time: number): void {
+        if (this.killed) return
+        const delta = Math.max(0, Math.min(100, time - this.previous)) / 1000
+        this.previous = time
+        const reduced = this.host.prefersReducedMotion?.() === true
+        const idle = !reduced && time - this.interruptedAt >= this.options.resumeAfter * 1000
+        if (!idle) {
+            this.base = this.copy(this.host.read())
+            this.strength = 0
+            return
+        }
+
+        this.phase = (this.phase + delta * Math.PI * 2 / this.options.duration) % (Math.PI * 2)
+        this.strength = this.options.fadeDuration === 0
+            ? 1
+            : Math.min(1, this.strength + delta / this.options.fadeDuration)
+        this.host.apply(this.pose())
+    }
+
+    private pose(): VxCameraOrbit {
+        const phase = this.phase
+        const strength = this.strength
+        if (this.options.preset === 'orbit') {
+            return { ...this.base, target: [...this.base.target], azimuth: this.base.azimuth + phase * 180 / Math.PI * strength }
+        }
+        if (this.options.preset === 'figure-eight') {
+            return {
+                ...this.base,
+                target: [...this.base.target],
+                azimuth: this.base.azimuth + Math.sin(phase) * this.options.amount * strength,
+                height: this.base.height + Math.sin(phase * 2) * this.base.radius * 0.025 * strength,
+                radius: this.base.radius * (1 + Math.cos(phase) * 0.012 * strength),
+            }
+        }
+        return {
+            ...this.base,
+            target: [...this.base.target],
+            azimuth: this.base.azimuth + Math.sin(phase) * this.options.amount * strength,
+            height: this.base.height + Math.sin(phase * 2) * this.base.radius * 0.012 * strength,
+        }
+    }
+
+    private copy(orbit: VxCameraOrbit): VxCameraOrbit {
+        return { ...orbit, target: [...orbit.target] }
+    }
 }
 
 function validate(update: VxCameraOrbitUpdate): void {
@@ -92,6 +218,8 @@ export class VxCameraTimeline {
 /** Owns the explicit orbit and at most one camera timeline. */
 export class VxCameraController {
     private active?: VxCameraTimeline
+    private ambient?: VxAmbientCameraMotion
+    private configuredMotion?: VxCameraMotion
     private orbitState?: VxCameraOrbit
     private explicit = false
     private disposed = false
@@ -119,10 +247,25 @@ export class VxCameraController {
         this.host.apply(state)
         return this.active = new VxCameraTimeline(this.host, state, options)
     }
+    setMotion(motion?: VxCameraMotion): this {
+        this.assertAlive()
+        const resolved = motion === undefined ? undefined : resolveCameraMotion(motion)
+        this.ambient?.kill()
+        this.ambient = undefined
+        this.configuredMotion = typeof motion === 'object' ? { ...motion } : motion
+        if (resolved !== undefined) this.ambient = new VxAmbientCameraMotion(this.host, resolved)
+        return this
+    }
+    get motion(): VxCameraMotion | undefined { return this.configuredMotion }
     /** Pause when the user takes control. Resume continues the authored trajectory. */
-    interrupt(): void { this.active?.pause(); this.orbitState = undefined }
+    interrupt(): void { this.active?.pause(); this.orbitState = undefined; this.ambient?.interrupt() }
     /** Release explicit control before switching back to content fitting or node focus. */
-    release(): void { this.active?.kill(); this.active = undefined; this.orbitState = undefined; this.explicit = false }
-    dispose(): void { if (this.disposed) return; this.release(); this.disposed = true }
+    release(): void { this.active?.kill(); this.active = undefined; this.orbitState = undefined; this.explicit = false; this.ambient?.interrupt() }
+    dispose(): void {
+        if (this.disposed) return
+        this.release()
+        this.ambient?.kill(); this.ambient = undefined; this.configuredMotion = undefined
+        this.disposed = true
+    }
     private assertAlive(): void { if (this.disposed) throw new Error('The camera controller is disposed') }
 }

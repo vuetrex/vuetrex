@@ -16,6 +16,9 @@ The strands are joined into one immutable geometry graph and realized by one `vx
 icosphere prototype through a point distribution, so those pieces are GPU-instanced even though the tube paths have
 unique topology.
 
+The scene also uses `<vx-camera motion="sway">`. This declarative ambient preset yields immediately to orbit and zoom
+input, then fades back in around the user's new view after the idle delay.
+
 ## How close is this to Blender Geometry Nodes?
 
 Vuetrex can already make this class of form, but the authoring level is lower than Blender's curve workflow. Smooth

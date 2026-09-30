@@ -6,9 +6,16 @@ import { StageDeclaration } from '../nodes/StageDeclaration.js'
 import type { VuetrexStage } from '../three/stage.js'
 import { createStudioEnvironment } from './studio.js'
 import type { VxComposerOptions } from './composer.js'
+import type { VxCameraMotion } from '../three/cameraController.js'
 
 export interface VxEnvironmentProps { preset?: 'studio'; texture?: Texture; enabled?: boolean; intensity?: number; rotation?: number }
-export interface VxCameraProps { direction?: readonly [number, number, number]; fit?: 'content'; padding?: number; duration?: number }
+export interface VxCameraProps {
+    direction?: readonly [number, number, number]
+    fit?: 'content'
+    padding?: number
+    duration?: number
+    motion?: VxCameraMotion
+}
 export interface VxFloorProps {
     finish?: 'matte' | 'mirror'
     color?: number
@@ -90,7 +97,7 @@ export class EnvironmentDeclaration extends SceneDeclaration {
 
 export class CameraDeclaration extends SceneDeclaration {
     constructor(stage: VuetrexStage) {
-        super(stage, 'vx-camera', { direction: [0, 0.65, 1], fit: 'content', padding: 0.75, duration: 0.6 })
+        super(stage, 'vx-camera', { direction: [0, 0.65, 1], fit: 'content', padding: 0.75, duration: 0.6, motion: undefined })
     }
     protected capture(): () => void {
         const prior = this.stage.captureCameraView()
@@ -102,7 +109,8 @@ export class CameraDeclaration extends SceneDeclaration {
         if (!Array.isArray(direction) || direction.length !== 3 || !Array.from(direction).every(Number.isFinite)
             || !direction.some(n => n !== 0) || direction[1] < 0) throw new TypeError('Camera direction requires three finite numbers, nonzero length, and nonnegative Y')
         if (this.state.padding < 0 || this.state.duration < 0) throw new RangeError('Camera padding and duration cannot be negative')
-        this.stage.setCameraView({ direction: [...direction] as [number, number, number], padding: this.state.padding, duration: this.state.duration })
+        this.stage.setCameraView({ direction: [...direction] as [number, number, number], padding: this.state.padding,
+            duration: this.state.duration, motion: this.state.motion as VxCameraMotion | undefined })
     }
 }
 

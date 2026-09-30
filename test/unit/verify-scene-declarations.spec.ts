@@ -191,7 +191,7 @@ describe('scene declarations', () => {
         floor.setStateValue('fadeStart', 20); floor.setStateValue('fadeEnd', 50)
         parent.appendChild(camera); parent.appendChild(floor)
         camera.syncWithThree(); floor.syncWithThree(); await nextTick()
-        expect(stage.setCameraView).toHaveBeenLastCalledWith({ direction: [8, 6, 11], padding: 2, duration: 0.6 })
+        expect(stage.setCameraView).toHaveBeenLastCalledWith({ direction: [8, 6, 11], padding: 2, duration: 0.6, motion: undefined })
         floor.setStateValue('reflection', undefined); camera.setStateValue('padding', undefined)
         await nextTick()
         expect(stage.applyFloorStyle).toHaveBeenLastCalledWith(expect.objectContaining({ reflection: 0.6 }))

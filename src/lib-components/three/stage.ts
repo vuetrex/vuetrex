@@ -359,6 +359,7 @@ export class VuetrexStage extends Scene implements VxStage {
     readonly camera = new VxCameraController({
         now: () => this.lifecycle.timer.current,
         onFrame: fn => this.registerAnimation(fn),
+        prefersReducedMotion: () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches,
         read: () => ({
             target: this.cameraTarget.toArray() as [number, number, number],
             height: this.renderCamera.position.y,
@@ -457,13 +458,14 @@ export class VuetrexStage extends Scene implements VxStage {
 
     captureCameraView() {
         return { direction: this.overviewDirection().toArray() as [number, number, number],
-            ...this.fitOptions, target: this.activeCameraTarget }
+            ...this.fitOptions, target: this.activeCameraTarget, motion: this.camera.motion }
     }
 
     setCameraView(view: VxCameraProps): void {
         if (this.destroyed) return
         if (view.direction) this.cameraBase.copy(this.cameraTarget).add(new THREE.Vector3(...view.direction))
         this.fitToContent({ padding: view.padding, duration: view.duration })
+        this.camera.setMotion(view.motion)
     }
 
     restoreCameraView(view: ReturnType<VuetrexStage['captureCameraView']>): void {

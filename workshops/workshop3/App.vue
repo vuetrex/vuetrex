@@ -3,7 +3,7 @@
     <a class="back" href="/">&larr; workshops</a>
 
     <section class="scene-card" aria-label="Procedural organic spline bundle">
-      <Vuetrex height="80vh" width="100%" :settings="settings" :camera="camera">
+      <Vuetrex height="80vh" width="100%" :settings="settings">
         <vx-composer
           preset="luminous"
           quality="high"
@@ -18,6 +18,7 @@
         />
         <vx-lighting :key-intensity="3.5" :fill-intensity="0.44" shadow-quality="high" />
         <vx-environment preset="studio" :intensity="0.3" :rotation="2.2" />
+        <vx-camera fit="content" :direction="[0.15, 0.55, 1]" motion="orbit" :padding="0.72" />
         <vx-floor
           finish="matte"
           :color="0x222828"
@@ -81,10 +82,6 @@ const bundle = computed(() => organicBundle({
   growth: growth.value,
   seed: seed.value,
 }))
-
-const camera = {
-  orbit: { target: [0.15, 3.45, 0] as const, height: 2.65, radius: 11.3, azimuth: 31 },
-}
 
 const settings: VxSettings = {
   backgroundColor: 0x202629,

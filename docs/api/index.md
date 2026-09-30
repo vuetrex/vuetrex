@@ -51,7 +51,7 @@ allowed per scene. Removing the declaration restores the previous stage configur
 | --- | --- |
 | `vx-environment` | `preset="studio"`, optional caller-owned `texture`, `enabled=true`, `intensity=0.55`, Y `rotation=0` in radians |
 | `vx-lighting` | `keyIntensity=5.5`, `fillIntensity=2`, `shadowQuality="medium"` (`off`, `low`, `medium`, `high`) |
-| `vx-camera` | `fit="content"`, `direction=[0, 0.65, 1]`, `padding=0.75`, `duration=0.6` seconds |
+| `vx-camera` | `fit="content"`, `direction=[0, 0.65, 1]`, `padding=0.75`, `duration=0.6` seconds; optional `motion="sway"`, `"figure-eight"`, or `"orbit"` |
 | `vx-floor` | `finish="matte"` or `"mirror"`, `color=0x3f3f3f`, `reflection=0.6`, `grid=false`, `captions=false`; optional paired `fadeStart` and `fadeEnd` |
 
 Live lighting controls the two stage-owned directional lights. The shadow-casting key uses `lightColor2`;

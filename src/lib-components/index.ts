@@ -21,7 +21,8 @@ export type {
     VxGeometryProps,
 } from './root-api.js';
 export type { VxCameraController, VxCameraTimeline, VxCameraOrbit, VxCameraView,
-    VxCameraOrbitUpdate, VxCameraTweenOptions, VxCameraTimelineOptions } from './three/cameraController.js';
+    VxCameraOrbitUpdate, VxCameraTweenOptions, VxCameraTimelineOptions, VxCameraMotion,
+    VxCameraMotionOptions, VxCameraMotionPreset } from './three/cameraController.js';
 export type { VxStage, VxMouseEvent } from '@/lib-components/vuetrex.js';
 export type {
     VxAnimProps,
