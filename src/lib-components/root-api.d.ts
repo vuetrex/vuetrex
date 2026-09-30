@@ -4,6 +4,13 @@ import type { VxStage } from './three/stage.js'
 import type { VxCameraView } from './three/cameraController.js'
 import type { VxColorScheme, VxStyleSheetDefinition } from './styling/stylesheets.js'
 import type { ComposerDiagnostics } from './three/postprocessing/ComposerController.js'
+import type { Placement } from './composition/index.js'
+import type { GeometryParameterValues, GeometrySource } from './geometry/types.js'
+import type { GeometryAnchor, GeometryEffectChannels, GeometryMaterialChannels } from './geometry/GeometryNode.js'
+import type { VxNodeEffects } from './scene/composer.js'
+import type { VxHoverProps } from './styling/types.js'
+import type { VxMaterialBinding } from './styling/stylesheets.js'
+import type { InstanceAnchor, InstanceEncoding, InstanceGeometry, InstanceKey } from './nodes/InstanceNode.js'
 
 /** Root scene container. Import Vuetrex and place the scene in its default slot. */
 export interface VuetrexProps {
@@ -175,4 +182,170 @@ export interface VxDiagnosticsSettings {
      * @default true
      */
     nodeIds?: boolean
+}
+
+/** Shared template props for spatial layout and geometry nodes. */
+export interface VxNodeProps {
+    /** Stable semantic identity used by focus, animation, diagnostics, and connections. */
+    id?: string
+    /** Human-readable identity. Use `id` for machine references and `text` for captions. */
+    name?: string
+    /** Floor caption where supported by the node. */
+    text?: string
+    /** Show the node while retaining its layout slot.
+     * @default true
+     */
+    visible?: boolean
+    /** Suppress pointer and click handling without hiding the node.
+     * @default false
+     */
+    disabled?: boolean
+    /** Include the node in parent measurement and automatic placement.
+     * @default true
+     */
+    participatesInLayout?: boolean
+    /** Composer contribution policy for this node and its descendants. */
+    effects?: Readonly<VxNodeEffects>
+}
+
+/** Plain or Three.js-compatible size accepted by layout containers and spacers. */
+export type VxLayoutSize = number | Readonly<{ x: number; y?: number; z?: number }>
+export type VxAlignment = 'start' | 'center' | 'end'
+export type VxLayoutName = 'grid' | 'row' | 'depth' | 'stack' | 'ring'
+export type VxLayoutDirection = 'normal' | 'reverse'
+export type VxFitMode = 'shrink' | 'none'
+
+/** Props shared by vx-group, vx-row, and vx-stack. */
+export interface VxGroupProps extends VxNodeProps {
+    /** Declared X/Z size or `{ x, y, z }` allocation. */
+    size?: VxLayoutSize
+    /** Declared vertical allocation. */
+    height?: number
+    /** Gap between automatically arranged children, in world units. */
+    gap?: number
+    /** Set all three alignment axes together. */
+    align?: VxAlignment
+    alignX?: VxAlignment
+    alignY?: VxAlignment
+    alignZ?: VxAlignment
+    /** Override the container's built-in layout strategy. */
+    layout?: VxLayoutName
+    /** Ring start angle in degrees. */
+    startAngle?: number
+    direction?: VxLayoutDirection
+    /** Shrink oversized content into declared bounds or allow overflow.
+     * @default "shrink"
+     */
+    fit?: VxFitMode
+    /** Recipe-owned position, orientation, scale, and visibility. */
+    placement?: Placement
+}
+
+/** Props specific to vx-layer in addition to the shared group contract. */
+export interface VxLayerProps extends VxGroupProps {
+    /** Uniform scale applied at this layout boundary.
+     * @default 1
+     */
+    scale?: number
+    /** Vertical offset from the parent layout, in world units.
+     * @default 0
+     */
+    elevation?: number
+}
+
+/** Props specific to vx-ring in addition to the shared group contract. */
+export interface VxRingProps extends VxGroupProps {
+    /** Explicit outer ring radius. Omit to derive it from child footprints. */
+    radius?: number
+    /** Fraction of each angular slot reserved as a gap, from 0 inclusive to 1 exclusive. */
+    gapRatio?: number
+}
+
+/** Props for the non-visual vx-spacer layout reservation. */
+export interface VxSpacerProps extends VxNodeProps {
+    /** Shorthand for equal width/depth, or an explicit three-dimensional size. */
+    size?: VxLayoutSize
+    width?: number
+    height?: number
+    depth?: number
+}
+
+/** Props for the visual vx-panel layout container. */
+export interface VxPanelProps extends VxNodeProps {
+    size?: number
+    depth?: number
+    height?: number
+    lines?: readonly string[]
+    labelRegion?: 'north' | 'south'
+    labelShare?: number
+    labelPadding?: number
+    labelColor?: number
+    labelFontSize?: number
+    labelLineHeight?: number
+    labelAlign?: 'left' | 'center' | 'right'
+    contentPadding?: number
+    layout?: VxLayoutName
+    gap?: number
+    startAngle?: number
+    direction?: VxLayoutDirection
+    material?: VxMaterialBinding
+    hover?: VxHoverProps
+}
+
+/** Shared props for fixed shapes derived from MeshNode. */
+export interface VxMeshProps extends VxNodeProps {
+    /** Shape width and default Z depth.
+     * @default 1
+     */
+    size?: number
+    /** Exact vertical extent.
+     * @default 0.5
+     */
+    height?: number
+    /** Box Z extent; radial shapes ignore it.
+     * @default 0
+     */
+    depth?: number
+    /** Multi-line SDF label rendered on the mesh face. */
+    lines?: readonly string[]
+    labelFace?: 'front' | 'top'
+    labelColor?: number
+    labelPadding?: number
+    labelFontSize?: number
+    labelLineHeight?: number
+    labelAlign?: 'left' | 'center' | 'right'
+    material?: VxMaterialBinding
+    hover?: VxHoverProps
+}
+
+/** Additional fixed-geometry props accepted by vx-wedge. */
+export interface VxWedgeProps extends VxMeshProps {
+    /** Radial thickness of the ring segment. */
+    thickness?: number
+}
+
+/** Props for keyed repeated geometry hosted by one vx-instances node. */
+export interface VxInstanceProps<Item = unknown> extends VxNodeProps {
+    items?: readonly Item[]
+    keyBy?: InstanceKey<Item>
+    encoding?: InstanceEncoding<Item>
+    geometry?: InstanceGeometry
+    material?: VxMaterialBinding
+    /** How encoded bounds align with the parent layout.
+     * @default "base"
+     */
+    anchor?: InstanceAnchor
+}
+
+/** Props for one immutable procedural geometry graph hosted by vx-geometry. */
+export interface VxGeometryProps extends VxNodeProps {
+    graph?: GeometrySource
+    parameters?: GeometryParameterValues
+    material?: VxMaterialBinding
+    materials?: GeometryMaterialChannels
+    materialEffects?: GeometryEffectChannels
+    /** How compiled bounds align with the parent layout.
+     * @default "base"
+     */
+    anchor?: GeometryAnchor
 }

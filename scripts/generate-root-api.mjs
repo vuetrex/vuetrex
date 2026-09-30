@@ -8,14 +8,24 @@ const input = await readFile(file, 'utf8')
 const source = ts.createSourceFile(file, input, ts.ScriptTarget.Latest, true)
 const pkg = JSON.parse(await readFile('package.json', 'utf8'))
 const interfaces = source.statements.filter(ts.isInterfaceDeclaration)
+const interfaceByName = new Map(interfaces.map(node => [node.name.text, node]))
 const description = node => node.jsDoc?.map(doc => typeof doc.comment === 'string' ? doc.comment : '').join('\n') ?? ''
-const fields = name => interfaces.find(node => node.name.text === name).members.map(node => ({
-    name: node.name.getText(source),
-    type: node.type.getText(source),
-    description: description(node),
-    default: ts.getJSDocTags(node).find(tag => tag.tagName.text === 'default')?.comment,
-    source: { file: navigationFile, offset: node.name.getStart(source) },
-}))
+const fields = (name, visiting = new Set()) => {
+    if (visiting.has(name)) throw new Error(`Cyclic root API interface inheritance at ${name}`)
+    const declaration = interfaceByName.get(name)
+    if (!declaration) throw new Error(`Unknown root API interface: ${name}`)
+    const nextVisiting = new Set(visiting).add(name)
+    const inherited = (declaration.heritageClauses ?? []).flatMap(clause => clause.types.flatMap(type =>
+        fields(type.expression.getText(source), nextVisiting)))
+    const own = declaration.members.map(node => ({
+        name: node.name.getText(source),
+        type: node.type.getText(source),
+        description: description(node),
+        default: ts.getJSDocTags(node).find(tag => tag.tagName.text === 'default')?.comment,
+        source: { file: navigationFile, offset: node.name.getStart(source) },
+    }))
+    return [...new Map([...inherited, ...own].map(field => [field.name, field])).values()]
+}
 const props = fields('VuetrexProps')
 const settings = fields('VxSettings')
 const ready = fields('VuetrexEvents')[0]
@@ -51,6 +61,50 @@ const webTypes = {
                 arguments: [{ name: 'status', type: { module: pkg.name, name: 'ComposerDiagnostics' } }] }],
         slots: [{ name: 'default', description: 'The scene tree rendered by Vuetrex. Required to create a stage.' }],
     }] } },
+}
+const rootApiTypes = new Set([
+    'VxLayoutSize', 'VxAlignment', 'VxLayoutName', 'VxLayoutDirection', 'VxFitMode',
+    'VxMaterialBinding', 'VxHoverProps', 'GeometrySource', 'GeometryParameterValues',
+    'GeometryMaterialChannels', 'GeometryEffectChannels', 'GeometryAnchor', 'Placement',
+])
+const elementAttributes = type => fields(type).map(field => ({
+    name: field.name.replace(/[A-Z]/g, character => `-${character.toLowerCase()}`),
+    description: field.description,
+    default: field.default,
+    required: false,
+    value: {
+        kind: 'expression',
+        type: rootApiTypes.has(field.type) ? { module: pkg.name, name: field.type } : field.type,
+    },
+    source: field.source,
+}))
+const nodeEvents = ['click', 'dblclick', 'pointerenter', 'pointerleave'].map(name => ({
+    name,
+    description: name.startsWith('pointer')
+        ? 'Pointer boundary event for this node; it does not bubble through the logical tree.'
+        : 'Pointer activation event for this node; it bubbles through the logical tree.',
+}))
+for (const [name, type, tagDescription, acceptsChildren] of [
+    ['vx-group', 'VxGroupProps', 'Spatial container with selectable grid, row, depth, stack, or ring layout.', true],
+    ['vx-row', 'VxGroupProps', 'Spatial container that arranges children along the X axis.', true],
+    ['vx-stack', 'VxGroupProps', 'Spatial container that stacks children along the Y axis.', true],
+    ['vx-ring', 'VxRingProps', 'Spatial container that arranges children around an XZ ring.', true],
+    ['vx-layer', 'VxLayerProps', 'Depth-layout container and scaling boundary.', true],
+    ['vx-panel', 'VxPanelProps', 'Visual rounded-box container with independent label and child-layout regions.', true],
+    ['vx-spacer', 'VxSpacerProps', 'Non-visual node that reserves an explicit slot in its parent layout.', false],
+    ['vx-box', 'VxMeshProps', 'Fixed rounded box geometry. A positive depth overrides its Z extent.', false],
+    ['vx-cylinder', 'VxMeshProps', 'Fixed beveled cylinder geometry.', false],
+    ['vx-wedge', 'VxWedgeProps', 'Fixed beveled ring-segment geometry designed for vx-ring layouts.', false],
+    ['vx-instances', 'VxInstanceProps', 'Keyed repeated geometry realized as one instanced mesh.', false],
+    ['vx-geometry', 'VxGeometryProps', 'One immutable procedural geometry graph compiled into keyed render batches.', false],
+]) {
+    webTypes.contributions.html.elements.push({
+        name,
+        description: tagDescription,
+        attributes: elementAttributes(type),
+        events: nodeEvents,
+        ...(acceptsChildren ? { slots: [{ name: 'default', description: 'Spatial children arranged by this container.' }] } : {}),
+    })
 }
 const declarationsFile = 'src/lib-components/connectors/template-api.d.ts'
 const declarationsInput = await readFile(declarationsFile, 'utf8')
@@ -179,7 +233,9 @@ are also documented in the emitted TypeScript declarations.
 
 Evaluate attribute completion on \`<Vuetrex>\`, Quick Documentation on \`settings\` or \`stopped\`, and
 Go to Declaration on attributes. Exact navigation behavior depends on which Vue/TypeScript provider IDEA selects.
-The metadata covers the root component and host declarations such as connectors and \`vx-composer\`.
+The metadata covers the root component, layout containers, fixed meshes, procedural geometry, and the existing
+connector/composer host declarations. Runtime classes and TypeScript contracts for the supported layout and geometry
+extension surface are exported from the package root.
 
 Maintainers: run \`node scripts/generate-root-api.mjs\` after editing the root interfaces.
 The build regenerates these files; \`node scripts/generate-root-api.mjs --check\` detects stale output.

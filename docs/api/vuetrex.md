@@ -131,7 +131,9 @@ are also documented in the emitted TypeScript declarations.
 
 Evaluate attribute completion on `<Vuetrex>`, Quick Documentation on `settings` or `stopped`, and
 Go to Declaration on attributes. Exact navigation behavior depends on which Vue/TypeScript provider IDEA selects.
-The metadata covers the root component and host declarations such as connectors and `vx-composer`.
+The metadata covers the root component, layout containers, fixed meshes, procedural geometry, and the existing
+connector/composer host declarations. Runtime classes and TypeScript contracts for the supported layout and geometry
+extension surface are exported from the package root.
 
 Maintainers: run `node scripts/generate-root-api.mjs` after editing the root interfaces.
 The build regenerates these files; `node scripts/generate-root-api.mjs --check` detects stale output.

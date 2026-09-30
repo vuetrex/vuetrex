@@ -14,11 +14,10 @@
           :grading="{ contrast: 1.025, saturation: 0.96 }"
           :vignette="{ strength: 0.08, offset: 0.95 }"
           :bloom="{ mode: 'selected', strength: 0.22, radius: 0.24, threshold: 0 }"
+          :ambient-occlusion="{ intensity: 0.52, radius: 0.28 }"
           :outlines="false"
           :protect-annotations="true"
         />
-<!--        :ambient-occlusion="{ intensity: 0.32, radius: 0.28 }"-->
-        <!--         -->
         <vx-lighting :key-intensity="2.7" :fill-intensity="0.65" shadow-quality="high" />
         <vx-environment preset="studio" :intensity="0.48" :rotation="0.65" />
         <vx-floor
@@ -164,7 +163,7 @@ function onStageReady(value: VxStage) {
 // Animate one complete camera pose instead of refitting changing monitor bounds.
 const overview = { x: 0, y: 0.75, z: -0.3, height: 9.5, radius: 14, azimuth: 25 }
 const hubCloseup = { x: -0.35, y: 0.8, z: 1.4, height: 2.7, radius: 3.4, azimuth: 0 }
-const displayCloseup = {x: 0, y: 1.55, z: -3.35, height: 1.55, radius: 4, azimuth: 0 }
+const displayCloseup = {x: 0, y: 1.55, z: -1.35, height: 1.55, radius: 4, azimuth: 0 }
 const cameraPose = reactive({ ...overview })
 const cameraView = computed(() => ({ orbit: {
   target: [cameraPose.x, cameraPose.y, cameraPose.z] as const,
@@ -227,11 +226,9 @@ const databaseGap = 0.008
 const databaseLayers = [
   { id: 'core-layer-base', size: 1.2, height: 0.13, material: materials.darkBase },
   { id: 'core-layer-blue-1', size: 1.12, height: 0.25, material: materials.blue },
-  { id: 'core-layer-band-1', size: 1.12, height: 0.025, material: materials.whiteBand,
-    effects: { bloom: 'include' as const, bloomGain: 0.55 } },
+  { id: 'core-layer-band-1', size: 1.22, height: 0.025, material: materials.whiteBand, effects: { bloom: 'include' as const, bloomGain: 0.55 } },
   { id: 'core-layer-blue-2', size: 1.12, height: 0.25, material: materials.blue },
-  { id: 'core-layer-band-2', size: 1.12, height: 0.025, material: materials.whiteBand,
-    effects: { bloom: 'include' as const, bloomGain: 0.55 } },
+  { id: 'core-layer-band-2', size: 1.22, height: 0.025, material: materials.whiteBand, effects: { bloom: 'include' as const, bloomGain: 0.55 } },
   { id: 'core-layer-blue-3', size: 1.12, height: 0.25, material: materials.blue },
   { id: 'core-layer-cap', size: 1.02, height: 0.12, material: materials.white },
   { id: 'core-layer-top', size: 0.68, height: 0.055, material: materials.blueTop },
@@ -245,15 +242,16 @@ function toggleDatabase() {
   const opening = !databaseOpen.value
   databaseOpen.value = opening
   databaseAnimating = true
-  const radius = 1.50
-  const raisedY = 1.59
-  const finalIndex = opening ? databaseLayers.length - 1 : 0
+  const radius = 0.9
+  const raisedY = 0.9
+  const N = 4;
+  const finalIndex = opening ? N - 1 : 0
 
-  databaseLayers.forEach((layer, index) => {
-    const angle = index / databaseLayers.length * Math.PI * 2
+  databaseLayers.filter(l => l.id.startsWith('core-layer-blue') || l.id.startsWith('core-layer-cap')).forEach((layer, index) => {
+    const angle = index / N * Math.PI * 2
     stage?.animateTo(layer.id, {
       positionX: opening ? Math.sin(angle) * radius : 0,
-      positionY: opening ? raisedY : layer.baseY,
+      positionY: opening ? raisedY : (layer.id.startsWith('core-layer-blue') ? layer.baseY + 0.125 : layer.baseY + 0.06),
       positionZ: opening ? Math.cos(angle) * radius : 0,
     }, {
       duration: 0.72,

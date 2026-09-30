@@ -13,7 +13,7 @@
           "description": "Root scene container. Import Vuetrex and place the scene in its default slot.",
           "source": {
             "file": "dist_types/src/lib-components/root-api.d.ts",
-            "offset": 510
+            "offset": 1053
           },
           "attributes": [
             {
@@ -22,7 +22,7 @@
               "default": "{}",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 657
+                "offset": 1200
               },
               "required": false,
               "value": {
@@ -42,7 +42,7 @@
               "default": "\"static\"",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 754
+                "offset": 1297
               },
               "required": false,
               "value": {
@@ -56,7 +56,7 @@
               "default": "\"50vh\"",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 884
+                "offset": 1427
               },
               "required": false,
               "value": {
@@ -70,7 +70,7 @@
               "default": "\"100%\"",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1019
+                "offset": 1562
               },
               "required": false,
               "value": {
@@ -84,7 +84,7 @@
               "default": "false",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1146
+                "offset": 1689
               },
               "required": false,
               "value": {
@@ -97,7 +97,7 @@
               "description": "Ordered style definitions for this scene. Overrides sheets inherited from a `vx-stylesheet` provider; changes apply reactively.",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1307
+                "offset": 1850
               },
               "required": false,
               "value": {
@@ -110,7 +110,7 @@
               "description": "Color scheme for this scene. Overrides the scheme inherited from a `vx-stylesheet` provider; `system` follows the browser preference.",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1499
+                "offset": 2042
               },
               "required": false,
               "value": {
@@ -127,7 +127,7 @@
               "default": "\"scene\"",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1719
+                "offset": 2262
               },
               "required": false,
               "value": {
@@ -144,7 +144,7 @@
               "default": "[]",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1861
+                "offset": 2404
               },
               "required": false,
               "value": {
@@ -158,7 +158,7 @@
               "default": "{}",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 1990
+                "offset": 2533
               },
               "required": false,
               "value": {
@@ -176,7 +176,7 @@
               "description": "Emitted once after stage mounting, before the inner scene tree mounts on the next Vue tick.\nThe payload provides the public stage controls; content bounds are not ready yet.",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 2299
+                "offset": 2842
               },
               "arguments": [
                 {
@@ -193,7 +193,7 @@
               "description": "Structured scene failure, emitted in development and production. Includes tag, optional node ID/property, phase, correction, and original cause.",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 2483
+                "offset": 3026
               },
               "arguments": [
                 {
@@ -210,7 +210,7 @@
               "description": "Emitted when the requested/effective composer plan or a fallback changes; never emitted per frame.",
               "source": {
                 "file": "dist_types/src/lib-components/root-api.d.ts",
-                "offset": 2634
+                "offset": 3177
               },
               "arguments": [
                 {
@@ -227,6 +227,3420 @@
             {
               "name": "default",
               "description": "The scene tree rendered by Vuetrex. Required to create a stage."
+            }
+          ]
+        },
+        {
+          "name": "vx-group",
+          "description": "Spatial container with selectable grid, row, depth, stack, or ring layout.",
+          "attributes": [
+            {
+              "name": "id",
+              "description": "Stable semantic identity used by focus, animation, diagnostics, and connections.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7318
+              }
+            },
+            {
+              "name": "name",
+              "description": "Human-readable identity. Use `id` for machine references and `text` for captions.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7427
+              }
+            },
+            {
+              "name": "text",
+              "description": "Floor caption where supported by the node.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7499
+              }
+            },
+            {
+              "name": "visible",
+              "description": "Show the node while retaining its layout slot.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7601
+              }
+            },
+            {
+              "name": "disabled",
+              "description": "Suppress pointer and click handling without hiding the node.",
+              "default": "false",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7722
+              }
+            },
+            {
+              "name": "participates-in-layout",
+              "description": "Include the node in parent measurement and automatic placement.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7846
+              }
+            },
+            {
+              "name": "effects",
+              "description": "Composer contribution policy for this node and its descendants.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "Readonly<VxNodeEffects>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7956
+              }
+            },
+            {
+              "name": "size",
+              "description": "Declared X/Z size or `{ x, y, z }` allocation.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutSize"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8550
+              }
+            },
+            {
+              "name": "height",
+              "description": "Declared vertical allocation.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8615
+              }
+            },
+            {
+              "name": "gap",
+              "description": "Gap between automatically arranged children, in world units.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8707
+              }
+            },
+            {
+              "name": "align",
+              "description": "Set all three alignment axes together.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8774
+              }
+            },
+            {
+              "name": "align-x",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8798
+              }
+            },
+            {
+              "name": "align-y",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8823
+              }
+            },
+            {
+              "name": "align-z",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8848
+              }
+            },
+            {
+              "name": "layout",
+              "description": "Override the container's built-in layout strategy.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutName"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8935
+              }
+            },
+            {
+              "name": "start-angle",
+              "description": "Ring start angle in degrees.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9001
+              }
+            },
+            {
+              "name": "direction",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutDirection"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9025
+              }
+            },
+            {
+              "name": "fit",
+              "description": "Shrink oversized content into declared bounds or allow overflow.",
+              "default": "\"shrink\"",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxFitMode"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9165
+              }
+            },
+            {
+              "name": "placement",
+              "description": "Recipe-owned position, orientation, scale, and visibility.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "Placement"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9255
+              }
+            }
+          ],
+          "events": [
+            {
+              "name": "click",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "dblclick",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "pointerenter",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            },
+            {
+              "name": "pointerleave",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            }
+          ],
+          "slots": [
+            {
+              "name": "default",
+              "description": "Spatial children arranged by this container."
+            }
+          ]
+        },
+        {
+          "name": "vx-row",
+          "description": "Spatial container that arranges children along the X axis.",
+          "attributes": [
+            {
+              "name": "id",
+              "description": "Stable semantic identity used by focus, animation, diagnostics, and connections.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7318
+              }
+            },
+            {
+              "name": "name",
+              "description": "Human-readable identity. Use `id` for machine references and `text` for captions.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7427
+              }
+            },
+            {
+              "name": "text",
+              "description": "Floor caption where supported by the node.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7499
+              }
+            },
+            {
+              "name": "visible",
+              "description": "Show the node while retaining its layout slot.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7601
+              }
+            },
+            {
+              "name": "disabled",
+              "description": "Suppress pointer and click handling without hiding the node.",
+              "default": "false",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7722
+              }
+            },
+            {
+              "name": "participates-in-layout",
+              "description": "Include the node in parent measurement and automatic placement.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7846
+              }
+            },
+            {
+              "name": "effects",
+              "description": "Composer contribution policy for this node and its descendants.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "Readonly<VxNodeEffects>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7956
+              }
+            },
+            {
+              "name": "size",
+              "description": "Declared X/Z size or `{ x, y, z }` allocation.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutSize"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8550
+              }
+            },
+            {
+              "name": "height",
+              "description": "Declared vertical allocation.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8615
+              }
+            },
+            {
+              "name": "gap",
+              "description": "Gap between automatically arranged children, in world units.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8707
+              }
+            },
+            {
+              "name": "align",
+              "description": "Set all three alignment axes together.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8774
+              }
+            },
+            {
+              "name": "align-x",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8798
+              }
+            },
+            {
+              "name": "align-y",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8823
+              }
+            },
+            {
+              "name": "align-z",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8848
+              }
+            },
+            {
+              "name": "layout",
+              "description": "Override the container's built-in layout strategy.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutName"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8935
+              }
+            },
+            {
+              "name": "start-angle",
+              "description": "Ring start angle in degrees.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9001
+              }
+            },
+            {
+              "name": "direction",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutDirection"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9025
+              }
+            },
+            {
+              "name": "fit",
+              "description": "Shrink oversized content into declared bounds or allow overflow.",
+              "default": "\"shrink\"",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxFitMode"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9165
+              }
+            },
+            {
+              "name": "placement",
+              "description": "Recipe-owned position, orientation, scale, and visibility.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "Placement"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9255
+              }
+            }
+          ],
+          "events": [
+            {
+              "name": "click",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "dblclick",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "pointerenter",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            },
+            {
+              "name": "pointerleave",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            }
+          ],
+          "slots": [
+            {
+              "name": "default",
+              "description": "Spatial children arranged by this container."
+            }
+          ]
+        },
+        {
+          "name": "vx-stack",
+          "description": "Spatial container that stacks children along the Y axis.",
+          "attributes": [
+            {
+              "name": "id",
+              "description": "Stable semantic identity used by focus, animation, diagnostics, and connections.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7318
+              }
+            },
+            {
+              "name": "name",
+              "description": "Human-readable identity. Use `id` for machine references and `text` for captions.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7427
+              }
+            },
+            {
+              "name": "text",
+              "description": "Floor caption where supported by the node.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7499
+              }
+            },
+            {
+              "name": "visible",
+              "description": "Show the node while retaining its layout slot.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7601
+              }
+            },
+            {
+              "name": "disabled",
+              "description": "Suppress pointer and click handling without hiding the node.",
+              "default": "false",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7722
+              }
+            },
+            {
+              "name": "participates-in-layout",
+              "description": "Include the node in parent measurement and automatic placement.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7846
+              }
+            },
+            {
+              "name": "effects",
+              "description": "Composer contribution policy for this node and its descendants.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "Readonly<VxNodeEffects>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7956
+              }
+            },
+            {
+              "name": "size",
+              "description": "Declared X/Z size or `{ x, y, z }` allocation.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutSize"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8550
+              }
+            },
+            {
+              "name": "height",
+              "description": "Declared vertical allocation.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8615
+              }
+            },
+            {
+              "name": "gap",
+              "description": "Gap between automatically arranged children, in world units.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8707
+              }
+            },
+            {
+              "name": "align",
+              "description": "Set all three alignment axes together.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8774
+              }
+            },
+            {
+              "name": "align-x",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8798
+              }
+            },
+            {
+              "name": "align-y",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8823
+              }
+            },
+            {
+              "name": "align-z",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8848
+              }
+            },
+            {
+              "name": "layout",
+              "description": "Override the container's built-in layout strategy.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutName"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8935
+              }
+            },
+            {
+              "name": "start-angle",
+              "description": "Ring start angle in degrees.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9001
+              }
+            },
+            {
+              "name": "direction",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutDirection"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9025
+              }
+            },
+            {
+              "name": "fit",
+              "description": "Shrink oversized content into declared bounds or allow overflow.",
+              "default": "\"shrink\"",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxFitMode"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9165
+              }
+            },
+            {
+              "name": "placement",
+              "description": "Recipe-owned position, orientation, scale, and visibility.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "Placement"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9255
+              }
+            }
+          ],
+          "events": [
+            {
+              "name": "click",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "dblclick",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "pointerenter",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            },
+            {
+              "name": "pointerleave",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            }
+          ],
+          "slots": [
+            {
+              "name": "default",
+              "description": "Spatial children arranged by this container."
+            }
+          ]
+        },
+        {
+          "name": "vx-ring",
+          "description": "Spatial container that arranges children around an XZ ring.",
+          "attributes": [
+            {
+              "name": "id",
+              "description": "Stable semantic identity used by focus, animation, diagnostics, and connections.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7318
+              }
+            },
+            {
+              "name": "name",
+              "description": "Human-readable identity. Use `id` for machine references and `text` for captions.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7427
+              }
+            },
+            {
+              "name": "text",
+              "description": "Floor caption where supported by the node.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7499
+              }
+            },
+            {
+              "name": "visible",
+              "description": "Show the node while retaining its layout slot.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7601
+              }
+            },
+            {
+              "name": "disabled",
+              "description": "Suppress pointer and click handling without hiding the node.",
+              "default": "false",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7722
+              }
+            },
+            {
+              "name": "participates-in-layout",
+              "description": "Include the node in parent measurement and automatic placement.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7846
+              }
+            },
+            {
+              "name": "effects",
+              "description": "Composer contribution policy for this node and its descendants.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "Readonly<VxNodeEffects>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7956
+              }
+            },
+            {
+              "name": "size",
+              "description": "Declared X/Z size or `{ x, y, z }` allocation.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutSize"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8550
+              }
+            },
+            {
+              "name": "height",
+              "description": "Declared vertical allocation.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8615
+              }
+            },
+            {
+              "name": "gap",
+              "description": "Gap between automatically arranged children, in world units.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8707
+              }
+            },
+            {
+              "name": "align",
+              "description": "Set all three alignment axes together.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8774
+              }
+            },
+            {
+              "name": "align-x",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8798
+              }
+            },
+            {
+              "name": "align-y",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8823
+              }
+            },
+            {
+              "name": "align-z",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8848
+              }
+            },
+            {
+              "name": "layout",
+              "description": "Override the container's built-in layout strategy.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutName"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8935
+              }
+            },
+            {
+              "name": "start-angle",
+              "description": "Ring start angle in degrees.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9001
+              }
+            },
+            {
+              "name": "direction",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutDirection"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9025
+              }
+            },
+            {
+              "name": "fit",
+              "description": "Shrink oversized content into declared bounds or allow overflow.",
+              "default": "\"shrink\"",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxFitMode"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9165
+              }
+            },
+            {
+              "name": "placement",
+              "description": "Recipe-owned position, orientation, scale, and visibility.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "Placement"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9255
+              }
+            },
+            {
+              "name": "radius",
+              "description": "Explicit outer ring radius. Omit to derive it from child footprints.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9836
+              }
+            },
+            {
+              "name": "gap-ratio",
+              "description": "Fraction of each angular slot reserved as a gap, from 0 inclusive to 1 exclusive.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9949
+              }
+            }
+          ],
+          "events": [
+            {
+              "name": "click",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "dblclick",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "pointerenter",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            },
+            {
+              "name": "pointerleave",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            }
+          ],
+          "slots": [
+            {
+              "name": "default",
+              "description": "Spatial children arranged by this container."
+            }
+          ]
+        },
+        {
+          "name": "vx-layer",
+          "description": "Depth-layout container and scaling boundary.",
+          "attributes": [
+            {
+              "name": "id",
+              "description": "Stable semantic identity used by focus, animation, diagnostics, and connections.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7318
+              }
+            },
+            {
+              "name": "name",
+              "description": "Human-readable identity. Use `id` for machine references and `text` for captions.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7427
+              }
+            },
+            {
+              "name": "text",
+              "description": "Floor caption where supported by the node.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7499
+              }
+            },
+            {
+              "name": "visible",
+              "description": "Show the node while retaining its layout slot.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7601
+              }
+            },
+            {
+              "name": "disabled",
+              "description": "Suppress pointer and click handling without hiding the node.",
+              "default": "false",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7722
+              }
+            },
+            {
+              "name": "participates-in-layout",
+              "description": "Include the node in parent measurement and automatic placement.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7846
+              }
+            },
+            {
+              "name": "effects",
+              "description": "Composer contribution policy for this node and its descendants.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "Readonly<VxNodeEffects>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7956
+              }
+            },
+            {
+              "name": "size",
+              "description": "Declared X/Z size or `{ x, y, z }` allocation.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutSize"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8550
+              }
+            },
+            {
+              "name": "height",
+              "description": "Declared vertical allocation.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8615
+              }
+            },
+            {
+              "name": "gap",
+              "description": "Gap between automatically arranged children, in world units.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8707
+              }
+            },
+            {
+              "name": "align",
+              "description": "Set all three alignment axes together.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8774
+              }
+            },
+            {
+              "name": "align-x",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8798
+              }
+            },
+            {
+              "name": "align-y",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8823
+              }
+            },
+            {
+              "name": "align-z",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxAlignment"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8848
+              }
+            },
+            {
+              "name": "layout",
+              "description": "Override the container's built-in layout strategy.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutName"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 8935
+              }
+            },
+            {
+              "name": "start-angle",
+              "description": "Ring start angle in degrees.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9001
+              }
+            },
+            {
+              "name": "direction",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutDirection"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9025
+              }
+            },
+            {
+              "name": "fit",
+              "description": "Shrink oversized content into declared bounds or allow overflow.",
+              "default": "\"shrink\"",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxFitMode"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9165
+              }
+            },
+            {
+              "name": "placement",
+              "description": "Recipe-owned position, orientation, scale, and visibility.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "Placement"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9255
+              }
+            },
+            {
+              "name": "scale",
+              "description": "Uniform scale applied at this layout boundary.",
+              "default": "1",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9494
+              }
+            },
+            {
+              "name": "elevation",
+              "description": "Vertical offset from the parent layout, in world units.",
+              "default": "0",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 9603
+              }
+            }
+          ],
+          "events": [
+            {
+              "name": "click",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "dblclick",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "pointerenter",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            },
+            {
+              "name": "pointerleave",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            }
+          ],
+          "slots": [
+            {
+              "name": "default",
+              "description": "Spatial children arranged by this container."
+            }
+          ]
+        },
+        {
+          "name": "vx-panel",
+          "description": "Visual rounded-box container with independent label and child-layout regions.",
+          "attributes": [
+            {
+              "name": "id",
+              "description": "Stable semantic identity used by focus, animation, diagnostics, and connections.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7318
+              }
+            },
+            {
+              "name": "name",
+              "description": "Human-readable identity. Use `id` for machine references and `text` for captions.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7427
+              }
+            },
+            {
+              "name": "text",
+              "description": "Floor caption where supported by the node.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7499
+              }
+            },
+            {
+              "name": "visible",
+              "description": "Show the node while retaining its layout slot.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7601
+              }
+            },
+            {
+              "name": "disabled",
+              "description": "Suppress pointer and click handling without hiding the node.",
+              "default": "false",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7722
+              }
+            },
+            {
+              "name": "participates-in-layout",
+              "description": "Include the node in parent measurement and automatic placement.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7846
+              }
+            },
+            {
+              "name": "effects",
+              "description": "Composer contribution policy for this node and its descendants.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "Readonly<VxNodeEffects>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7956
+              }
+            },
+            {
+              "name": "size",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10364
+              }
+            },
+            {
+              "name": "depth",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10382
+              }
+            },
+            {
+              "name": "height",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10401
+              }
+            },
+            {
+              "name": "lines",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "readonly string[]"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10421
+              }
+            },
+            {
+              "name": "label-region",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "'north' | 'south'"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10451
+              }
+            },
+            {
+              "name": "label-share",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10487
+              }
+            },
+            {
+              "name": "label-padding",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10511
+              }
+            },
+            {
+              "name": "label-color",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10537
+              }
+            },
+            {
+              "name": "label-font-size",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10561
+              }
+            },
+            {
+              "name": "label-line-height",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10588
+              }
+            },
+            {
+              "name": "label-align",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "'left' | 'center' | 'right'"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10617
+              }
+            },
+            {
+              "name": "content-padding",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10662
+              }
+            },
+            {
+              "name": "layout",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutName"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10690
+              }
+            },
+            {
+              "name": "gap",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10716
+              }
+            },
+            {
+              "name": "start-angle",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10733
+              }
+            },
+            {
+              "name": "direction",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutDirection"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10757
+              }
+            },
+            {
+              "name": "material",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxMaterialBinding"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10791
+              }
+            },
+            {
+              "name": "hover",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxHoverProps"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10824
+              }
+            }
+          ],
+          "events": [
+            {
+              "name": "click",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "dblclick",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "pointerenter",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            },
+            {
+              "name": "pointerleave",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            }
+          ],
+          "slots": [
+            {
+              "name": "default",
+              "description": "Spatial children arranged by this container."
+            }
+          ]
+        },
+        {
+          "name": "vx-spacer",
+          "description": "Non-visual node that reserves an explicit slot in its parent layout.",
+          "attributes": [
+            {
+              "name": "id",
+              "description": "Stable semantic identity used by focus, animation, diagnostics, and connections.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7318
+              }
+            },
+            {
+              "name": "name",
+              "description": "Human-readable identity. Use `id` for machine references and `text` for captions.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7427
+              }
+            },
+            {
+              "name": "text",
+              "description": "Floor caption where supported by the node.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7499
+              }
+            },
+            {
+              "name": "visible",
+              "description": "Show the node while retaining its layout slot.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7601
+              }
+            },
+            {
+              "name": "disabled",
+              "description": "Suppress pointer and click handling without hiding the node.",
+              "default": "false",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7722
+              }
+            },
+            {
+              "name": "participates-in-layout",
+              "description": "Include the node in parent measurement and automatic placement.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7846
+              }
+            },
+            {
+              "name": "effects",
+              "description": "Composer contribution policy for this node and its descendants.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "Readonly<VxNodeEffects>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7956
+              }
+            },
+            {
+              "name": "size",
+              "description": "Shorthand for equal width/depth, or an explicit three-dimensional size.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxLayoutSize"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10172
+              }
+            },
+            {
+              "name": "width",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10196
+              }
+            },
+            {
+              "name": "height",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10215
+              }
+            },
+            {
+              "name": "depth",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 10235
+              }
+            }
+          ],
+          "events": [
+            {
+              "name": "click",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "dblclick",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "pointerenter",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            },
+            {
+              "name": "pointerleave",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            }
+          ]
+        },
+        {
+          "name": "vx-box",
+          "description": "Fixed rounded box geometry. A positive depth overrides its Z extent.",
+          "attributes": [
+            {
+              "name": "id",
+              "description": "Stable semantic identity used by focus, animation, diagnostics, and connections.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7318
+              }
+            },
+            {
+              "name": "name",
+              "description": "Human-readable identity. Use `id` for machine references and `text` for captions.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7427
+              }
+            },
+            {
+              "name": "text",
+              "description": "Floor caption where supported by the node.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7499
+              }
+            },
+            {
+              "name": "visible",
+              "description": "Show the node while retaining its layout slot.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7601
+              }
+            },
+            {
+              "name": "disabled",
+              "description": "Suppress pointer and click handling without hiding the node.",
+              "default": "false",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7722
+              }
+            },
+            {
+              "name": "participates-in-layout",
+              "description": "Include the node in parent measurement and automatic placement.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7846
+              }
+            },
+            {
+              "name": "effects",
+              "description": "Composer contribution policy for this node and its descendants.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "Readonly<VxNodeEffects>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7956
+              }
+            },
+            {
+              "name": "size",
+              "description": "Shape width and default Z depth.",
+              "default": "1",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11030
+              }
+            },
+            {
+              "name": "height",
+              "description": "Exact vertical extent.",
+              "default": "0.5",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11107
+              }
+            },
+            {
+              "name": "depth",
+              "description": "Box Z extent; radial shapes ignore it.",
+              "default": "0",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11200
+              }
+            },
+            {
+              "name": "lines",
+              "description": "Multi-line SDF label rendered on the mesh face.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "readonly string[]"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11278
+              }
+            },
+            {
+              "name": "label-face",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "'front' | 'top'"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11308
+              }
+            },
+            {
+              "name": "label-color",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11340
+              }
+            },
+            {
+              "name": "label-padding",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11364
+              }
+            },
+            {
+              "name": "label-font-size",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11390
+              }
+            },
+            {
+              "name": "label-line-height",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11417
+              }
+            },
+            {
+              "name": "label-align",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "'left' | 'center' | 'right'"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11446
+              }
+            },
+            {
+              "name": "material",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxMaterialBinding"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11491
+              }
+            },
+            {
+              "name": "hover",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxHoverProps"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11524
+              }
+            }
+          ],
+          "events": [
+            {
+              "name": "click",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "dblclick",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "pointerenter",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            },
+            {
+              "name": "pointerleave",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            }
+          ]
+        },
+        {
+          "name": "vx-cylinder",
+          "description": "Fixed beveled cylinder geometry.",
+          "attributes": [
+            {
+              "name": "id",
+              "description": "Stable semantic identity used by focus, animation, diagnostics, and connections.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7318
+              }
+            },
+            {
+              "name": "name",
+              "description": "Human-readable identity. Use `id` for machine references and `text` for captions.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7427
+              }
+            },
+            {
+              "name": "text",
+              "description": "Floor caption where supported by the node.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7499
+              }
+            },
+            {
+              "name": "visible",
+              "description": "Show the node while retaining its layout slot.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7601
+              }
+            },
+            {
+              "name": "disabled",
+              "description": "Suppress pointer and click handling without hiding the node.",
+              "default": "false",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7722
+              }
+            },
+            {
+              "name": "participates-in-layout",
+              "description": "Include the node in parent measurement and automatic placement.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7846
+              }
+            },
+            {
+              "name": "effects",
+              "description": "Composer contribution policy for this node and its descendants.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "Readonly<VxNodeEffects>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7956
+              }
+            },
+            {
+              "name": "size",
+              "description": "Shape width and default Z depth.",
+              "default": "1",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11030
+              }
+            },
+            {
+              "name": "height",
+              "description": "Exact vertical extent.",
+              "default": "0.5",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11107
+              }
+            },
+            {
+              "name": "depth",
+              "description": "Box Z extent; radial shapes ignore it.",
+              "default": "0",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11200
+              }
+            },
+            {
+              "name": "lines",
+              "description": "Multi-line SDF label rendered on the mesh face.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "readonly string[]"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11278
+              }
+            },
+            {
+              "name": "label-face",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "'front' | 'top'"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11308
+              }
+            },
+            {
+              "name": "label-color",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11340
+              }
+            },
+            {
+              "name": "label-padding",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11364
+              }
+            },
+            {
+              "name": "label-font-size",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11390
+              }
+            },
+            {
+              "name": "label-line-height",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11417
+              }
+            },
+            {
+              "name": "label-align",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "'left' | 'center' | 'right'"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11446
+              }
+            },
+            {
+              "name": "material",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxMaterialBinding"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11491
+              }
+            },
+            {
+              "name": "hover",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxHoverProps"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11524
+              }
+            }
+          ],
+          "events": [
+            {
+              "name": "click",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "dblclick",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "pointerenter",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            },
+            {
+              "name": "pointerleave",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            }
+          ]
+        },
+        {
+          "name": "vx-wedge",
+          "description": "Fixed beveled ring-segment geometry designed for vx-ring layouts.",
+          "attributes": [
+            {
+              "name": "id",
+              "description": "Stable semantic identity used by focus, animation, diagnostics, and connections.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7318
+              }
+            },
+            {
+              "name": "name",
+              "description": "Human-readable identity. Use `id` for machine references and `text` for captions.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7427
+              }
+            },
+            {
+              "name": "text",
+              "description": "Floor caption where supported by the node.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7499
+              }
+            },
+            {
+              "name": "visible",
+              "description": "Show the node while retaining its layout slot.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7601
+              }
+            },
+            {
+              "name": "disabled",
+              "description": "Suppress pointer and click handling without hiding the node.",
+              "default": "false",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7722
+              }
+            },
+            {
+              "name": "participates-in-layout",
+              "description": "Include the node in parent measurement and automatic placement.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7846
+              }
+            },
+            {
+              "name": "effects",
+              "description": "Composer contribution policy for this node and its descendants.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "Readonly<VxNodeEffects>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7956
+              }
+            },
+            {
+              "name": "size",
+              "description": "Shape width and default Z depth.",
+              "default": "1",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11030
+              }
+            },
+            {
+              "name": "height",
+              "description": "Exact vertical extent.",
+              "default": "0.5",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11107
+              }
+            },
+            {
+              "name": "depth",
+              "description": "Box Z extent; radial shapes ignore it.",
+              "default": "0",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11200
+              }
+            },
+            {
+              "name": "lines",
+              "description": "Multi-line SDF label rendered on the mesh face.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "readonly string[]"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11278
+              }
+            },
+            {
+              "name": "label-face",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "'front' | 'top'"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11308
+              }
+            },
+            {
+              "name": "label-color",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11340
+              }
+            },
+            {
+              "name": "label-padding",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11364
+              }
+            },
+            {
+              "name": "label-font-size",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11390
+              }
+            },
+            {
+              "name": "label-line-height",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11417
+              }
+            },
+            {
+              "name": "label-align",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "'left' | 'center' | 'right'"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11446
+              }
+            },
+            {
+              "name": "material",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxMaterialBinding"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11491
+              }
+            },
+            {
+              "name": "hover",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxHoverProps"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11524
+              }
+            },
+            {
+              "name": "thickness",
+              "description": "Radial thickness of the ring segment.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "number"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11714
+              }
+            }
+          ],
+          "events": [
+            {
+              "name": "click",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "dblclick",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "pointerenter",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            },
+            {
+              "name": "pointerleave",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            }
+          ]
+        },
+        {
+          "name": "vx-instances",
+          "description": "Keyed repeated geometry realized as one instanced mesh.",
+          "attributes": [
+            {
+              "name": "id",
+              "description": "Stable semantic identity used by focus, animation, diagnostics, and connections.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7318
+              }
+            },
+            {
+              "name": "name",
+              "description": "Human-readable identity. Use `id` for machine references and `text` for captions.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7427
+              }
+            },
+            {
+              "name": "text",
+              "description": "Floor caption where supported by the node.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7499
+              }
+            },
+            {
+              "name": "visible",
+              "description": "Show the node while retaining its layout slot.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7601
+              }
+            },
+            {
+              "name": "disabled",
+              "description": "Suppress pointer and click handling without hiding the node.",
+              "default": "false",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7722
+              }
+            },
+            {
+              "name": "participates-in-layout",
+              "description": "Include the node in parent measurement and automatic placement.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7846
+              }
+            },
+            {
+              "name": "effects",
+              "description": "Composer contribution policy for this node and its descendants.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "Readonly<VxNodeEffects>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7956
+              }
+            },
+            {
+              "name": "items",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "readonly Item[]"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11885
+              }
+            },
+            {
+              "name": "key-by",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "InstanceKey<Item>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11913
+              }
+            },
+            {
+              "name": "encoding",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "InstanceEncoding<Item>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11943
+              }
+            },
+            {
+              "name": "geometry",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "InstanceGeometry"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 11981
+              }
+            },
+            {
+              "name": "material",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxMaterialBinding"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 12013
+              }
+            },
+            {
+              "name": "anchor",
+              "description": "How encoded bounds align with the parent layout.",
+              "default": "\"base\"",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "InstanceAnchor"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 12134
+              }
+            }
+          ],
+          "events": [
+            {
+              "name": "click",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "dblclick",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "pointerenter",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            },
+            {
+              "name": "pointerleave",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            }
+          ]
+        },
+        {
+          "name": "vx-geometry",
+          "description": "One immutable procedural geometry graph compiled into keyed render batches.",
+          "attributes": [
+            {
+              "name": "id",
+              "description": "Stable semantic identity used by focus, animation, diagnostics, and connections.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7318
+              }
+            },
+            {
+              "name": "name",
+              "description": "Human-readable identity. Use `id` for machine references and `text` for captions.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7427
+              }
+            },
+            {
+              "name": "text",
+              "description": "Floor caption where supported by the node.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "string"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7499
+              }
+            },
+            {
+              "name": "visible",
+              "description": "Show the node while retaining its layout slot.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7601
+              }
+            },
+            {
+              "name": "disabled",
+              "description": "Suppress pointer and click handling without hiding the node.",
+              "default": "false",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7722
+              }
+            },
+            {
+              "name": "participates-in-layout",
+              "description": "Include the node in parent measurement and automatic placement.",
+              "default": "true",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "boolean"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7846
+              }
+            },
+            {
+              "name": "effects",
+              "description": "Composer contribution policy for this node and its descendants.",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": "Readonly<VxNodeEffects>"
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 7956
+              }
+            },
+            {
+              "name": "graph",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "GeometrySource"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 12300
+              }
+            },
+            {
+              "name": "parameters",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "GeometryParameterValues"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 12327
+              }
+            },
+            {
+              "name": "material",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "VxMaterialBinding"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 12368
+              }
+            },
+            {
+              "name": "materials",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "GeometryMaterialChannels"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 12401
+              }
+            },
+            {
+              "name": "material-effects",
+              "description": "",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "GeometryEffectChannels"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 12442
+              }
+            },
+            {
+              "name": "anchor",
+              "description": "How compiled bounds align with the parent layout.",
+              "default": "\"base\"",
+              "required": false,
+              "value": {
+                "kind": "expression",
+                "type": {
+                  "module": "@exceeder/vuetrex",
+                  "name": "GeometryAnchor"
+                }
+              },
+              "source": {
+                "file": "dist_types/src/lib-components/root-api.d.ts",
+                "offset": 12576
+              }
+            }
+          ],
+          "events": [
+            {
+              "name": "click",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "dblclick",
+              "description": "Pointer activation event for this node; it bubbles through the logical tree."
+            },
+            {
+              "name": "pointerenter",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
+            },
+            {
+              "name": "pointerleave",
+              "description": "Pointer boundary event for this node; it does not bubble through the logical tree."
             }
           ]
         },

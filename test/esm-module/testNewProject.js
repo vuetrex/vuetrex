@@ -66,7 +66,7 @@ try {
     ].join('\n'))
 
     await writeFile(join(projectRoot, 'consumer.ts'), [
-        "import { Vuetrex, VxStylesheet, VxStyleSheet, defineVxStyleSheet, finishes, useCanvasTexture, type VuetrexProps, type VuetrexEvents, type VxSettings, type VxMaterialBinding, type VxEnvironmentProps, type VxCameraProps, type VxFloorProps, type VxSceneError, type ConnectorHandle, type ConnectorPortDeclarationRecord, type ConnectorHostProps } from '@exceeder/vuetrex'",
+        "import { Vuetrex, VxStylesheet, VxStyleSheet, defineVxStyleSheet, finishes, useCanvasTexture, GroupNode, Row, Stack, Ring, Layer, Panel, Spacer, MeshNode, Box, Cylinder, Wedge, InstanceNode, GeometryNode, gridLayout, type VuetrexProps, type VuetrexEvents, type VxSettings, type VxMaterialBinding, type VxEnvironmentProps, type VxCameraProps, type VxFloorProps, type VxSceneError, type ConnectorHandle, type ConnectorPortDeclarationRecord, type ConnectorHostProps, type VxGroupProps, type VxRingProps, type VxPanelProps, type VxMeshProps, type VxInstanceProps, type VxGeometryProps, type Layout } from '@exceeder/vuetrex'",
         "import { sceneElements } from './src/elements.config.js'",
         "import { CustomBrick } from './src/CustomBrick.js'",
         "// @ts-expect-error missing declared custom tag",
@@ -97,6 +97,14 @@ try {
         "const environment: VxEnvironmentProps = { preset: 'studio', rotation: 0.5 }",
         "const camera: VxCameraProps = { direction: [8, 6, 11], fit: 'content' }",
         "const floor: VxFloorProps = { finish: 'mirror', reflection: 0.6, fadeStart: 20, fadeEnd: 50 }",
+        "const groupProps: VxGroupProps = { layout: 'grid', alignY: 'start', fit: 'shrink' }",
+        "const ringProps: VxRingProps = { radius: 4, gapRatio: 0.1, direction: 'reverse' }",
+        "const panelProps: VxPanelProps = { layout: 'row', labelRegion: 'north', contentPadding: 0.08 }",
+        "const meshProps: VxMeshProps = { size: 2, height: 1, material: { roughness: 0.7 } }",
+        "const instanceProps: VxInstanceProps<{ id: string }> = { items: [{ id: 'one' }], keyBy: 'id', anchor: 'base' }",
+        "const geometryProps: VxGeometryProps = { graph: undefined, anchor: 'base', parameters: {} }",
+        "const layout: Layout = gridLayout",
+        "void [GroupNode, Row, Stack, Ring, Layer, Panel, Spacer, MeshNode, Box, Cylinder, Wedge, InstanceNode, GeometryNode, groupProps, ringProps, panelProps, meshProps, instanceProps, geometryProps, layout]",
         "const heightTexture = () => useCanvasTexture(() => {}, { purpose: 'bump' })",
         "void [heightTexture, sheet, binding, environment, camera, floor, VxStylesheet, VxStyleSheet, useCanvasTexture]",
     ].join('\n'))

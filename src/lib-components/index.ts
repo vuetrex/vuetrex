@@ -1,4 +1,25 @@
-export type { VuetrexProps, VuetrexEvents, VxSettings, VxFogSettings, VxDiagnosticsSettings } from './root-api.js';
+export type {
+    VuetrexProps,
+    VuetrexEvents,
+    VxSettings,
+    VxFogSettings,
+    VxDiagnosticsSettings,
+    VxNodeProps,
+    VxLayoutSize,
+    VxAlignment,
+    VxLayoutName,
+    VxLayoutDirection,
+    VxFitMode,
+    VxGroupProps,
+    VxLayerProps,
+    VxRingProps,
+    VxSpacerProps,
+    VxPanelProps,
+    VxMeshProps,
+    VxWedgeProps,
+    VxInstanceProps,
+    VxGeometryProps,
+} from './root-api.js';
 export type { VxCameraController, VxCameraTimeline, VxCameraOrbit, VxCameraView,
     VxCameraOrbitUpdate, VxCameraTweenOptions, VxCameraTimelineOptions } from './three/cameraController.js';
 export type { VxStage, VxMouseEvent } from '@/lib-components/vuetrex.js';
@@ -222,6 +243,12 @@ export type { ClassComponent, FunctionalComponent, ElementRegistry } from '@/lib
 
 export { Node } from '@/lib-components/nodes/Node.js';
 export { Base } from '@/lib-components/nodes/Base.js';
+export { GroupNode } from '@/lib-components/nodes/GroupNode.js';
+export type { Alignment, FitMode, GroupState, LayoutName } from '@/lib-components/nodes/GroupNode.js';
+export { Row } from '@/lib-components/nodes/Row.js';
+export { Stack } from '@/lib-components/nodes/Stack.js';
+export { Ring } from '@/lib-components/nodes/Ring.js';
+export { Layer } from '@/lib-components/nodes/Layer.js';
 export { Panel } from '@/lib-components/nodes/Panel.js';
 export { Spacer } from '@/lib-components/nodes/Spacer.js';
 export { ConnectorGraphHost } from '@/lib-components/nodes/ConnectorGraphHost.js';
@@ -245,7 +272,19 @@ export type { ComposerDiagnostics } from './three/postprocessing/ComposerControl
 export type { VxLightingProps, VxShadowQuality } from './three/lighting/LiveLighting.js';
 
 export { MeshNode } from './nodes/MeshNode.js';
-export type { MeshNodeStage, MeshState } from './nodes/MeshNode.js';
+export type { LayoutContext, MeshNodeStage, MeshState } from './nodes/MeshNode.js';
+export { Box } from './nodes/shapes/Box.js';
+export { Cylinder } from './nodes/shapes/Cylinder.js';
+export { Wedge } from './nodes/shapes/Wedge.js';
+export {
+    depthLayout,
+    gridLayout,
+    horizontalLayout,
+    layoutWithDirection,
+    ringLayout,
+    stackLayout,
+} from './nodes/layouts.js';
+export type { Layout, LayoutDirection, RingLayout, RingOptions } from './nodes/layouts.js';
 
 export { createElementConfig, isVuetrexElement } from './compiler.js';
 

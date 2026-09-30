@@ -5,6 +5,23 @@ import { VuetrexStage } from '@/lib-components/three/stage.js'
 import { Connectors } from '@/lib-components/three/connectors/connectors.js'
 
 describe('public API cleanup', () => {
+    it('publishes the curated layout and geometry extension surface', () => {
+        for (const name of [
+            'Node', 'GroupNode', 'Row', 'Stack', 'Ring', 'Layer', 'Panel', 'Spacer',
+            'MeshNode', 'Box', 'Cylinder', 'Wedge', 'InstanceNode', 'GeometryNode',
+        ]) {
+            expect(api[name as keyof typeof api], name).toBeTypeOf('function')
+        }
+        for (const name of [
+            'horizontalLayout', 'depthLayout', 'stackLayout', 'ringLayout', 'gridLayout', 'layoutWithDirection',
+        ]) {
+            expect(api[name as keyof typeof api], name).toBeDefined()
+        }
+        for (const name of ['Root', 'nodeOps', 'patchProp', 'GeometryEvaluator', 'GeometryRealizer']) {
+            expect(api).not.toHaveProperty(name)
+        }
+    })
+
     it('exposes graph connectors without the removed compatibility APIs', () => {
         expect(types['vx-connectors']).toBeDefined()
         expect(api.geo.join).toBeTypeOf('function')
