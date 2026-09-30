@@ -213,6 +213,11 @@ export class DisplayWall extends Node {
     syncWithThree(): void {
         if (this.stopHandles.length > 0) return
 
+        // Picking resolves the screen/frame meshes back to this element, then
+        // dispatches the event on the persistent root Object3D. Install the
+        // logical-node listeners there just as MeshNode does on its mesh.
+        this.subscribeEvents()
+
         this.stopHandles.push(watchSceneEffect(this, () => {
             const parent = this.nearestAncestorObject()
             if (this.root.parent !== parent) parent.add(this.root)
@@ -303,6 +308,8 @@ export class DisplayWall extends Node {
                 createDisplayWallEndCaps(radius, radius + thickness, height, arc),
                 frameMaterial,
             )
+            frame.userData.el = this.element
+            outer.userData.el = this.element
             sides.name = `el-${this.id}-sides`
             sides.userData.el = this.element
             this.root.add(frame, outer, sides)
@@ -325,6 +332,7 @@ export class DisplayWall extends Node {
 
         const width = Math.max(0.1, config.width)
         const frame = new Mesh(new THREEx.RoundedBoxGeometry(width, height, thickness, 8, 0.08), frameMaterial)
+        frame.userData.el = this.element
         this.root.add(frame)
         const screen = this.createScreen(
             new PlaneGeometry(Math.max(0.08, width - bezel * 2), Math.max(0.08, height - bezel * 2)),

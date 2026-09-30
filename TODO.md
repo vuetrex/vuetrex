@@ -135,10 +135,10 @@ from implemented runtime features.
 
 ### 6. Support articulated animation without application-owned transform plumbing
 
-- [ ] Extend animation authoring beyond `animateTo()`'s Y translation and scale:
+- [x] Extend animation authoring beyond `animateTo()`'s Y translation and scale:
   support full XYZ translation and quaternion/local-axis rotation, with explicit
-  pivot/hinge origins. Workshop2's folding monitor currently needs nested placement
-  groups and GSAP-driven reactive quaternions for its rear X and side Y hinges.
+  pivot/hinge origins. Workshop2's nested placement groups and GSAP-driven reactive
+  quaternions for its rear X and side Y hinges motivated this API.
 - [ ] Provide owned, reversible multi-node timelines with sequence/overlap controls,
   interruption handling, and cancel/reverse handles. Current `animateTo()` returns
   void and does not register its timelines for node/stage teardown; workshop2 owns

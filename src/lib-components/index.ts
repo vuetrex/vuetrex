@@ -5,6 +5,9 @@ export type { VxStage, VxMouseEvent } from '@/lib-components/vuetrex.js';
 export type {
     VxAnimProps,
     VxAnimOptions,
+    VxAnimAxis,
+    VxAnimQuaternion,
+    VxAnimVector3,
     VxFitOptions,
 } from '@/lib-components/three/stage.js';
 export { DisplayWall } from '@/lib-components/nodes/DisplayWall.js';

@@ -254,13 +254,12 @@ describe('composer controller ownership', () => {
 
         const textSource = new THREE.MeshBasicMaterial()
         Object.defineProperty(textSource, 'isTroikaTextMaterial', { value: true })
-        const text = new THREE.Mesh(new THREE.PlaneGeometry(), textSource) as THREE.Mesh & {
-            createDerivedMaterial: (base: THREE.Material) => THREE.Material
-        }
-        text.createDerivedMaterial = base => {
-            Object.defineProperty(base, 'isTroikaTextMaterial', { value: true })
-            return base
-        }
+        const text = Object.assign(new THREE.Mesh(new THREE.PlaneGeometry(), textSource), {
+            createDerivedMaterial: (base: THREE.Material): THREE.Material => {
+                Object.defineProperty(base, 'isTroikaTextMaterial', { value: true })
+                return base
+            },
+        })
         const textMask = (controller as any).emissionMaterial(textSource, 0.2, 0.7, text) as THREE.Material
         expect((textMask as any).isTroikaTextMaterial).toBe(true)
         expect(textMask.userData.vxBloomUniforms).toMatchObject({ threshold: { value: 0.2 }, gain: { value: 0.7 } })

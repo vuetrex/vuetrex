@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { Reflector } from 'three/examples/jsm/objects/Reflector.js'
 import { shallowMount } from '@vue/test-utils'
 import { describe, it, expect, vi } from 'vitest'
+import gsap from 'gsap'
 import Scene from '@/lib-components/three/scene.js'
 import { createRendererForStage } from '@/lib-components/renderer.js';
 import { GroundReflectorMaterial, GroundSurfaceMaterial } from '@/lib-components/three/materials/GroundReflectorMaterial.js';
@@ -16,6 +17,71 @@ import {
 } from '@/lib-components/three/stage.js';
 
 describe('The Vuetrex Stage object', () => {
+
+    it('animates full translation and local-axis rotation around a local pivot', () => {
+        const mesh = new THREE.Object3D()
+        mesh.position.set(1, 2, 3)
+        const stage = Object.create(VuetrexStage.prototype) as VuetrexStage
+        Object.assign(stage, { getById: () => ({ mesh }) })
+        const updates: Array<{ position: THREE.Vector3; quaternion: THREE.Quaternion }> = []
+        const timeline = {
+            to(target: { value: number }, vars: gsap.TweenVars) {
+                target.value = 0.5
+                vars.onUpdate?.()
+                updates.push({ position: mesh.position.clone(), quaternion: mesh.quaternion.clone() })
+                target.value = 1
+                vars.onUpdate?.()
+                updates.push({ position: mesh.position.clone(), quaternion: mesh.quaternion.clone() })
+                return this
+            },
+        }
+        const timelineSpy = vi.spyOn(gsap, 'timeline').mockReturnValue(timeline as gsap.core.Timeline)
+
+        stage.animateTo('panel', {
+            positionX: 5,
+            positionY: 6,
+            positionZ: 7,
+            scaleX: 2,
+            scaleY: 3,
+            scaleZ: 4,
+            rotationAxis: 'z',
+            rotationAngle: Math.PI / 2,
+            pivot: [1, 0, 0],
+        })
+
+        expect(updates).toHaveLength(2)
+        expect(mesh.position.toArray()).toEqual([6, 4, 7])
+        expect(mesh.scale.toArray()).toEqual([2, 3, 4])
+        expect(new THREE.Vector3(1, 0, 0).multiply(mesh.scale).applyQuaternion(mesh.quaternion).add(mesh.position).toArray())
+            .toEqual([6, 6, 7])
+        expect(mesh.quaternion.angleTo(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2)))
+            .toBeCloseTo(0)
+        timelineSpy.mockRestore()
+    })
+
+    it('accepts an absolute quaternion target and preserves unspecified transform axes', () => {
+        const mesh = new THREE.Object3D()
+        mesh.position.set(1, 2, 3)
+        mesh.scale.set(2, 3, 4)
+        const stage = Object.create(VuetrexStage.prototype) as VuetrexStage
+        Object.assign(stage, { getById: () => ({ mesh }) })
+        const target = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 3)
+        const timeline = {
+            to(progress: { value: number }, vars: gsap.TweenVars) {
+                progress.value = 1
+                vars.onUpdate?.()
+                return this
+            },
+        }
+        const timelineSpy = vi.spyOn(gsap, 'timeline').mockReturnValue(timeline as gsap.core.Timeline)
+
+        stage.animateTo('panel', { positionX: 8, scaleY: 5, quaternion: target.toArray() })
+
+        expect(mesh.position.toArray()).toEqual([8, 2, 3])
+        expect(mesh.scale.toArray()).toEqual([2, 5, 4])
+        expect(mesh.quaternion.angleTo(target)).toBeCloseTo(0)
+        timelineSpy.mockRestore()
+    })
 
     it("should create a renderer for the given stage", () => {
         const mockStage = null as any

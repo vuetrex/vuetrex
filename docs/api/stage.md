@@ -66,10 +66,31 @@ stage.animateTo('orders', { positionY: 0.4, scale: 1.08 }, {
   duration: 0.35,
   ease: 'power2.out',
 })
+
+stage.animateTo('monitor', {
+  positionX: -0.35,
+  positionY: 0.66,
+  positionZ: 1.11,
+  rotationAxis: 'x',
+  rotationAngle: 0,
+  pivot: [0, -0.42, 0.34],
+}, { duration: 0.75, ease: 'power2.inOut' })
 ```
 
-Supported targets are `positionY`, `scale`, `scaleX`, `scaleY`, and `scaleZ`. Per-axis scale values override the uniform
-`scale`. Options are `duration`, `ease`, `delay`, and `onComplete`.
+Translation targets are `positionX`, `positionY`, and `positionZ`. Scale targets are `scale`, `scaleX`, `scaleY`, and
+`scaleZ`; per-axis values override the uniform `scale`. Rotation can be an absolute `quaternion` (a Three.js
+quaternion, `[x, y, z, w]`, or an equivalent object), or an absolute local-axis orientation using `rotationAxis` and
+`rotationAngle`. An axis can be `'x'`, `'y'`, `'z'`, or a vector. `quaternion` takes precedence when both forms are
+present.
+
+`pivot` is a point in the animated object's local coordinates. During rotation or scaling, Vuetrex compensates the
+object's position so that point remains fixed in parent space. If translation is included in the same call, the pivot
+moves by that translation while remaining the hinge for rotation and scale. This makes a panel rotate around an edge
+without requiring an extra placement group.
+
+Options are `duration`, `ease`, `delay`, and `onComplete`. `animateTo()` still performs an imperative realized-object
+animation; a reactive placement update can overwrite it. Use one source of transform state when placement is changing
+at the same time.
 
 ### `onEachFrame(callback)`
 

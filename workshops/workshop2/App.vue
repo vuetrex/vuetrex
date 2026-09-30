@@ -3,20 +3,22 @@
     <a class="back" href="/">&larr; workshops</a>
 
     <section class="scene-card" aria-label="Data infrastructure diagram">
-      <vuetrex height="76vh" width="100%" :settings="settings" :elements="elements" :camera="cameraView">
+      <vuetrex height="76vh" width="100%" :settings="settings" :elements="elements" :camera="cameraView"
+                @ready="onStageReady">
         <vx-composer v-if="effectsEnabled"
           preset="studio"
           quality="high"
           :max-pixel-ratio="2"
           :output="{ toneMapping: 'aces', exposure: 1 }"
-          :ambient-occlusion="{ intensity: 0.32, radius: 0.28 }"
+          :depth-of-field="{ focus: displayFocused ? 'operations-wall' : monitorOpen ? 'hub' : 'core', aperture: 0.00008, maxBlur: 0.013 }"
           :grading="{ contrast: 1.025, saturation: 0.96 }"
           :vignette="{ strength: 0.08, offset: 0.95 }"
           :bloom="{ mode: 'selected', strength: 0.22, radius: 0.24, threshold: 0 }"
-          :depth-of-field="{ focus: monitorOpen ? 'hub' : 'core', aperture: 0.00008, maxBlur: 0.003 }"
           :outlines="false"
           :protect-annotations="true"
         />
+<!--        :ambient-occlusion="{ intensity: 0.32, radius: 0.28 }"-->
+        <!--         -->
         <vx-lighting :key-intensity="2.7" :fill-intensity="0.65" shadow-quality="high" />
         <vx-environment preset="studio" :intensity="0.48" :rotation="0.65" />
         <vx-floor
@@ -35,21 +37,21 @@
           <vx-workshop-plinth :size="9.6" :depth="8" :height="platformTop" :material="platformMaterial" />
         </vx-group>
 
-        <RearDisplay :platform-top="platformTop" />
+        <RearDisplay id="display" :platform-top="platformTop" @toggle-view="displayFocused = !displayFocused" />
+
 
         <!-- Central stacked data store. -->
         <vx-stack id="core" :placement="at(0.1, platformTop, -1.25)" :gap="0.008"
-                  :effects="{ outline: 'include' }">
-          <vx-cylinder :size="1.2" :height="0.13" :material="materials.darkBase" />
-          <vx-cylinder :size="1.12" :height="0.25" :material="materials.blue" />
-          <vx-cylinder :size="1.12" :height="0.025" :material="materials.whiteBand"
-                       :effects="{ bloom: 'include', bloomGain: 0.55 }" />
-          <vx-cylinder :size="1.12" :height="0.25" :material="materials.blue" />
-          <vx-cylinder :size="1.12" :height="0.025" :material="materials.whiteBand"
-                       :effects="{ bloom: 'include', bloomGain: 0.55 }" />
-          <vx-cylinder :size="1.12" :height="0.25" :material="materials.blue" />
-          <vx-cylinder :size="1.02" :height="0.12" :material="materials.white" />
-          <vx-cylinder :size="0.68" :height="0.055" :material="materials.blueTop" />
+                  :effects="{ outline: 'include' }" @click="toggleDatabase">
+          <vx-cylinder
+            v-for="layer in databaseLayers"
+            :id="layer.id"
+            :key="layer.id"
+            :size="layer.size"
+            :height="layer.height"
+            :material="layer.material"
+            :effects="layer.effects"
+          />
           <FloorPorts :width="1.2" :depth="1.2" />
         </vx-stack>
 
@@ -138,7 +140,7 @@
 </template>
 
 <script setup lang="ts">
-import { Vuetrex, connectors, useCanvasTexture, type VxSettings } from '@/lib-components'
+import { Vuetrex, connectors, useCanvasTexture, type VxSettings, type VxStage } from '@/lib-components'
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import gsap from 'gsap'
 import { Quaternion, Vector3 } from 'three'
@@ -149,22 +151,36 @@ import FloorPorts from './things/FloorPorts.vue'
 import MonitorHub from './things/MonitorHub.vue'
 import RearDisplay from './things/RearDisplay.vue'
 
+const displayFocused = ref(false)
 const effectsEnabled = ref(true)
 const monitorOpen = ref(false)
+const databaseOpen = ref(false)
+let stage: VxStage | undefined
+let databaseAnimating = false
+
+function onStageReady(value: VxStage) {
+  stage = value
+}
 // Animate one complete camera pose instead of refitting changing monitor bounds.
 const overview = { x: 0, y: 0.75, z: -0.3, height: 9.5, radius: 14, azimuth: 25 }
-const closeup = { x: -0.35, y: 0.8, z: 1.4, height: 2.7, radius: 3.4, azimuth: 0 }
+const hubCloseup = { x: -0.35, y: 0.8, z: 1.4, height: 2.7, radius: 3.4, azimuth: 0 }
+const displayCloseup = {x: 0, y: 1.55, z: -3.35, height: 1.55, radius: 4, azimuth: 0 }
 const cameraPose = reactive({ ...overview })
 const cameraView = computed(() => ({ orbit: {
   target: [cameraPose.x, cameraPose.y, cameraPose.z] as const,
   height: cameraPose.height, radius: cameraPose.radius, azimuth: cameraPose.azimuth,
 } }))
 let cameraTween: gsap.core.Tween | undefined
-watch(monitorOpen, open => {
+watch([monitorOpen, displayFocused], ([hubOpen, displayOpen]) => {
   cameraTween?.kill()
-  cameraTween = gsap.to(cameraPose, {
-    ...(open ? closeup : overview), duration: 1.2, ease: 'sine.inOut',
-  })
+
+  const destination = displayOpen
+      ? displayCloseup
+      : hubOpen
+          ? hubCloseup
+          : overview
+
+  cameraTween = gsap.to(cameraPose, {...destination, duration: 1.2, ease: 'sine.inOut',})
 })
 onBeforeUnmount(() => cameraTween?.kill())
 
@@ -205,6 +221,47 @@ const materials = {
   cyanTop: { color: 0x68d6ef, roughness: 0.28, metalness: 0.18 },
   coral: { color: 0xff7f73, roughness: 0.38, metalness: 0.1 },
   coralTop: { color: 0xffada5, roughness: 0.34, metalness: 0.08 },
+}
+
+const databaseGap = 0.008
+const databaseLayers = [
+  { id: 'core-layer-base', size: 1.2, height: 0.13, material: materials.darkBase },
+  { id: 'core-layer-blue-1', size: 1.12, height: 0.25, material: materials.blue },
+  { id: 'core-layer-band-1', size: 1.12, height: 0.025, material: materials.whiteBand,
+    effects: { bloom: 'include' as const, bloomGain: 0.55 } },
+  { id: 'core-layer-blue-2', size: 1.12, height: 0.25, material: materials.blue },
+  { id: 'core-layer-band-2', size: 1.12, height: 0.025, material: materials.whiteBand,
+    effects: { bloom: 'include' as const, bloomGain: 0.55 } },
+  { id: 'core-layer-blue-3', size: 1.12, height: 0.25, material: materials.blue },
+  { id: 'core-layer-cap', size: 1.02, height: 0.12, material: materials.white },
+  { id: 'core-layer-top', size: 0.68, height: 0.055, material: materials.blueTop },
+].map((layer, index, layers) => ({
+  ...layer,
+  baseY: layers.slice(0, index).reduce((y, previous) => y + previous.height + databaseGap, 0),
+}))
+
+function toggleDatabase() {
+  if (!stage || databaseAnimating) return
+  const opening = !databaseOpen.value
+  databaseOpen.value = opening
+  databaseAnimating = true
+  const radius = 1.50
+  const raisedY = 1.59
+  const finalIndex = opening ? databaseLayers.length - 1 : 0
+
+  databaseLayers.forEach((layer, index) => {
+    const angle = index / databaseLayers.length * Math.PI * 2
+    stage?.animateTo(layer.id, {
+      positionX: opening ? Math.sin(angle) * radius : 0,
+      positionY: opening ? raisedY : layer.baseY,
+      positionZ: opening ? Math.cos(angle) * radius : 0,
+    }, {
+      duration: 0.72,
+      delay: (opening ? index : databaseLayers.length - 1 - index) * 0.035,
+      ease: opening ? 'back.out(1.2)' : 'power2.inOut',
+      ...(index === finalIndex && { onComplete: () => { databaseAnimating = false } }),
+    })
+  })
 }
 
 const gridTexture = useCanvasTexture(ctx => {

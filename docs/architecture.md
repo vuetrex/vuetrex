@@ -274,7 +274,8 @@ separate highway router is not approximated by an averaged presentation path. Ap
 traversal or the whole network, and public route positions are immutable tuples. `stage.connectorDiagnostics()` reports authored/resolved counts,
 unresolved keys, route builds, backend updates, batches, emitters, and owner names without exposing mutable internals.
 
-- **`VxAnimProps`:** target transform values for `animateTo()` (positionY, scale, etc.)
+- **`VxAnimProps`:** target XYZ translation, scale, quaternion or local-axis orientation, and an optional local pivot
+  for `animateTo()`
 - **`VxAnimOptions`:** animation timing and easing (duration, ease, delay, onComplete)
 - **`animateTo(id, props, opts)`:** programmatically animates a node's transform, isolating callers from Three.js
   internals.

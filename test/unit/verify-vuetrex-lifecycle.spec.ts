@@ -2,7 +2,7 @@ import { defineComponent, h, nextTick, onBeforeUnmount, onUnmounted, ref } from 
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Base } from '@/lib-components/nodes/Base.js'
-import { VxStylesheet, type VxStyleSheetDefinition } from '@/lib-components/styling/stylesheets.js'
+import { VxStylesheet, type VxColorScheme, type VxStyleSheetDefinition } from '@/lib-components/styling/stylesheets.js'
 import type { ClassComponent } from '@/lib-components/nodes/types.js'
 
 const stageMock = vi.hoisted(() => ({
@@ -94,7 +94,7 @@ describe('Vuetrex custom-renderer lifecycle', () => {
             connectors: { local: { strokeColor: '#0000ff' } } },
             dark: { materials: { localDark: { base: { color: 'black' } } } } }
         const sceneSheets = ref<readonly VxStyleSheetDefinition[] | undefined>([localSheet])
-        const sceneScheme = ref<'light' | 'dark' | undefined>(undefined)
+        const sceneScheme = ref<VxColorScheme | undefined>(undefined)
         const Parent = defineComponent({
             setup() { return () => h(VxStylesheet, { sheets: [parentSheet], scheme: 'dark' }, () =>
                 h(Vuetrex, { stopped: true, sheets: sceneSheets.value, scheme: sceneScheme.value }, () => [])) },

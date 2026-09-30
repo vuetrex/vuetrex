@@ -24,13 +24,33 @@ import {Text} from 'troika-three-text';
  * specified fields are animated; the rest are left unchanged.
  *
  * `scale` is a uniform shorthand; `scaleX/Y/Z` override it per-axis.
+ * `quaternion` takes precedence over `rotationAxis`/`rotationAngle`.
+ * `pivot` is a local-space point kept fixed while rotation and scale change.
  */
+export type VxAnimVector3 =
+    | readonly [number, number, number]
+    | Readonly<{ x: number; y: number; z: number }>
+    | THREE.Vector3
+
+export type VxAnimQuaternion =
+    | readonly [number, number, number, number]
+    | Readonly<{ x: number; y: number; z: number; w: number }>
+    | THREE.Quaternion
+
+export type VxAnimAxis = 'x' | 'y' | 'z' | VxAnimVector3
+
 export interface VxAnimProps {
+    positionX?: number
     positionY?: number
+    positionZ?: number
     scale?: number
     scaleX?: number
     scaleY?: number
     scaleZ?: number
+    quaternion?: VxAnimQuaternion
+    rotationAxis?: VxAnimAxis
+    rotationAngle?: number
+    pivot?: VxAnimVector3
 }
 
 /**
@@ -42,6 +62,99 @@ export interface VxAnimOptions {
     ease?: string
     delay?: number
     onComplete?: () => void
+}
+
+interface VxAnimationTransform {
+    startPosition: THREE.Vector3
+    targetPosition: THREE.Vector3
+    startScale: THREE.Vector3
+    targetScale: THREE.Vector3
+    startQuaternion: THREE.Quaternion
+    targetQuaternion: THREE.Quaternion
+    pivot: THREE.Vector3
+    startPivotOffset: THREE.Vector3
+}
+
+function animVector(value: VxAnimVector3 | undefined): THREE.Vector3 {
+    if (value === undefined) return new THREE.Vector3()
+    if (Array.isArray(value)) return new THREE.Vector3(value[0], value[1], value[2])
+    if ((value as THREE.Vector3).isVector3) return (value as THREE.Vector3).clone()
+    const point = value as Readonly<{ x: number; y: number; z: number }>
+    return new THREE.Vector3(point.x, point.y, point.z)
+}
+
+function animAxis(value: VxAnimAxis): THREE.Vector3 {
+    if (value === 'x') return new THREE.Vector3(1, 0, 0)
+    if (value === 'y') return new THREE.Vector3(0, 1, 0)
+    if (value === 'z') return new THREE.Vector3(0, 0, 1)
+    return animVector(value)
+}
+
+function animQuaternion(value: VxAnimQuaternion): THREE.Quaternion {
+    if ((value as THREE.Quaternion).isQuaternion) return (value as THREE.Quaternion).clone().normalize()
+    if (Array.isArray(value)) return new THREE.Quaternion(value[0], value[1], value[2], value[3]).normalize()
+    const quaternion = value as Readonly<{ x: number; y: number; z: number; w: number }>
+    return new THREE.Quaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w).normalize()
+}
+
+function hasAnimatedTransform(props: VxAnimProps): boolean {
+    return props.positionX !== undefined
+        || props.positionY !== undefined
+        || props.positionZ !== undefined
+        || props.scale !== undefined
+        || props.scaleX !== undefined
+        || props.scaleY !== undefined
+        || props.scaleZ !== undefined
+        || props.quaternion !== undefined
+        || (props.rotationAxis !== undefined && props.rotationAngle !== undefined)
+}
+
+function animationTransform(mesh: THREE.Object3D, props: VxAnimProps): VxAnimationTransform {
+    const startPosition = mesh.position.clone()
+    const targetPosition = startPosition.clone()
+    if (props.positionX !== undefined) targetPosition.x = props.positionX
+    if (props.positionY !== undefined) targetPosition.y = props.positionY
+    if (props.positionZ !== undefined) targetPosition.z = props.positionZ
+
+    const startScale = mesh.scale.clone()
+    const targetScale = startScale.clone()
+    if (props.scale !== undefined) targetScale.setScalar(props.scale)
+    if (props.scaleX !== undefined) targetScale.x = props.scaleX
+    if (props.scaleY !== undefined) targetScale.y = props.scaleY
+    if (props.scaleZ !== undefined) targetScale.z = props.scaleZ
+
+    const startQuaternion = mesh.quaternion.clone()
+    let targetQuaternion = startQuaternion.clone()
+    if (props.quaternion !== undefined) {
+        targetQuaternion = animQuaternion(props.quaternion)
+    } else if (props.rotationAxis !== undefined && props.rotationAngle !== undefined) {
+        const axis = animAxis(props.rotationAxis)
+        if (axis.lengthSq() > 0) targetQuaternion.setFromAxisAngle(axis.normalize(), props.rotationAngle)
+    }
+
+    const pivot = animVector(props.pivot)
+    const startPivotOffset = pivot.clone().multiply(startScale).applyQuaternion(startQuaternion)
+    return {
+        startPosition,
+        targetPosition,
+        startScale,
+        targetScale,
+        startQuaternion,
+        targetQuaternion,
+        pivot,
+        startPivotOffset,
+    }
+}
+
+function applyAnimationTransform(mesh: THREE.Object3D, animation: VxAnimationTransform, progress: number): void {
+    const amount = THREE.MathUtils.clamp(progress, 0, 1)
+    mesh.scale.lerpVectors(animation.startScale, animation.targetScale, amount)
+    mesh.quaternion.copy(animation.startQuaternion).slerp(animation.targetQuaternion, amount)
+    mesh.position.lerpVectors(animation.startPosition, animation.targetPosition, amount)
+    if (animation.pivot.lengthSq() > 0) {
+        const pivotOffset = animation.pivot.clone().multiply(mesh.scale).applyQuaternion(mesh.quaternion)
+        mesh.position.add(animation.startPivotOffset).sub(pivotOffset)
+    }
 }
 
 export interface VxFitOptions {
@@ -806,28 +919,17 @@ export class VuetrexStage extends Scene implements VxStage {
         if (!mesh) return;
 
         const { duration = 0.4, ease = 'power2.out', delay, onComplete } = opts;
-        const tweenBase: gsap.TweenVars = { duration, ease, ...(delay !== undefined && { delay }) };
+        if (!hasAnimatedTransform(props)) return;
 
-        const posProps: Record<string, number> = {};
-        if (props.positionY !== undefined) posProps.y = props.positionY;
-
-        const scaleProps: Record<string, number> = {};
-        if (props.scale !== undefined) { scaleProps.x = scaleProps.y = scaleProps.z = props.scale; }
-        if (props.scaleX !== undefined) scaleProps.x = props.scaleX;
-        if (props.scaleY !== undefined) scaleProps.y = props.scaleY;
-        if (props.scaleZ !== undefined) scaleProps.z = props.scaleZ;
-
-        if (!Object.keys(posProps).length && !Object.keys(scaleProps).length) return;
-
-        const tl = gsap.timeline({ ...(onComplete && { onComplete }) });
-
-        if (Object.keys(posProps).length) {
-            tl.to(mesh.position, { ...posProps, ...tweenBase }, 0);
-        }
-
-        if (Object.keys(scaleProps).length) {
-            tl.to(mesh.scale, { ...scaleProps, ...tweenBase }, 0);
-        }
+        const animation = animationTransform(mesh, props);
+        const progress = { value: 0 };
+        gsap.timeline({ ...(onComplete && { onComplete }) }).to(progress, {
+            value: 1,
+            duration,
+            ease,
+            ...(delay !== undefined && { delay }),
+            onUpdate: () => applyAnimationTransform(mesh, animation, progress.value),
+        }, 0);
     }
 
     destroy() {

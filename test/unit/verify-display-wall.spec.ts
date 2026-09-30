@@ -107,4 +107,23 @@ describe('DisplayWall', () => {
         wall.onRemoved()
         expect(dispose).not.toHaveBeenCalled()
     })
+
+    it('dispatches picked screen clicks through the logical display node', async () => {
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(mockCanvasContext())
+        const wall = new DisplayWall(makeStage())
+        const onClick = vi.fn()
+        wall.onClick = onClick
+        wall.syncWithThree()
+        await nextTick()
+
+        const root = wall.element.mesh as THREE.Group
+        const screen = root.children.find(object => object.name.endsWith('-screen')) as THREE.Mesh
+        expect(screen.userData.el).toBe(wall.element)
+        expect(root.children.every(object => object.userData.el === wall.element)).toBe(true)
+
+        root.dispatchEvent({ type: 'click', originalEvent: new MouseEvent('click') })
+
+        expect(onClick).toHaveBeenCalledOnce()
+        wall.onRemoved()
+    })
 })

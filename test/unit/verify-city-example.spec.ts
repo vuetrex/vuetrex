@@ -33,10 +33,10 @@ describe('city notebook example', () => {
     try {
       const graph = createCityBlock(1, 12)
       prototypes.beginCompilation()
-      const before = evaluateGeometry(graph, prototypes, { skyline: [1, 1, 1], ...trafficParameters(12, 0) })
+      const before = evaluateGeometry(graph as any, prototypes, { skyline: [1, 1, 1], ...trafficParameters(12, 0) })
       prototypes.endCompilation()
       prototypes.beginCompilation()
-      const after = evaluateGeometry(graph, prototypes, { skyline: [1, 1.5, 1], ...trafficParameters(12, 3) })
+      const after = evaluateGeometry(graph as any, prototypes, { skyline: [1, 1.5, 1], ...trafficParameters(12, 3) })
       prototypes.endCompilation()
       expect(after.records.map(record => record.key)).toEqual(before.records.map(record => record.key))
       expect(new Set(before.records.map(record => record.prototype)).size).toBe(1)
@@ -60,9 +60,9 @@ describe('city notebook example', () => {
   it('supports empty traffic and reproducible skyline variations', () => {
     const prototypes = new GeometryPrototypeRegistry()
     try {
-      const a = evaluateGeometry(createCityBlock(1, 0), prototypes)
-      const b = evaluateGeometry(createCityBlock(1, 0), prototypes)
-      const c = evaluateGeometry(createCityBlock(2, 24), prototypes)
+      const a = evaluateGeometry(createCityBlock(1, 0) as any, prototypes)
+      const b = evaluateGeometry(createCityBlock(1, 0)  as any, prototypes)
+      const c = evaluateGeometry(createCityBlock(2, 24)  as any, prototypes)
       expect(a.records.some(record => record.materialKey === 'car')).toBe(false)
       expect(c.records.filter(record => record.materialKey === 'car')).toHaveLength(24)
       const facades = (set: typeof a) => set.records.filter(record => record.materialKey === 'facade')

@@ -12,6 +12,12 @@ clicking during motion reverses from the current pose. The sequence runs at 2× 
 One 1.2-second `sine.inOut` camera tween animates both the target and orbit, so
 unfolding panels do not restart bounds-fitting transitions.
 
+Click the blue database for a separate animation built with `stage.animateTo()`.
+Its eight stacked cylinders rise and slide along distinct radial directions into
+an elevated ring, then return to their exact stack positions on the next click.
+The staggered XYZ motion uses semantic cylinder IDs and does not add placement
+groups or application-owned transform objects.
+
 The models, materials, placements, ports, and connections use Vuetrex. The
 rounded plinth is a local fixed `MeshNode` extension registered through the
 scene's `elements` prop; it uses the standard renderer lifecycle and material
@@ -85,8 +91,10 @@ reactive pose; computed `Placement` values drive the nested hinge groups.
 original semantic ID and fixed floor ports, so its ground connections stay attached.
 
 Vuetrex's placement hierarchy and bubbling clicks are adequate for building the
-mechanism. Its `animateTo()` helper is not sufficient for this animation: it only
-supports Y translation and scale, does not expose pivot/rotation controls or a
-reversible timeline handle, and does not own/cancel its timelines on teardown.
-Direct transform tweens can also compete with reactive placement synchronization.
-Concrete follow-ups are recorded in the roadmap's articulated animation section.
+mechanism. `animateTo()` now supports XYZ translation, quaternion or local-axis
+rotation, and local pivot points, so individual panels no longer require a placement
+group solely to establish a hinge. The workshop still owns its reactive placement
+timeline because `animateTo()` does not yet provide reversible multi-node sequencing
+or owned cancellation. Direct transform tweens can also compete with reactive
+placement synchronization. Those follow-ups remain in the roadmap's articulated
+animation section.
