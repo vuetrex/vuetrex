@@ -164,7 +164,7 @@ export default defineComponent({
                     h('div', { ref: elRef, style: { width: '100%', height: '100%' } }),
                     process.env.NODE_ENV !== 'production' && lastError.value
                         ? h('div', { role: 'alert', class: 'vuetrex-scene-error', style: {
-                            position: 'absolute', inset: '12px', bottom: 'auto', zIndex: 10,
+                            position: 'absolute', inset: '12px', bottom: 'auto', zIndex: 100,
                             padding: '16px', background: '#fff3f1', color: '#651b16', border: '1px solid #d96b60',
                             borderRadius: '6px', font: '14px/1.5 system-ui', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
                             maxHeight: '80%', overflow: 'auto',

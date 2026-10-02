@@ -14,12 +14,12 @@
           :height="3.5"
           :thickness="0.12"
           :bezel="0.07"
-          :segments="64"
+          :segments="32"
           :texture-width="4096"
           :texture-height="1536"
           :frame-color="0x8fa1aa"
           :surface="dashboardSurface"
-          :screen-style="{ brightness: 1.32, effects: { bloom: 'exclude' } }"
+          :screen-style="{ brightness: 1.12, effects: { bloom: 'exclude' } }"
           :participates-in-layout="false"
       />
     </vx-group>
@@ -45,9 +45,9 @@ const gridTexture = useCanvasTexture(ctx => {
   const size = ctx.canvas.width;
   ctx.fillStyle = '#d8dde0';
   ctx.fillRect(0, 0, size, size);
-  ctx.strokeStyle = '#bdc6cc';
+  ctx.strokeStyle = '#91989d';
   const scale = size / 256;
-  ctx.lineWidth = scale * .45
+  ctx.lineWidth = scale * .15
   for (let point = 0; point <= size; point += 12 * scale) {
     ctx.beginPath();
     ctx.moveTo(point, 0);
@@ -58,24 +58,13 @@ const gridTexture = useCanvasTexture(ctx => {
     ctx.lineTo(size, point);
     ctx.stroke()
   }
-}, {width: 2048, height: 2048, purpose: 'color'})
-const grainTexture = useCanvasTexture(ctx => {
-  for (let y = 0; y < ctx.canvas.height; y++) {
-    const shade = 170 + ((y * 73 + 19) % 53);
-    ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
-    ctx.fillRect(0, y, ctx.canvas.width, 1)
-  }
-}, {width: 512, height: 512, purpose: 'bump'})
-watch(gridTexture, texture => {
-  if (texture) texture.anisotropy = 8
-})
+}, {width: 1024, height: 1024, purpose: 'color'})
 const platformMaterial = computed(() => ({
   color: 0xffffff,
   map: gridTexture.value,
   roughness: .72,
   metalness: .12,
-  bumpMap: grainTexture.value,
-  bumpScale: .003
+  bumpScale: .3
 }))
 
 const dashboardSurface = computed<VxDisplaySurface>(() => {

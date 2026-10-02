@@ -1,17 +1,23 @@
 <template>
   <section class="scene-shell">
     <Vuetrex height="100%" width="100%" :settings="settings" :elements="elements" :camera="cameraView">
-      <vx-composer preset="studio" quality="high" :max-pixel-ratio="2"
-        :ambient-occlusion="{ intensity: 0.48, radius: 0.3 }"
-        :outlines="false"
-        :protect-annotations="true"
-        :grading="{ contrast: 1.025, saturation: 1 }"
-        />
+      <vx-composer preset="luminous" quality="high"
+                   :max-pixel-ratio="2"
+                   :outlines="false"
+
+                   :output="{ toneMapping: 'none', exposure: 1.0 }"
+                   :grading="{ contrast: 1.0, saturation: 1 }"
+      />
+      <!--                   :ambient-occlusion="{ intensity: 0.48, radius: 0.3 }"-->
+<!--      :outlines="false"-->
+<!--      :protect-annotations="true"-->
+<!--      :grading="{ contrast: 1.025, saturation: 1 }"-->
+      <!--     :bloom="{ mode: 'selected', strength: 0.18, radius: 0.24, threshold: 0 }" -->
       <!--    :output="{ toneMapping: 'neutral', exposure: 1.0 }"-->
       <!--    :vignette="{ strength: 0.06, offset: 0.96 }" -->
       <!--    :depth-of-field="{ focus: 'health-wall', aperture: 0.000035, maxBlur: 0.006 }" -->
-      <!--    :bloom="{ mode: 'selected', strength: 0.18, radius: 0.24, threshold: 0 }" -->
-      <vx-lighting :key-intensity="3.05" :fill-intensity="0.72" shadow-quality="high" />
+
+      <vx-lighting :key-intensity="1.05" :fill-intensity="0.72" shadow-quality="high" />
       <vx-environment preset="studio" :intensity="0.5" :rotation="0.65" />
       <vx-floor finish="matte" :color="0xf2f4f5" :reflection="0.1" :grid="false" :captions="false" :fade-start="12" :fade-end="20" />
       <FoundationScene :deployments="deployments" :relations="relations" :current-time="currentTime" />
@@ -25,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { Vuetrex, type VxCameraView, type VxSettings } from '@/lib-components/index.js'
+import {ComposerDiagnostics, Vuetrex, type VxCameraView, type VxSettings} from '@/lib-components/index.js'
 import { workshopElements } from '../../../workshops/workshop2/elements.config.js'
 import { Plinth } from '../../../workshops/workshop2/things/Plinth.js'
 import FoundationScene from './scene/FoundationScene.vue'
@@ -36,6 +42,9 @@ const emit = defineEmits<{ reconnect: [] }>()
 const elements = workshopElements.defineElements({ 'vx-workshop-plinth': Plinth })
 const cameraView: VxCameraView = { orbit: { target: [0, 1.1, -0.55], height: 8.8, radius: 14, azimuth: 18 } }
 const settings: VxSettings = { backgroundColor:0xf7f7f8,floorColor:0xf2f4f5,captionColor:0x87939b,lightColor1:0xffffff,lightColor2:0xdceaff,mirrorOpacity:.94,floorGrid:false,floorMirror:false,floorCaptions:false,shadows:true,gap:.22 }
+const onComposerStatus = function (status: ComposerDiagnostics) {
+  console.log(status)
+}
 </script>
 
 <style scoped>

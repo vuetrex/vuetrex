@@ -4,10 +4,12 @@ import {
     BufferGeometry,
     CanvasTexture,
     CylinderGeometry,
+    BackSide,
     DoubleSide,
     Float32BufferAttribute,
     Group,
     LinearFilter,
+    LinearMipmapLinearFilter,
     Mesh,
     MeshBasicMaterial,
     MeshStandardMaterial,
@@ -358,14 +360,30 @@ export class DisplayWall extends Node {
 
         const texture = new CanvasTexture(canvas)
         texture.colorSpace = SRGBColorSpace
-        texture.minFilter = LinearFilter
+        texture.minFilter = LinearMipmapLinearFilter
+        texture.generateMipmaps = true
+        texture.anisotropy = this.stage.renderer?.capabilities.getMaxAnisotropy() ?? 1
         texture.magFilter = LinearFilter
         if (flipHorizontal) {
             texture.wrapS = RepeatWrapping
             texture.repeat.x = -1
             texture.offset.x = 1
         }
-        const material = new MeshBasicMaterial({ map: texture, side: DoubleSide, toneMapped: false })
+
+        // const material = new MeshBasicMaterial({ map: texture, side: BackSide, toneMapped: false })
+        const material = new MeshStandardMaterial({
+                color: 0x808080,          // Base color is dark so the screen looks glass-like when off
+                roughness: 0.15,         // Low roughness makes the screen glossy and reflective
+                metalness: 0.1,          // Slight metallic hint for the glass pane effect
+
+                // The Magic: This makes the screen content glow independently of scene lights
+                emissiveMap: texture,
+                map: texture,
+                side: BackSide,
+                emissive: 0x888888, // Multiplies the map colors (white keeps original colors)
+                emissiveIntensity: 2.1,  // Controls how bright the monitor glows
+                toneMapped: false
+            })
         const mesh = new Mesh(geometry, material)
         mesh.name = `el-${this.id}-screen`
         mesh.userData.el = this.element
