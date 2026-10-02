@@ -2,7 +2,15 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
-    "types": ["vite/client", "vite-plugin-glsl/ext"]
+    "rootDir": "../..",
+    "types": ["vite/client", "vite-plugin-glsl/ext", "node"]
   },
-  "include": ["./**/*.ts", "./**/*.vue", "../../src/**/*.d.ts"]
+  "include": [
+    "../../src/**/*.ts",
+    "../../src/**/*.d.ts",
+    "../../src/**/*.vue",
+    "../../workshops/workshop2/**/*.ts",
+    "./**/*.ts",
+    "./**/*.vue"
+  ]
 }

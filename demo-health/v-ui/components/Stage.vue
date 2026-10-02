@@ -1,386 +1,44 @@
 <template>
   <section class="scene-shell">
-    <Vuetrex
-      :key="stageKey"
-      height="100%"
-      width="100%"
-      :camera="camera"
-      :settings="settings"
-      @ready="onReady"
-    >
-      <BackgroundWall
-        :deployments="deployments"
-        :relations="relations"
-        :current-time="currentTime"
-        :theme="theme"
-      />
-      <MainStage
-        :deployments="deployments"
-        :relations="relations"
-        :composition="composition"
-        :current-time="currentTime"
-        :selected-id="selected?.id ?? ''"
-        :selected-connector-key="selectedConnector?.key ?? ''"
-        :theme="theme"
-        @select-deployment="selectDeployment"
-        @select-pod="selectPod"
-        @select-connector="selectConnector"
-      />
+    <Vuetrex height="100%" width="100%" :settings="settings" :elements="elements" :camera="cameraView">
+      <vx-composer preset="studio" quality="high" :max-pixel-ratio="2"
+        :ambient-occlusion="{ intensity: 0.48, radius: 0.3 }"
+        :outlines="false"
+        :protect-annotations="true"
+        :grading="{ contrast: 1.025, saturation: 1 }"
+        />
+      <!--    :output="{ toneMapping: 'neutral', exposure: 1.0 }"-->
+      <!--    :vignette="{ strength: 0.06, offset: 0.96 }" -->
+      <!--    :depth-of-field="{ focus: 'health-wall', aperture: 0.000035, maxBlur: 0.006 }" -->
+      <!--    :bloom="{ mode: 'selected', strength: 0.18, radius: 0.24, threshold: 0 }" -->
+      <vx-lighting :key-intensity="3.05" :fill-intensity="0.72" shadow-quality="high" />
+      <vx-environment preset="studio" :intensity="0.5" :rotation="0.65" />
+      <vx-floor finish="matte" :color="0xf2f4f5" :reflection="0.1" :grid="false" :captions="false" :fade-start="12" :fade-end="20" />
+      <FoundationScene :deployments="deployments" :relations="relations" :current-time="currentTime" />
     </Vuetrex>
 
     <div v-if="error" class="error-banner">
-      <span>{{ error }}</span>
+      <span>Live data unavailable — running in display mode.</span>
       <button type="button" @click="emit('reconnect')">Reconnect</button>
     </div>
-
-    <aside class="scene-summary">
-      <span><strong>{{ visibleDeploymentCount }}</strong> visible deployments</span>
-      <span><strong>{{ visiblePodCount }}</strong> visible pods</span>
-      <span><strong>{{ readyPodCount }}</strong> ready</span>
-      <span v-if="lightingProgress > 0" class="studio-light">
-        <strong>{{ lightingProgress < 1 ? `${Math.round(lightingProgress * 100)}%` : 'ready' }}</strong>
-        studio light
-      </span>
-    </aside>
-
-    <aside v-if="selected" class="inspector">
-      <button class="close" type="button" aria-label="Close inspector" @click="emit('clearSelection')">×</button>
-      <p>{{ selected.namespace }} / {{ selected.team }}</p>
-      <h2>{{ selected.id }}</h2>
-      <dl>
-        <div><dt>Status</dt><dd :class="selected.status">{{ selected.status }}</dd></div>
-        <div><dt>Replicas</dt><dd>{{ selected.readyReplicas }}/{{ selected.desiredReplicas }}</dd></div>
-        <div><dt>Requests</dt><dd>{{ Math.round(selected.metrics.requestsPerSecond) }}/s</dd></div>
-        <div><dt>p95 latency</dt><dd>{{ Math.round(selected.metrics.latencyP95Ms) }} ms</dd></div>
-        <div><dt>Error rate</dt><dd>{{ (selected.metrics.errorRate * 100).toFixed(2) }}%</dd></div>
-        <template v-if="selectedPod">
-          <div><dt>Pod</dt><dd>{{ selectedPod.id }}</dd></div>
-          <div><dt>Phase</dt><dd>{{ selectedPod.phase }}</dd></div>
-          <div><dt>Restarts</dt><dd>{{ selectedPod.restarts }}</dd></div>
-          <div><dt>Memory</dt><dd>{{ Math.round(selectedPod.metrics.memoryMb) }} MB</dd></div>
-        </template>
-      </dl>
-    </aside>
-
-    <aside v-else-if="selectedConnector" class="inspector connector-inspector">
-      <button class="close" type="button" aria-label="Close connector inspector" @click="selectedConnector = null">×</button>
-      <p>{{ selectedConnector.kind }} / {{ selectedConnector.part }}</p>
-      <h2>{{ selectedConnector.sourceName ?? selectedConnector.key }}</h2>
-      <dl>
-        <div><dt>Route key</dt><dd>{{ selectedConnector.key }}</dd></div>
-        <div v-if="selectedConnector.pathPosition !== undefined">
-          <dt>Picked at</dt><dd>{{ Math.round(selectedConnector.pathPosition * 100) }}%</dd>
-        </div>
-        <div><dt>World point</dt><dd>{{ connectorPoint }}</dd></div>
-        <div v-if="selectedConnector.kind === 'bundle'">
-          <dt>Members</dt><dd>{{ selectedConnector.memberKeys.length }}</dd>
-        </div>
-      </dl>
-    </aside>
-
-    <ol v-if="recentEvents.length" class="events" aria-label="Recent lifecycle events">
-      <li v-for="event in recentEvents.slice(0, 4)" :key="event.id" :class="event.severity">
-        <time>t={{ event.t }}</time>
-        <strong>{{ event.reason }}</strong>
-        <span>{{ event.resource.id }}</span>
-      </li>
-    </ol>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import {
-  Vuetrex,
-  type ConnectorHit,
-  type VuetrexStage,
-  type VxSettings,
-  type VxStage,
-} from '@/lib-components/index.js'
-import BackgroundWall from './scene/BackgroundWall.vue'
-import MainStage from './scene/MainStage.vue'
-import {
-  startProgressiveStudioLight,
-  type ProgressiveStudioLight,
-} from '../lighting/progressiveStudioLight.js'
-import {
-  createSelectedPodLight,
-  type SelectedPodLight,
-} from '../lighting/selectedPodLight.js'
-import type {
-  CompositionPattern,
-  DeploymentViewModel,
-  HealthEvent,
-  MetricPodSample,
-  RenderFeatures,
-  RelationViewModel,
-  ThemeMode,
-} from '../types.js'
+import { Vuetrex, type VxCameraView, type VxSettings } from '@/lib-components/index.js'
+import { workshopElements } from '../../../workshops/workshop2/elements.config.js'
+import { Plinth } from '../../../workshops/workshop2/things/Plinth.js'
+import FoundationScene from './scene/FoundationScene.vue'
+import type { ConnectionStatus, DeploymentViewModel, RelationViewModel } from '../types.js'
 
-const props = defineProps<{
-  camera: string
-  composition: CompositionPattern
-  diagnostics: boolean
-  renderFeatures: RenderFeatures
-  theme: ThemeMode
-  currentTime: number
-  deployments: DeploymentViewModel[]
-  relations: RelationViewModel[]
-  selected: DeploymentViewModel | null
-  selectedPod: (MetricPodSample & { ordinal: number }) | null
-  recentEvents: HealthEvent[]
-  error: string
-}>()
-
-const emit = defineEmits<{
-  selectDeployment: [id: string]
-  selectPod: [deploymentId: string, podId: string]
-  clearSelection: []
-  reconnect: []
-}>()
-
-const settings = computed<VxSettings>(() => ({
-  unit: 1,
-  gap: 0.34,
-  color: props.theme === 'light' ? 0x737d85 : 0x2f3b41,
-  backgroundColor: props.theme === 'light' ? 0xf4f7f8 : 0x0b1115,
-  fog: {
-    color: props.theme === 'light' ? 0xf4f7f8 : 0x0b1115,
-    near: 18,
-    far: 38,
-  },
-  highlightColor: props.theme === 'light' ? 0x2588df : 0x4e9cbe,
-  floorColor: props.theme === 'light' ? 0xe8edef : 0x111b1f,
-  captionColor: props.theme === 'light' ? 0x273039 : 0xe8ecee,
-  connectorColor: props.theme === 'light' ? 0x167e97 : 0x58c6d5,
-  lightColor1: props.theme === 'light' ? 0xb9deef : 0x66d8ff,
-  lightColor2: props.theme === 'light' ? 0xffe0c7 : 0xffcfaa,
-  mirrorOpacity: 0.76,
-  floorGrid: props.renderFeatures.floorGrid,
-  floorMirror: props.renderFeatures.floorMirror,
-  floorCaptions: props.renderFeatures.floorCaptions,
-  shadows: props.renderFeatures.shadows,
-}))
-
-// Stage-level render features are construction settings. A keyed remount keeps
-// the demo control simple while preserving application-owned camera state.
-const stageKey = computed(() => [
-  props.theme,
-  props.renderFeatures.floorGrid,
-  props.renderFeatures.floorMirror,
-  props.renderFeatures.floorCaptions,
-  props.renderFeatures.shadows,
-].map(value => value ? '1' : '0').join(''))
-
-let stage: VxStage | undefined
-let studioLight: ProgressiveStudioLight | undefined
-let podLight: SelectedPodLight | undefined
-let studioLightTimer: ReturnType<typeof setTimeout> | undefined
-const lightingProgress = ref(0)
-const selectedConnector = ref<ConnectorHit | null>(null)
-const visiblePodCount = computed(() =>
-  props.deployments.reduce((count, item) => count + item.pods.length, 0),
-)
-const visibleDeploymentCount = computed(() =>
-  props.deployments.filter(item => item.currentReplicas > 0).length,
-)
-const readyPodCount = computed(() =>
-  props.deployments.reduce((count, item) => count + item.readyReplicas, 0),
-)
-const connectorPoint = computed(() => selectedConnector.value?.point
-  .map(coordinate => coordinate.toFixed(2))
-  .join(', ') ?? '')
-
-function onReady(value: VxStage) {
-  disposeStudioLight()
-  podLight?.dispose()
-  stage = value
-  stage.setDiagnostics(props.diagnostics)
-  podLight = createSelectedPodLight(value as VuetrexStage, { theme: props.theme })
-  syncSelectedPodLight()
-  scheduleStudioLight()
-}
-
-watch(() => props.diagnostics, enabled => stage?.setDiagnostics(enabled))
-watch(
-  () => [props.selected?.id, props.selectedPod?.id, props.camera],
-  syncSelectedPodLight,
-  { flush: 'post' },
-)
-watch(
-  () => [visibleDeploymentCount.value, props.composition],
-  scheduleStudioLight,
-  { flush: 'post' },
-)
-
-function syncSelectedPodLight() {
-  podLight?.setTarget(
-    props.selected?.id,
-    props.selectedPod?.id,
-    Boolean(props.selectedPod && props.camera !== 'scene'),
-  )
-}
-
-function selectDeployment(id: string) {
-  selectedConnector.value = null
-  emit('selectDeployment', id)
-}
-
-function selectPod(deploymentId: string, podId: string) {
-  selectedConnector.value = null
-  emit('selectPod', deploymentId, podId)
-}
-
-function selectConnector(hit: ConnectorHit) {
-  selectedConnector.value = hit
-  emit('clearSelection')
-}
-
-function scheduleStudioLight() {
-  if (studioLightTimer !== undefined) clearTimeout(studioLightTimer)
-  if (!stage || visibleDeploymentCount.value === 0) return
-  studioLightTimer = setTimeout(() => {
-    studioLight?.dispose()
-    lightingProgress.value = 0.001
-    studioLight = startProgressiveStudioLight(stage as VuetrexStage, {
-      theme: props.theme,
-      onProgress(progress) {
-        lightingProgress.value = progress
-      },
-    })
-    if (!studioLight) lightingProgress.value = 0
-  }, 500)
-}
-
-function disposeStudioLight() {
-  if (studioLightTimer !== undefined) {
-    clearTimeout(studioLightTimer)
-    studioLightTimer = undefined
-  }
-  studioLight?.dispose()
-  studioLight = undefined
-  lightingProgress.value = 0
-}
-
-onBeforeUnmount(() => {
-  disposeStudioLight()
-  podLight?.dispose()
-  podLight = undefined
-})
+defineProps<{ deployments: DeploymentViewModel[]; relations: RelationViewModel[]; currentTime: number; connection: ConnectionStatus; error: string }>()
+const emit = defineEmits<{ reconnect: [] }>()
+const elements = workshopElements.defineElements({ 'vx-workshop-plinth': Plinth })
+const cameraView: VxCameraView = { orbit: { target: [0, 1.1, -0.55], height: 8.8, radius: 14, azimuth: 18 } }
+const settings: VxSettings = { backgroundColor:0xf7f7f8,floorColor:0xf2f4f5,captionColor:0x87939b,lightColor1:0xffffff,lightColor2:0xdceaff,mirrorOpacity:.94,floorGrid:false,floorMirror:false,floorCaptions:false,shadows:true,gap:.22 }
 </script>
 
 <style scoped>
-.scene-shell { position: relative; min-width: 0; min-height: 0; }
-.scene-shell :deep(canvas) { display: block; }
-.scene-summary, .inspector, .events, .error-banner {
-  position: absolute;
-  border: 1px solid var(--border);
-  background: var(--overlay);
-}
-.scene-summary {
-  top: 24px;
-  left: 20px;
-  display: flex;
-  gap: 18px;
-  padding: 10px 13px;
-  color: var(--text-muted);
-  font-size: 11px;
-}
-.scene-summary strong { color: var(--text-strong); }
-.scene-summary .studio-light { color: var(--accent); }
-.inspector { top: 24px; right: 20px; width: 260px; padding: 16px; }
-.inspector p {
-  margin: 0 0 4px;
-  color: var(--accent);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-}
-.inspector h2 { margin: 4px 0 15px; font-size: 18px; }
-.close {
-  position: absolute;
-  top: 7px;
-  right: 7px;
-  min-height: 27px;
-  padding: 1px 8px;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
-  cursor: pointer;
-  font-size: 17px;
-}
-.inspector dl, .inspector dl div { margin: 0; }
-.inspector dl div {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-top: 1px solid var(--border-soft);
-  font-size: 12px;
-}
-.inspector dt { color: var(--text-subtle); }
-.inspector dd {
-  max-width: 155px;
-  margin: 0;
-  overflow: hidden;
-  font-weight: 700;
-  text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.connector-inspector p { color: #77d7e6; }
-.inspector dd.healthy { color: #58c6d5; }
-.inspector dd.degraded { color: #f2b55d; }
-.inspector dd.unavailable { color: #ff6b76; }
-.events {
-  right: 20px;
-  bottom: 20px;
-  width: 350px;
-  margin: 0;
-  padding: 8px 12px;
-  list-style: none;
-}
-.events li {
-  display: grid;
-  grid-template-columns: 48px 1fr 1.2fr;
-  gap: 8px;
-  padding: 6px 0;
-  color: var(--text-muted);
-  border-top: 1px solid var(--border-soft);
-  font-size: 11px;
-}
-.events li:first-child { border-top: 0; }
-.events time { color: #6faec0; }
-.events .warning strong { color: #e4ae53; }
-.events .critical strong { color: #ed6871; }
-.error-banner {
-  top: 24px;
-  left: 50%;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  color: #ffd8d8;
-  transform: translateX(-50%);
-}
-.error-banner button {
-  min-height: 29px;
-  padding: 4px 8px;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
-  cursor: pointer;
-}
-
-@media (max-width: 900px) {
-  .scene-summary { top: 10px; left: 10px; }
-  .inspector { top: 58px; right: 10px; width: min(260px, calc(100% - 20px)); }
-  .events { right: 10px; bottom: 10px; width: min(350px, calc(100% - 20px)); }
-}
-
-@media (max-width: 560px) {
-  .scene-summary { gap: 10px; font-size: 10px; }
-  .events { display: none; }
-}
+.scene-shell{position:absolute;inset:0;overflow:hidden}.scene-shell :deep(canvas){display:block;cursor:grab}.scene-shell :deep(canvas:active){cursor:grabbing}
+.error-banner{position:absolute;z-index:5;top:112px;left:50%;display:flex;gap:12px;align-items:center;padding:9px 12px;border:1px solid rgba(142,158,167,.28);border-radius:10px;color:#7a5d37;background:rgba(255,255,255,.86);box-shadow:0 16px 45px rgba(50,68,79,.12);backdrop-filter:blur(16px);font-size:11px;transform:translateX(-50%)}.error-banner button{border:0;border-radius:6px;padding:6px 9px;color:white;background:#168bdf;cursor:pointer}
 </style>

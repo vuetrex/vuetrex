@@ -17,32 +17,20 @@ pnpm health:server
 
 The server listens on <http://127.0.0.1:4100>. Set `HEALTH_HOST` or `HEALTH_PORT` to override the bind address.
 
-With the repository Vite server running, a small five-deployment research client is available at
-<http://127.0.0.1:5173/demo-health/v-ui/>. Its transport, scene-model, and visual component layers are kept separate so
-it can serve as a starting point for contextual composition experiments. Each displayed deployment also has a
-deterministic procedural signature: its service identity selects the motif while live replica and metric values shape
-the generated detail, color, and variation.
+With the repository Vite server running, a five-deployment showcase is available at
+<http://127.0.0.1:5173/demo-health/v-ui/>. The client preserves the fixture transport and scene-model boundary while
+presenting the live system as a minimal foundation for iterative scene design.
 
 ## Visual grammar
 
-The research client applies the hierarchy from [Designing legible data scenes](../docs/guide/visual-design.md): the
-platform, wall, grid, and ordinary materials stay neutral so live topology and health remain the strongest signals.
-Cyan means healthy or active, amber is reserved for degraded state, and coral is reserved for unavailable or critical
-state. Request rate changes particle velocity while status changes route role and color, so the same metric is not
-encoded twice without purpose.
+The scene deliberately begins with only a workshop2-style rounded, gridded floor plate and a freestanding curved
+display. The plate keeps the bright studio lighting and pale industrial material scheme. The display uses the same
+blue, cyan, and coral accents across eight live panels for traffic, latency, readiness, errors, service health,
+topology, capacity, and workload inventory. Its curvature is authored independently of the plate perimeter so both
+can evolve separately in later design steps.
 
-The connector graph demonstrates the public fluent API instead of maintaining a demo-only routing layer. Healthy
-gateway traffic is a keyed `bus` with shared ground-level structure. Other healthy relations are keyed `edges`, use
-explicit or automatic ports, follow the `ground` profile, and may share protocol bundles. Degraded and unavailable
-relations switch to the `air` profile with elevated Bézier or spline routes, making exceptional traffic visibly cross
-the normal orthogonal network. Every route uses stable `underlay` and `shaft` decoration keys, semantic names and
-metadata, an end marker, and an additive particle flow compiled from the resolved traversal.
-
-Connectors are interactive. Selecting a shaft, marker, bundle, or particle opens an inspector with its semantic route
-key, resolved source name, actual world-space hit point, normalized path progress, and bundle membership where
-applicable. This keeps the same resolved network useful for rendering, motion, and picking. Shadows are enabled by
-default in the demo; a cool directional key, warm opposing rim, restrained hemisphere fill, progressive lightmap, and
-wall contact shadow provide depth without making the environment compete with the data.
+The simulation timeline and Server-Sent Events transport remain active. Metrics repaint the curved display in place;
+no service nodes, connectors, particles, procedural models, capacity bars, or decorative scene objects are present.
 
 ## Timeline control
 
