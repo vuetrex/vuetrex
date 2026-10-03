@@ -264,9 +264,9 @@ export { useCanvasTexture } from './styling/textures.js';
 export type { VxTexturePurpose, VxCanvasTextureOptions } from './styling/textures.js';
 export type { VxEnvironmentProps, VxCameraProps, VxFloorProps } from './scene/declarations.js';
 export { mergeComposerOptions, resolveComposerOptions, resolveNodeEffects } from './scene/composer.js';
-export type { VxComposerOptions, VxComposerPreset, VxComposerQuality, VxToneMapping, VxAntialias,
+export type { VxComposerOptions, VxComposerPreset, VxComposerQuality, VxAntialias,
     VxBloomMode, VxBloomOptions, VxAmbientOcclusionOptions, VxGradingOptions, VxVignetteOptions,
-    VxDepthOfFieldOptions, VxOutlineOptions, VxLutOptions, VxEffectOption, VxNodeEffects,
+    VxComposerPass, VxEffectOption, VxNodeEffects,
     VxResolvedComposerOptions } from './scene/composer.js';
 export type { ComposerDiagnostics } from './three/postprocessing/ComposerController.js';
 
@@ -290,3 +290,5 @@ export type { Layout, LayoutDirection, RingLayout, RingOptions } from './nodes/l
 export { createElementConfig, isVuetrexElement } from './compiler.js';
 
 export type { VxSceneError } from './diagnostics/sceneErrors.js';
+
+export { composer, type VxComposerBuilder } from './scene/composer-builder.js';

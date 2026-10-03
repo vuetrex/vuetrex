@@ -1,21 +1,17 @@
 <template>
   <section class="scene-shell">
     <Vuetrex height="100%" width="100%" :settings="settings" :elements="elements" :camera="cameraView">
-      <vx-composer preset="luminous" quality="high"
-                   :max-pixel-ratio="2"
-                   :outlines="false"
-
-                   :output="{ toneMapping: 'none', exposure: 1.0 }"
-                   :grading="{ contrast: 1.0, saturation: 1 }"
-      />
+<!--      <vx-composer preset="editorial" quality="high"-->
+<!--                   :max-pixel-ratio="2"-->
+<!--                   :output="{ exposure: 1.0 }"-->
+<!--                   :grading="{ contrast: 1.1, saturation: 1 }"-->
+<!--      />-->
       <!--                   :ambient-occlusion="{ intensity: 0.48, radius: 0.3 }"-->
-<!--      :outlines="false"-->
 <!--      :protect-annotations="true"-->
 <!--      :grading="{ contrast: 1.025, saturation: 1 }"-->
       <!--     :bloom="{ mode: 'selected', strength: 0.18, radius: 0.24, threshold: 0 }" -->
-      <!--    :output="{ toneMapping: 'neutral', exposure: 1.0 }"-->
+      <!--    :output="{ exposure: 1.0 }"-->
       <!--    :vignette="{ strength: 0.06, offset: 0.96 }" -->
-      <!--    :depth-of-field="{ focus: 'health-wall', aperture: 0.000035, maxBlur: 0.006 }" -->
 
       <vx-lighting :key-intensity="1.05" :fill-intensity="0.72" shadow-quality="high" />
       <vx-environment preset="studio" :intensity="0.5" :rotation="0.65" />

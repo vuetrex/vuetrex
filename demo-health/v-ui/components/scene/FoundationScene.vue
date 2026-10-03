@@ -19,7 +19,7 @@
           :texture-height="1536"
           :frame-color="0x8fa1aa"
           :surface="dashboardSurface"
-          :screen-style="{ brightness: 1.12, effects: { bloom: 'exclude' } }"
+          :screen-style="{ brightness: 1.22, effects: { bloom: 'exclude' } }"
           :participates-in-layout="false"
       />
     </vx-group>

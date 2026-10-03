@@ -385,3 +385,12 @@ operations and built-in reactive effects report structured errors to their ownin
 Vuetrex component. The component emits `scene-error` in every mode and renders a
 development-only DOM panel beside the canvas. Direct low-level callers retain
 throwing semantics. Reporting does not change logical-tree or GPU ownership.
+
+### Optional postprocessing
+
+Scenes render directly until a stylesheet, `vx-composer`, or `stage.setComposer()` requests postprocessing. The backend
+is dynamically imported and creates render targets only on demand; late loading is cancelled by scene teardown.
+`composer()` is an immutable fluent authoring API for bloom, ambient occlusion, grading, vignette, and custom pass
+factories. Custom passes are realized in explicit linear/display phases and owned, resized, and disposed by the
+controller. Stable factories and parameter-only updates retain pass instances. Removing all configuration returns to
+direct rendering. See [Composer and visual styles](/design/composer-and-visual-styles).

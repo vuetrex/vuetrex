@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import LifeCycle from '@/lib-components/three/lifecycle.js';
 import {Color} from 'three';
-import { ComposerController, type ComposerDiagnostics } from './postprocessing/ComposerController.js'
-import type { VxComposerOptions } from '../scene/composer.js'
+import type { ComposerController, ComposerDiagnostics } from './postprocessing/ComposerController.js'
+import { resolveComposerOptions, type VxComposerOptions } from '../scene/composer.js'
 
 interface MousePosition {
     x: number
@@ -40,7 +40,10 @@ export default class Scene extends LifeCycle {
     protected selectedInstanceId: number | undefined
     protected selectedIntersection: THREE.Intersection | undefined
 
-    private readonly composerController: ComposerController
+    private composerController?: ComposerController
+    private composerLoading?: Promise<void>
+    private composerProgram?: Readonly<VxComposerOptions>
+    private composerLoadError?: string
     private composerStyles?: Readonly<VxComposerOptions>
     private composerDeclaration?: Readonly<VxComposerOptions>
     private composerStatusListener?: (status: ComposerDiagnostics) => void
@@ -75,9 +78,6 @@ export default class Scene extends LifeCycle {
         //scene
         this.scene = this.createScene();
         this.scene.background = new Color('#808080');
-
-        this.composerController = new ComposerController(this.renderer, this.scene, this.renderCamera, this.width, this.height,
-            status => this.composerStatusListener?.(status))
 
         //events
         this.mouse = { x: 0, y: 0 };
@@ -208,20 +208,74 @@ export default class Scene extends LifeCycle {
 
     //--- overrides ---
     render() {
-        this.composerController.render();
+        if (this.composerController) this.composerController.render();
+        else this.renderer.render(this.scene, this.renderCamera);
     }
 
     setComposerStyles(options?: Readonly<VxComposerOptions>): void {
+        resolveComposerOptions(options, this.composerDeclaration, this.composerProgram)
         this.composerStyles = options
-        this.composerController.configure(this.composerStyles, this.composerDeclaration)
+        void this.reconcileComposer()
     }
 
     setComposerDeclaration(options?: Readonly<VxComposerOptions>): void {
+        resolveComposerOptions(this.composerStyles, options, this.composerProgram)
         this.composerDeclaration = options
-        this.composerController.configure(this.composerStyles, this.composerDeclaration)
+        void this.reconcileComposer()
     }
 
-    composerDiagnostics(): ComposerDiagnostics { return this.composerController.diagnostics() }
+    /** Programmatic overrides take precedence over stylesheet and declaration options. */
+    setComposer(options?: Readonly<VxComposerOptions>): Promise<void> {
+        resolveComposerOptions(this.composerStyles, this.composerDeclaration, options)
+        this.composerProgram = options
+        return this.reconcileComposer()
+    }
+
+    private reconcileComposer(): Promise<void> {
+        if (this.sceneDestroyed) return Promise.resolve()
+        const requested = resolveComposerOptions(this.composerStyles, this.composerDeclaration, this.composerProgram)
+        if (!requested) {
+            this.composerController?.configure(undefined)
+            this.composerController?.destroy()
+            this.composerController = undefined
+            this.composerStatusListener?.(this.composerDiagnostics())
+            return this.composerLoading ?? Promise.resolve()
+        }
+        if (this.composerController) {
+            this.composerController.configure(requested)
+            return Promise.resolve()
+        }
+        if (!this.composerLoading) {
+            this.composerLoadError = undefined
+            this.composerLoading = import('./postprocessing/ComposerController.js').then(({ ComposerController }) => {
+                if (this.sceneDestroyed) return
+                const latest = resolveComposerOptions(this.composerStyles, this.composerDeclaration, this.composerProgram)
+                if (!latest) return
+                this.composerController = new ComposerController(this.renderer, this.scene, this.renderCamera,
+                    this.domParent.offsetWidth || 1, this.domParent.offsetHeight || 1,
+                    status => this.composerStatusListener?.(status))
+                this.composerController.configure(latest)
+            }).catch(cause => {
+                this.composerLoadError = String(cause)
+                this.composerStatusListener?.(this.composerDiagnostics())
+            }).finally(() => { this.composerLoading = undefined })
+        }
+        return this.composerLoading
+    }
+
+    composerDiagnostics(): ComposerDiagnostics {
+        if (this.composerController) return this.composerController.diagnostics()
+        return Object.freeze({
+            requested: resolveComposerOptions(this.composerStyles, this.composerDeclaration, this.composerProgram),
+            passKeys: Object.freeze(['direct-render']),
+            targetSize: Object.freeze({ width: this.domParent.offsetWidth || 1, height: this.domParent.offsetHeight || 1, pixelRatio: this.renderer.getPixelRatio() }),
+            estimatedOwnedBytes: 0, allocations: 0, updates: 0,
+            supportedFeatures: Object.freeze({ output: true, fxaa: true, luminanceBloom: true, selectedBloom: true,
+                depth: true, annotations: true, ambientOcclusion: true, grading: true, vignette: true, customPasses: true, perInstanceMasks: true }),
+            fallbackReasons: Object.freeze(this.composerLoadError ? [`Composer loading failed; using direct rendering: ${this.composerLoadError}`] : []),
+            lastError: this.composerLoadError,
+        })
+    }
 
     setComposerStatusListener(listener?: (status: ComposerDiagnostics) => void): void {
         this.composerStatusListener = listener
@@ -419,6 +473,7 @@ export default class Scene extends LifeCycle {
         // camera.position.x = -window.pageYOffset / 500;
         // camera.position.y = 11 + window.pageYOffset / 1000;
 
-        this.composerController.resize(width, height, window.devicePixelRatio || 1);
+        if (this.composerController) this.composerController.resize(width, height, window.devicePixelRatio || 1);
+        else { this.renderer.setPixelRatio(window.devicePixelRatio || 1); this.renderer.setSize(width, height); }
     }
 }

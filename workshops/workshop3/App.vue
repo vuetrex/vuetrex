@@ -8,13 +8,11 @@
           preset="luminous"
           quality="high"
           :max-pixel-ratio="2"
-          :output="{ toneMapping: 'aces', exposure: 1.08 }"
+          :output="{ exposure: 1.08 }"
           :ambient-occlusion="{ intensity: 0.72, radius: 0.36 }"
           :bloom="{ mode: 'selected', strength: 0.34, radius: 0.32, threshold: 0 }"
           :grading="{ contrast: 0.98, saturation: 0.75 }"
           :vignette="{ strength: 0.3, offset: 0.12 }"
-          :depth-of-field="{ focus: 'organism', aperture: 0.000045, maxBlur: 0.008 }"
-          :outlines="false"
         />
         <vx-lighting :key-intensity="3.5" :fill-intensity="0.44" shadow-quality="high" />
         <vx-environment preset="studio" :intensity="0.3" :rotation="2.2" />

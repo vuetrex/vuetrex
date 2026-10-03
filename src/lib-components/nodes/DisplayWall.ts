@@ -4,7 +4,6 @@ import {
     BufferGeometry,
     CanvasTexture,
     CylinderGeometry,
-    BackSide,
     DoubleSide,
     Float32BufferAttribute,
     Group,
@@ -373,15 +372,15 @@ export class DisplayWall extends Node {
         // const material = new MeshBasicMaterial({ map: texture, side: BackSide, toneMapped: false })
         const material = new MeshStandardMaterial({
                 color: 0x808080,          // Base color is dark so the screen looks glass-like when off
-                roughness: 0.15,         // Low roughness makes the screen glossy and reflective
+                roughness: 0.55,         // Low roughness makes the screen glossy and reflective
                 metalness: 0.1,          // Slight metallic hint for the glass pane effect
 
                 // The Magic: This makes the screen content glow independently of scene lights
                 emissiveMap: texture,
                 map: texture,
-                side: BackSide,
+                side: DoubleSide,
                 emissive: 0x888888, // Multiplies the map colors (white keeps original colors)
-                emissiveIntensity: 2.1,  // Controls how bright the monitor glows
+                emissiveIntensity: 2.2,  // Controls how bright the monitor glows
                 toneMapped: false
             })
         const mesh = new Mesh(geometry, material)

@@ -215,21 +215,19 @@ export abstract class Node extends Base {
     }
 
     /** Resolve contribution policies independently through logical ownership. */
-    resolvedNodeEffects(): { bloom: 'auto' | 'include' | 'exclude'; bloomGain: number; outline: 'auto' | 'include' | 'exclude' } {
+    resolvedNodeEffects(): { bloom: 'auto' | 'include' | 'exclude'; bloomGain: number } {
         let bloom: 'auto' | 'include' | 'exclude' | undefined
         let bloomGain: number | undefined
-        let outline: 'auto' | 'include' | 'exclude' | undefined
         let current: Base | null = this
         while (current) {
             if (current instanceof Node) {
                 bloom ??= current.nodeEffects.value?.bloom
                 bloomGain ??= current.nodeEffects.value?.bloomGain
-                outline ??= current.nodeEffects.value?.outline
             }
-            if (bloom !== undefined && bloomGain !== undefined && outline !== undefined) break
+            if (bloom !== undefined && bloomGain !== undefined) break
             current = current.parent.value
         }
-        return { bloom: bloom ?? 'auto', bloomGain: bloomGain ?? 1, outline: outline ?? 'auto' }
+        return { bloom: bloom ?? 'auto', bloomGain: bloomGain ?? 1 }
     }
 
     /** Apply common visibility and interaction state to a newly-created object. */

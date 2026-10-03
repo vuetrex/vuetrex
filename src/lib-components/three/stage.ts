@@ -185,6 +185,8 @@ export interface VxStage {
     /** Inspect authored, resolved, and realized connector state without exposing mutable paths. */
     connectorDiagnostics(): ConnectorRuntimeDiagnostics
     /** Inspect the requested and effective post-processing plan and owned target budget. */
+    /** Apply programmatic composer overrides; resolves after the optional backend loads. */
+    setComposer(options?: Readonly<import('../scene/composer.js').VxComposerOptions>): Promise<void>
     composerDiagnostics(): import('./postprocessing/ComposerController.js').ComposerDiagnostics
 }
 

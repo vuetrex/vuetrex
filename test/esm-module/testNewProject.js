@@ -66,7 +66,14 @@ try {
     ].join('\n'))
 
     await writeFile(join(projectRoot, 'consumer.ts'), [
-        "import { Vuetrex, VxStylesheet, VxStyleSheet, defineVxStyleSheet, finishes, useCanvasTexture, GroupNode, Row, Stack, Ring, Layer, Panel, Spacer, MeshNode, Box, Cylinder, Wedge, InstanceNode, GeometryNode, gridLayout, type VuetrexProps, type VuetrexEvents, type VxSettings, type VxMaterialBinding, type VxEnvironmentProps, type VxCameraProps, type VxFloorProps, type VxSceneError, type ConnectorHandle, type ConnectorPortDeclarationRecord, type ConnectorHostProps, type VxGroupProps, type VxRingProps, type VxPanelProps, type VxMeshProps, type VxInstanceProps, type VxGeometryProps, type Layout } from '@exceeder/vuetrex'",
+        "import { composer, Vuetrex, VxStylesheet, VxStyleSheet, defineVxStyleSheet, finishes, useCanvasTexture, GroupNode, Row, Stack, Ring, Layer, Panel, Spacer, MeshNode, Box, Cylinder, Wedge, InstanceNode, GeometryNode, gridLayout, type VuetrexProps, type VuetrexEvents, type VxSettings, type VxMaterialBinding, type VxEnvironmentProps, type VxCameraProps, type VxFloorProps, type VxSceneError, type ConnectorHandle, type ConnectorPortDeclarationRecord, type ConnectorHostProps, type VxGroupProps, type VxRingProps, type VxPanelProps, type VxMeshProps, type VxInstanceProps, type VxGeometryProps, type Layout } from '@exceeder/vuetrex'",
+        "import { Pass } from 'three/examples/jsm/postprocessing/Pass.js'",
+        "const postprocessing = composer().bloom({ strength: 0.4 }).grading().pass('custom', () => new Pass(), 'display').build()",
+        "// @ts-expect-error fluent chains retain option types",
+        "composer().bloom().grading({ contrast: 'invalid' })",
+        "// @ts-expect-error removed effects are not part of the public API",
+        "composer({ depthOfField: true })",
+        "void postprocessing",
         "import { sceneElements } from './src/elements.config.js'",
         "import { CustomBrick } from './src/CustomBrick.js'",
         "// @ts-expect-error missing declared custom tag",

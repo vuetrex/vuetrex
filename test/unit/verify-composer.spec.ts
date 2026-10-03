@@ -7,6 +7,9 @@ import { ComposerDeclaration } from '@/lib-components/scene/declarations.js'
 import { GroupNode } from '@/lib-components/nodes/GroupNode.js'
 import type { VuetrexStage } from '@/lib-components/three/stage.js'
 import { ComposerController } from '@/lib-components/three/postprocessing/ComposerController.js'
+import { composer } from '@/lib-components/scene/composer-builder.js'
+import { Pass } from 'three/examples/jsm/postprocessing/Pass.js'
+import Scene from '@/lib-components/three/scene.js'
 import { AnnotationPass } from '@/lib-components/three/postprocessing/AnnotationPass.js'
 
 describe('composer configuration', () => {
@@ -15,7 +18,7 @@ describe('composer configuration', () => {
         const layers = [{ preset: 'technical', bloom }, { preset: 'luminous', output: { exposure: 1.2 } }] as const
         const resolved = resolveComposerOptions(...layers)
         expect(resolved).toMatchObject({ preset: 'luminous', quality: 'balanced', maxPixelRatio: 1.5,
-            output: { toneMapping: 'aces', exposure: 1.2 },
+            output: { exposure: 1.2 },
             bloom: { mode: 'selected', strength: 0.5, radius: 0.3, threshold: 0 } })
         expect(bloom).toEqual({ strength: 0.5 })
         expect(Object.isFrozen(resolved)).toBe(true)
@@ -45,27 +48,31 @@ describe('composer configuration', () => {
         expect(() => resolveComposerOptions(value as any)).toThrow(path)
     })
 
-    it('resolves depth, image treatment, focus, outlines, annotation protection, and borrowed LUTs', () => {
-        const texture = new THREE.Data3DTexture(new Uint8Array(2 * 2 * 2 * 4), 2, 2, 2)
-        const resolved = resolveComposerOptions({
-            ambientOcclusion: true,
-            grading: { contrast: 1.1, saturation: 0.8 },
-            vignette: true,
-            depthOfField: { focus: [1, 2, 3], maxBlur: 0.01 },
-            outlines: { color: '#22ccff', thickness: 2 },
-            lut: { texture, intensity: 0.5 },
-            protectAnnotations: true,
-        })!
-        expect(resolved).toMatchObject({
-            ambientOcclusion: { intensity: 0.2, radius: 0.25 },
-            grading: { contrast: 1.1, saturation: 0.8 },
-            vignette: { strength: 0.1, offset: 0.8 },
-            depthOfField: { focus: [1, 2, 3], aperture: 0.0002, maxBlur: 0.01 },
-            outlines: { color: '#22ccff', thickness: 2 },
-            lut: { texture, intensity: 0.5 }, protectAnnotations: true,
-        })
-        expect(Object.isFrozen(resolved.lut)).toBe(true)
-        expect(Object.isFrozen(texture)).toBe(false)
+    it('resolves the retained effects and rejects removed public options', () => {
+        expect(resolveComposerOptions({ ambientOcclusion: true, grading: true, vignette: true, protectAnnotations: true }))
+            .toMatchObject({ ambientOcclusion: { intensity: 0.2, radius: 0.25 }, grading: { contrast: 1, saturation: 1 },
+                vignette: { strength: 0.1, offset: 0.8 }, protectAnnotations: true })
+        for (const name of ['lut', 'depthOfField', 'outlines']) {
+            expect(() => resolveComposerOptions({ [name]: false } as any)).toThrow(`composer.${name}`)
+        }
+        expect(() => resolveComposerOptions({ output: { toneMapping: 'aces' } } as any)).toThrow('composer.output.toneMapping')
+    })
+
+    it('builds immutable fluent options equivalent to functional configuration', () => {
+        const source = { contrast: 1.1 }
+        const create = () => new Pass()
+        const base = composer().bloom({ strength: 0.5 })
+        const extended = base.grading(source).ambientOcclusion().vignette().pass('custom', create, 'display')
+        source.contrast = 0.1
+        expect(extended.build()).toEqual(resolveComposerOptions({ bloom: { strength: 0.5 }, grading: { contrast: 1.1 },
+            ambientOcclusion: true, vignette: true, passes: [{ key: 'custom', create, phase: 'display' }] }))
+        expect(base.build().grading).toBe(false)
+        expect(base.build().passes).toHaveLength(0)
+        expect(Object.isFrozen(extended.build().passes)).toBe(true)
+        expect(Object.isFrozen(extended.build().passes![0])).toBe(true)
+        expect(() => extended.pass('custom', create)).toThrow('unique')
+        const sheet = defineVxStyleSheet({ common: { composer: extended.build() } })
+        expect(resolveComposerOptions(mergeComposerStyleSheets([sheet], 'light'))!.passes[0].create).toBe(create)
     })
 
     it('merges immutable stylesheet common/scheme composer layers', () => {
@@ -118,11 +125,11 @@ describe('node bloom metadata', () => {
             connectors: { update: vi.fn(), remove: vi.fn() }, invalidateContentBounds: vi.fn() } as unknown as VuetrexStage
         const parent = new GroupNode(stage), child = new GroupNode(stage)
         parent.appendChild(child)
-        parent.setStateValue('effects', { bloom: 'include', bloomGain: 0.5, outline: 'include' })
+        parent.setStateValue('effects', { bloom: 'include', bloomGain: 0.5 })
         child.setStateValue('effects', { bloomGain: 0 })
-        expect(child.resolvedNodeEffects()).toEqual({ bloom: 'include', bloomGain: 0, outline: 'include' })
+        expect(child.resolvedNodeEffects()).toEqual({ bloom: 'include', bloomGain: 0 })
         child.setStateValue('effects', undefined)
-        expect(child.resolvedNodeEffects()).toEqual({ bloom: 'include', bloomGain: 0.5, outline: 'include' })
+        expect(child.resolvedNodeEffects()).toEqual({ bloom: 'include', bloomGain: 0.5 })
         expect(() => child.setStateValue('effects', { bloom: 'yes' })).toThrow('effects.bloom')
         expect(() => child.setStateValue('effects', { bloomGain: 5 })).toThrow('effects.bloomGain')
     })
@@ -159,31 +166,75 @@ describe('composer controller ownership', () => {
         controller.destroy()
     })
 
-    it('builds and updates the complete depth and image-treatment pipeline', () => {
-        const renderer = rendererFixture()
-        const controller = new ComposerController(renderer, new THREE.Scene(), new THREE.PerspectiveCamera(), 320, 180)
-        const texture = new THREE.Data3DTexture(new Uint8Array(32), 2, 2, 2)
-        controller.configure({ reducedEffects: false, ambientOcclusion: true, grading: true, vignette: true,
-            depthOfField: { focus: 4 }, outlines: true, lut: { texture }, protectAnnotations: true })
-        expect(controller.diagnostics().passKeys).toEqual(expect.arrayContaining([
-            'ao:on', 'dof:on', 'grade:on', 'lut:on', 'outline:on', 'annotations:on',
-        ]))
-        expect(controller.diagnostics().supportedFeatures).toMatchObject({
-            ambientOcclusion: true, depthOfField: true, annotations: true, outlines: true, lut: true,
-        })
+    it('updates retained effects without reallocating and disposes them on replacement', () => {
+        const controller = new ComposerController(rendererFixture(), new THREE.Scene(), new THREE.PerspectiveCamera(), 320, 180)
+        expect(controller.diagnostics().allocations).toBe(0)
+        expect(controller.diagnostics().estimatedOwnedBytes).toBe(0)
+        controller.configure({ reducedEffects: false, ambientOcclusion: true, grading: true, vignette: true, protectAnnotations: true })
+        expect(controller.diagnostics().passKeys).toEqual(expect.arrayContaining(['ao:on', 'grade:on', 'annotations:on']))
         const pipeline = (controller as any).managed
-        const disposed = [pipeline.aoPass, pipeline.dofPass, pipeline.gradePass, pipeline.lutPass,
-            pipeline.outlinePass, pipeline.annotationPass].map((pass: { dispose: () => void }) => vi.spyOn(pass, 'dispose'))
+        const disposed = [pipeline.aoPass, pipeline.gradePass, pipeline.annotationPass].map(pass => vi.spyOn(pass, 'dispose'))
         const allocation = controller.diagnostics().allocations
         controller.configure({ reducedEffects: false, ambientOcclusion: { intensity: 0.5 }, grading: { contrast: 1.1 },
-            vignette: { strength: 0.2 }, depthOfField: { focus: 8 }, outlines: { strength: 4 },
-            lut: { texture, intensity: 0.4 }, protectAnnotations: true })
+            vignette: { strength: 0.2 }, protectAnnotations: true })
         expect(controller.diagnostics().allocations).toBe(allocation)
         controller.configure({ quality: 'low', ambientOcclusion: true })
         disposed.forEach(spy => expect(spy).toHaveBeenCalledOnce())
         expect(controller.diagnostics().effective!.ambientOcclusion).toBe(false)
-        expect(controller.diagnostics().fallbackReasons).toContain('Ambient occlusion is disabled at low quality')
         controller.destroy()
+    })
+
+    it('orders custom passes by phase, keeps stable factories, and cleans up failed builds and teardown', () => {
+        const renderer = rendererFixture()
+        const controller = new ComposerController(renderer, new THREE.Scene(), new THREE.PerspectiveCamera(), 320, 180)
+        const made: Pass[] = []
+        const create = vi.fn(() => { const pass = new Pass(); vi.spyOn(pass, 'dispose'); vi.spyOn(pass, 'setSize'); made.push(pass); return pass })
+        const plan = composer().grading().pass('display', create, 'display').pass('linear', create)
+        controller.configure(plan.build())
+        const pipeline = (controller as any).managed
+        const passes = pipeline.composer.passes as Pass[]
+        expect(passes.indexOf(made[0])).toBeLessThan(passes.indexOf(pipeline.outputPass))
+        expect(passes.indexOf(made[1])).toBeGreaterThan(passes.indexOf(pipeline.gradePass))
+        controller.resize(640, 360, 1)
+        expect(made[0].setSize).toHaveBeenLastCalledWith(640, 360)
+        controller.configure(plan.grading({ contrast: 1.2 }).build())
+        expect(create).toHaveBeenCalledTimes(2)
+        controller.configure(plan.pass('broken', () => { throw new Error('factory failed') }).build())
+        expect((controller as any).managed).toBe(pipeline)
+        expect(controller.diagnostics().lastError).toBe('factory failed')
+        expect(made[2].dispose).toHaveBeenCalledOnce()
+        expect(made[0].dispose).not.toHaveBeenCalled()
+        controller.configure(composer().pass('replacement', create).build())
+        expect(made[0].dispose).toHaveBeenCalledOnce()
+        expect(made[1].dispose).toHaveBeenCalledOnce()
+        const last = made.at(-1)!
+        controller.destroy(); controller.destroy()
+        expect(last.dispose).toHaveBeenCalledOnce()
+        expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping)
+    })
+
+    it('loads the backend only on demand, applies the latest options, and cancels late setup', async () => {
+        const makeScene = () => Object.assign(Object.create(Scene.prototype) as Scene, {
+            renderer: Object.assign(rendererFixture(), { render: vi.fn(), dispose: vi.fn(), forceContextLoss: vi.fn() }),
+            scene: new THREE.Scene(), renderCamera: new THREE.PerspectiveCamera(), domParent: document.createElement('div'),
+            stopRenderLoop: vi.fn(), removeEventListeners: vi.fn(),
+        })
+        const scene = makeScene()
+        scene.render()
+        expect(scene.renderer.render).toHaveBeenCalledOnce()
+        expect(scene.composerDiagnostics().allocations).toBe(0)
+        const ready = scene.setComposer(composer().bloom().build())
+        const latest = scene.setComposer(composer().grading().build())
+        await Promise.all([ready, latest])
+        expect(scene.composerDiagnostics().effective!.grading).toEqual({ contrast: 1, saturation: 1 })
+        expect(scene.composerDiagnostics().effective!.bloom).toBe(false)
+        await scene.setComposer(undefined)
+        expect(scene.composerDiagnostics().passKeys).toEqual(['direct-render'])
+        expect(scene.composerDiagnostics().estimatedOwnedBytes).toBe(0)
+        const pending = scene.setComposer(composer().bloom().build())
+        scene.destroy()
+        await pending
+        expect((scene as any).composerController).toBeUndefined()
     })
 
     it('updates parameters in place, replaces topology by key, and restores legacy state', () => {
@@ -277,7 +328,7 @@ describe('composer controller ownership', () => {
         controller.configure({ bloom: false })
         expect(disposeMask).toHaveBeenCalledOnce()
         controller.configure(undefined)
-        expect(controller.diagnostics().passKeys).toEqual(['legacy-render'])
+        expect(controller.diagnostics().passKeys).toEqual(['direct-render'])
         expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping)
         expect(renderer.toneMappingExposure).toBe(1)
         controller.destroy(); controller.destroy()

@@ -31,7 +31,8 @@ export function defineVxStyleSheet(definition: VxStyleSheetDefinition): VxStyleS
                 hover: style.hover && Object.freeze({ ...style.hover }) })
         }
         const composer = value.composer && Object.freeze(Object.fromEntries(Object.entries(value.composer).map(([key, field]) =>
-            [key, field && typeof field === 'object' ? Object.freeze({ ...field }) : field]))) as Readonly<VxComposerOptions>
+            [key, Array.isArray(field) ? Object.freeze(field.map(pass => Object.freeze({ ...pass })))
+                : field && typeof field === 'object' ? Object.freeze({ ...field }) : field]))) as Readonly<VxComposerOptions>
         result[scheme] = Object.freeze({ materials: Object.freeze(materials), connectors: Object.freeze(Object.fromEntries(Object.entries(value.connectors ?? {}).map(([name, style]) => [name, Object.freeze({ ...style,
             effects: style.effects && Object.freeze({ ...style.effects }) })]))), composer })
     }

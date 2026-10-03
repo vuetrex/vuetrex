@@ -9,13 +9,11 @@
           preset="studio"
           quality="high"
           :max-pixel-ratio="2"
-          :output="{ toneMapping: 'aces', exposure: 1 }"
-          :depth-of-field="{ focus: displayFocused ? 'operations-wall' : monitorOpen ? 'hub' : 'core', aperture: 0.00008, maxBlur: 0.013 }"
+          :output="{ exposure: 1 }"
           :grading="{ contrast: 1.025, saturation: 0.96 }"
           :vignette="{ strength: 0.08, offset: 0.95 }"
           :bloom="{ mode: 'selected', strength: 0.22, radius: 0.24, threshold: 0 }"
           :ambient-occlusion="{ intensity: 0.52, radius: 0.28 }"
-          :outlines="false"
           :protect-annotations="true"
         />
         <vx-lighting :key-intensity="2.7" :fill-intensity="0.65" shadow-quality="high" />
@@ -41,7 +39,7 @@
 
         <!-- Central stacked data store. -->
         <vx-stack id="core" :placement="at(0.1, platformTop, -1.25)" :gap="0.008"
-                  :effects="{ outline: 'include' }" @click="toggleDatabase">
+                  @click="toggleDatabase">
           <vx-cylinder
             v-for="layer in databaseLayers"
             :id="layer.id"
