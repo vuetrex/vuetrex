@@ -396,7 +396,7 @@ describe('connector host and runtime', () => {
             .route({ strategy: 'manual', waypoints: [[1, 0, 0]], elevation: 0, lane: 0 })
             .flow(route => particles.path(route.points, { count: 8, interpolation }))
         controller.reconcile('owner', compileConnectors(graph))
-        const points = scene.getObjectByName('vx-particle-batch-soft-disc|additive|false|true') as THREE.Points
+        const points = scene.getObjectByName('vx-connector-particles-owner-elbow')!.children[0] as THREE.Points
         const positions = points.geometry.getAttribute('position')
         const offRoute = Array.from({ length: positions.count }, (_, i) => {
             const x = positions.getX(i)
@@ -437,6 +437,34 @@ describe('connector host and runtime', () => {
         controller.clear()
     })
 
+    it('retains keyed GPU flows and disposes route resources on replacement and unmount', () => {
+        const { controller, scene, stopFrame } = makeHarness()
+        const graph = (end: number) => connectors.edge({ position: [0, 0, 0] }, { position: [end, 0, 0] }, { key: 'gpu' })
+            .route({ strategy: 'direct' })
+            .flow(route => particles.path(route.points, { count: 2 }))
+        const source = graph(3)
+        controller.reconcile('owner', compileConnectors(source))
+        const object = scene.getObjectByName('vx-connector-particles-owner-gpu')!
+        const points = object.children[0] as THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>
+        const texture = points.material.uniforms.pathMotionTexture.value as THREE.DataTexture
+        const disposeTexture = vi.spyOn(texture, 'dispose')
+        const disposeGeometry = vi.spyOn(points.geometry, 'dispose')
+        const disposeMaterial = vi.spyOn(points.material, 'dispose')
+        controller.reconcile('owner', compileConnectors(source))
+        expect(scene.getObjectByName(object.name)).toBe(object)
+        expect(disposeTexture).not.toHaveBeenCalled()
+        controller.reconcile('owner', compileConnectors(graph(6)))
+        expect(disposeTexture).toHaveBeenCalledOnce()
+        expect(disposeGeometry).toHaveBeenCalledOnce()
+        expect(disposeMaterial).toHaveBeenCalledOnce()
+        const replacement = scene.getObjectByName(object.name)!.children[0] as THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>
+        const disposeReplacement = vi.spyOn(replacement.material.uniforms.pathMotionTexture.value, 'dispose')
+        controller.clear()
+        controller.clear()
+        expect(disposeReplacement).toHaveBeenCalledOnce()
+        expect(stopFrame).toHaveBeenCalledOnce()
+    })
+
     it('keeps TabA dense additive flows moving through the public graph API', () => {
         const { controller, addEndpoint, scene, frameCallbacks } = makeHarness()
         for (const [index, id] of ['b2', 'b3', 'c2', 'd1'].entries()) {
@@ -458,7 +486,9 @@ describe('connector host and runtime', () => {
         const before = [...positions]
         frameCallbacks[0](0, 1)
         frameCallbacks[0](1000, 2)
-        expect([...positions]).not.toEqual(before)
+        expect([...positions]).toEqual(before)
+        expect(points.userData.vxParticleAdapter).toBe('gpu-path')
+        expect((points.material as THREE.ShaderMaterial).uniforms.pathMotionTime.value).toBe(1)
         expect(compileConnectors(tabAConnectors(2, true)).records).toHaveLength(7)
         controller.clear()
     })

@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { attachGpuPathMotion, supportsGpuPathMotion } from './gpuPathMotion.js'
 import { resolveParticleField } from '@/lib-components/particles/fields.js'
 import { resolveParticleValue } from '@/lib-components/particles/parameters.js'
 import { LinearParticlePath, type ParticleMotionPath } from '@/lib-components/particles/compiler/path.js'
@@ -58,6 +59,7 @@ interface RuntimeBatch {
     readonly positions: Float32Array
     readonly hits: ParticleHit[]
     count: number
+    gpuMotion?: ReturnType<typeof attachGpuPathMotion>
 }
 
 interface ResolvedStyle {
@@ -77,6 +79,7 @@ export class CpuParticleBackend implements ParticleBackend {
     readonly particleCount: number
 
     private readonly particles: RuntimeParticle[] = []
+    private readonly cpuParticles: RuntimeParticle[] = []
     private readonly batches: RuntimeBatch[] = []
     private readonly batchByObject = new WeakMap<THREE.Object3D, RuntimeBatch>()
     private readonly bounds = new THREE.Box3()
@@ -85,8 +88,9 @@ export class CpuParticleBackend implements ParticleBackend {
     constructor(
         private readonly program: CompiledParticleProgram,
         private readonly backendContext: ParticleBackendContext,
+        private readonly gpuPaths = false,
     ) {
-        this.object.name = 'vx-particle-backend-cpu'
+        this.object.name = gpuPaths ? 'vx-particle-backend-auto' : 'vx-particle-backend-cpu'
         this.build()
         this.particleCount = this.particles.length
         this.update(0, 0)
@@ -95,8 +99,12 @@ export class CpuParticleBackend implements ParticleBackend {
     update(timeSeconds: number, deltaSeconds: number): void {
         const delta = this.lastTime === undefined ? 0 : Math.max(0, deltaSeconds)
         this.lastTime = timeSeconds
-        for (const particle of this.particles) this.updateParticle(particle, timeSeconds, delta)
+        for (const particle of this.cpuParticles) this.updateParticle(particle, timeSeconds, delta)
         for (const batch of this.batches) {
+            if (batch.gpuMotion) {
+                batch.gpuMotion.update(timeSeconds)
+                continue
+            }
             batch.points.geometry.attributes.position.needsUpdate = true
             batch.points.geometry.computeBoundingSphere()
         }
@@ -106,6 +114,10 @@ export class CpuParticleBackend implements ParticleBackend {
         target.makeEmpty()
         const point = new THREE.Vector3()
         for (const batch of this.batches) {
+            if (batch.gpuMotion) {
+                if (batch.count > 0) target.union(batch.points.geometry.boundingBox!)
+                continue
+            }
             for (let index = 0; index < batch.count; index++) {
                 point.fromArray(batch.positions, index * 3)
                 target.expandByPoint(point)
@@ -122,11 +134,13 @@ export class CpuParticleBackend implements ParticleBackend {
     dispose(): void {
         for (const batch of this.batches) {
             batch.points.removeFromParent()
+            batch.gpuMotion?.dispose()
             batch.points.geometry.dispose()
             batch.points.material.dispose()
         }
         this.object.clear()
         this.particles.length = 0
+        this.cpuParticles.length = 0
         this.batches.length = 0
         this.lastTime = undefined
     }
@@ -137,7 +151,8 @@ export class CpuParticleBackend implements ParticleBackend {
         for (const emitter of emitters) {
             const count = resolveCount(emitter, this.backendContext)
             const style = resolveStyle(emitter.appearance, this.backendContext)
-            const key = `${style.shape}|${style.blending}|${style.depthWrite}|${style.sizeAttenuation}`
+            const gpu = this.gpuPaths && supportsGpuPathMotion(emitter)
+            const key = `${style.shape}|${style.blending}|${style.depthWrite}|${style.sizeAttenuation}${gpu ? `|gpu:${emitter.emitterIndex}` : ''}`
             const plan = batchPlans.get(key) ?? { style, emitters: [], count: 0 }
             plan.emitters.push(emitter)
             plan.count += count
@@ -150,16 +165,29 @@ export class CpuParticleBackend implements ParticleBackend {
             this.batchByObject.set(batch.points, batch)
             this.object.add(batch.points)
 
+            const batchParticles: RuntimeParticle[] = []
             for (const emitter of plan.emitters) {
                 const count = resolveCount(emitter, this.backendContext)
                 // One immutable sampling path per emitter, shared by all its particles.
                 const path = emitter.kind === 'path' ? createMotionPath(emitter) : undefined
                 for (let localIndex = 0; localIndex < count; localIndex++) {
-                    this.particles.push(this.createParticle(emitter, localIndex, count, batch, path))
+                    const particle = this.createParticle(emitter, localIndex, count, batch, path)
+                    this.particles.push(particle)
+                    batchParticles.push(particle)
                 }
             }
             const geometry = batch.points.geometry
             geometry.setAttribute('position', new THREE.BufferAttribute(batch.positions, 3))
+            const emitter = plan.emitters[0]
+            if (this.gpuPaths && supportsGpuPathMotion(emitter)) {
+                for (const particle of batchParticles) this.updateParticle(particle, 0, 0)
+                batch.gpuMotion = attachGpuPathMotion(batch.points, emitter, batchParticles.map(particle => ({
+                    phase: particle.phase, speed: particle.speed, spread: particle.spread,
+                    angle: particle.context.random * Math.PI * 2,
+                })), (index, time) => this.pathPosition(batchParticles[index], time))
+            } else {
+                for (const particle of batchParticles) this.cpuParticles.push(particle)
+            }
         }
     }
 

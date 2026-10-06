@@ -140,8 +140,16 @@ const orbiting = particles.cloud('gateway', { count: 260, radius: 1.2 })
   })
 ```
 
-`auto` currently selects the built-in CPU backend. CPU simulation is intended for modest effects, not hundreds of
-thousands of stateful particles.
+For standalone `<vx-particles>`, `auto` selects the built-in CPU backend. Connector `.flow()` output automatically
+uses GPU-evaluated motion for linear paths with speed and spread. A static route texture preserves full XYZ segments,
+constant travel speed, sharp corners, closed paths, and wrapping; frames update only a clock uniform. Appearance fields,
+fog, and selected bloom are retained. Picking evaluates current positions on demand, and bounds conservatively cover
+the entire path plus spread.
+
+Explicit smoothing, velocity offsets, turbulence, orbit, stateful simulation, and paths exceeding 65,535 input vertices
+continue on the CPU. A joined flow can use GPU paths alongside CPU emitters. Explicit `backend: 'cpu'` or a registered
+backend takes precedence for the entire joined program. CPU simulation is intended for modest effects, not hundreds
+of thousands of stateful particles.
 
 ## FBO and custom GPU backends
 
@@ -160,7 +168,8 @@ const largeMetricField = source.simulate({ backend: 'fbo' })
 ```
 
 A backend owns one Three.js `object`, implements `update()`, reports local bounds and particle hits, and disposes its
-GPU resources. Vuetrex ships only `cpu` today; requesting an unregistered backend fails with an actionable error rather
+GPU resources. The built-in backend includes the connector path optimization above; `cpu` remains the only built-in
+explicit backend name; requesting an unregistered backend fails with an actionable error rather
 than silently falling back.
 
 ## Reusable effects and composition

@@ -191,7 +191,7 @@ export type ParticleForce<Item = unknown> =
     | ParticleVortexForce<Item>
 
 export interface ParticleSimulationOptions<Item = unknown> extends ParticleNodeOptions {
-    /** `auto` currently selects CPU and is the stable seam for a future FBO backend. */
+    /** `auto` uses CPU simulation, with GPU path motion for eligible connector flows. */
     backend?: ParticleValue<ParticleBackendName>
     forces?: readonly ParticleForce<Item>[]
     drag?: ParticleValue<number>

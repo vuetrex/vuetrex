@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>GPU connector motion verification</title>
+<style>body { font: 16px system-ui; padding: 24px; } canvas { border: 1px solid #888; } pre { white-space: pre-wrap; }</style>
+<h1>GPU connector motion verification</h1>
+<p>Open this page through the Vite development server. It compares rendered GPU paths against CPU reference frames.</p>
+<pre id="result">Running…</pre>
+<script type="module">
+import * as THREE from 'three'
+import { particles } from '/src/lib-components/particles/index.ts'
+import { compileParticles } from '/src/lib-components/particles/compiler/evaluator.ts'
+import { createParticleBackend } from '/src/lib-components/particles/backend.ts'
+
+const result = document.querySelector('#result')
+const renderer = new THREE.WebGLRenderer({ antialias: false })
+renderer.setSize(128, 128)
+document.body.append(renderer.domElement)
+const target = new THREE.WebGLRenderTarget(128, 128)
+const camera = new THREE.OrthographicCamera(-2, 2, 2, -2, 0.1, 20)
+camera.position.z = 5
+const context = { parameters: {}, pixelRatio: 1, resolveTarget: () => ({ center: new THREE.Vector3(), radius: new THREE.Vector3(1, 1, 1) }) }
+const errors = []
+renderer.debug.onShaderError = (gl, program, vertex, fragment) => {
+    errors.push([gl.getProgramInfoLog(program), gl.getShaderInfoLog(vertex), gl.getShaderInfoLog(fragment)].join('\n'))
+}
+const lines = []
+const active = []
+try {
+    const cases = [
+        { name: 'corners and wrapping', points: [[-1,-1,0],[1,-1,0],[1,1,0]], speed: 1 },
+        { name: 'reverse and closed', points: [[-1,-1,0],[-1,-1,0],[1,-1,0],[1,1,0]], speed: -1, closed: true },
+        { name: 'vertical segments and spread', points: [[-1,-1,0],[-1,1,0],[1,1,0]], speed: 1, spread: 0.2 },
+        { name: 'collapsed route', points: [[0,0,0],[0,0,0]], speed: 1 },
+        { name: 'texture row boundary', points: Array.from({ length: 300 }, (_, i) => [-1 + i / 150, -0.6, 0]), speed: 0.7 },
+    ]
+    let frames = 0
+    for (const test of cases) {
+        const source = particles.path(test.points, { count: 1, interpolation: 'linear', closed: test.closed, spread: test.spread ?? 0 })
+            .motion({ speed: test.speed })
+            .appearance({ shape: 'square', size: 7, sizeAttenuation: false, color: 0xffffff, opacity: 1, blending: 'normal' })
+        const program = compileParticles(source)
+        const cpu = createParticleBackend(program, context)
+        const gpu = createParticleBackend(program, context, { gpuPaths: true })
+        active.push(cpu, gpu)
+        for (const time of [0, 0.5, 2, 2.5, 3.5, 4.5]) {
+            const centers = []
+            for (const backend of [cpu, gpu]) {
+                backend.update(time, 0.5)
+                const scene = new THREE.Scene()
+                scene.add(backend.object)
+                renderer.setRenderTarget(target)
+                renderer.render(scene, camera)
+                const pixels = new Uint8Array(128 * 128 * 4)
+                renderer.readRenderTargetPixels(target, 0, 0, 128, 128, pixels)
+                let x = 0, y = 0, count = 0
+                for (let i = 0; i < 128 * 128; i++) {
+                    if (pixels[i * 4] > 100) { x += i % 128; y += Math.floor(i / 128); count++ }
+                }
+                if (!count) throw new Error(`${test.name} at ${time}: empty render`)
+                centers.push([x / count, y / count])
+                renderer.setRenderTarget(null)
+                renderer.render(scene, camera)
+            }
+            if (errors.length) throw new Error(errors.join('\n'))
+            const difference = Math.hypot(centers[0][0] - centers[1][0], centers[0][1] - centers[1][1])
+            if (difference > 1) throw new Error(`${test.name} at ${time}: GPU differs by ${difference} pixels`)
+            frames++
+        }
+        lines.push(`PASS: ${test.name}`)
+        cpu.dispose(); gpu.dispose(); active.length = 0
+    }
+    result.textContent = `${lines.join('\n')}\nPASS: ${frames} CPU/GPU frame comparisons; no shader errors.`
+} catch (error) {
+    result.textContent = `${lines.join('\n')}\nFAIL: ${error.stack ?? error}`
+    console.error(error)
+} finally {
+    active.forEach(backend => backend.dispose())
+    target.dispose()
+    renderer.dispose()
+}
+</script>
+</html>

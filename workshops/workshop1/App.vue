@@ -24,7 +24,16 @@
             <VColumns id="c1">
               <vx-port name="left" face="left" :at="[0.5, 0.1]"/>
               <vx-port name="back" face="back" :at="[0.5, 0.1]"/>
-              <vx-particles :graph="saturnRings" anchor="origin" :participates-in-layout="false"/>
+              <vx-particles
+                id="saturn-particles"
+                :graph="saturnRings"
+                anchor="origin"
+                :paused="particlesPaused"
+                :time-scale="particleSpeed"
+                :interactive="false"
+                :effects="{ bloom: 'include' }"
+                :participates-in-layout="false"
+              />
             </VColumns>
           </vx-row>
 
@@ -35,16 +44,38 @@
         </vx-connectors>
       </vuetrex>
     </section>
-    <h1>Experiment</h1>
+    <section class="particle-controls" aria-label="Particle controls">
+      <div class="particle-summary">
+        <h1>Saturn swarm</h1>
+        <p>{{ particleCount.toLocaleString() }} particles orbiting in three luminous bands.</p>
+      </div>
+      <label>
+        Particle count
+        <select v-model.number="particleCount">
+          <option :value="60000">60,000</option>
+          <option :value="300000">300,000</option>
+          <option :value="600000">600,000</option>
+          <option :value="1000000">1,000,000</option>
+        </select>
+      </label>
+      <label>
+        Orbit speed · {{ particleSpeed.toFixed(1) }}×
+        <input v-model.number="particleSpeed" type="range" min="0.1" max="3" step="0.1" />
+      </label>
+      <button type="button" @click="particlesPaused = !particlesPaused">
+        {{ particlesPaused ? 'Resume particles' : 'Pause particles' }}
+      </button>
+    </section>
   </main>
 </template>
 
 <script setup lang="ts">
 import {Vuetrex, type VxSettings, type VxStage, type VxCameraOrbit} from '@/lib-components'
-import {particles, defineVxStyleSheet} from "@/lib-components";
+import {defineVxStyleSheet} from "@/lib-components";
 import VColumns from './things/VColumns.vue'
 import VNode from './things/VNode.vue'
-import {ref, reactive, computed} from 'vue';
+import {ref, reactive, computed, onBeforeUnmount} from 'vue';
+import {workshopOrbitGraph, registerWorkshopGpuOrbits} from './gpuOrbits.js';
 import * as THREE from 'three';
 
 const settings: VxSettings = {
@@ -111,40 +142,12 @@ function initStage(stage: VxStage) {
 
 //--------- particles --------------
 
-const fireflies = computed(() =>
-    particles.cloud([0, 0.5, 0], {count: 8192, radius: 2.0, distribution: 'surface', seed: 42,})
-        .appearance({
-          color: ({random}) => random > 0.78 ? 0x8989d9 : 0x272d84,
-          size: ({random}) => 0.01 + random * 0.09,
-          opacity: ({random}) => 0.3 + random * 0.5, blending: 'additive'
-        })
-        .motion({
-          turbulence: ({random}) => 0.025 + random * 0.04,
-          turbulenceScale: 1.35,
-          orbit: {axis: [0, 1, 0], speed: 0.11}
-        })
-        .named('plant-fireflies'),
-)
-
-const ringPoints = (radius: number, tilt = -0.11): [number, number, number][] =>
-    Array.from({length: 32}, (_, i) => {
-      const angle = 2 * Math.PI * i / 32
-      const x = radius * Math.cos(angle)
-      const z = radius * Math.sin(angle)
-      return [x, 1.5 + z * Math.sin(tilt), z * Math.cos(tilt)]
-    })
-
-const saturnRings = particles.paths([1.15, 1.35, 1.75].map((radius, i) => ({
-      key: `ring-${i}`,
-      points: ringPoints(radius),
-      closed: true,
-    })),
-    {count: 128, spread: 0.145, distribution: 'random', seed: 42},
-);
-
-const torusParticles = particles.path(ringPoints(1.3), {closed: true, count: 10000, spread: 0.22})
-    .appearance({color: 0xa9b5e8, size: 0.025, opacity: 0.7})
-    .motion({speed: 0.25})
+const unregisterGpuOrbits = registerWorkshopGpuOrbits()
+const particleCount = ref(300000)
+const particleSpeed = ref(1)
+const particlesPaused = ref(false)
+const saturnRings = computed(() => workshopOrbitGraph(particleCount.value))
+onBeforeUnmount(unregisterGpuOrbits)
 
 //--------- nodes -------
 
@@ -165,6 +168,7 @@ const timer = setInterval(() => {
     footer2.value = "Steady"
   }
 }, 50)
+onBeforeUnmount(() => clearInterval(timer))
 
 </script>
 <style>
@@ -192,6 +196,29 @@ const timer = setInterval(() => {
   max-width: 1400px;
   margin: 0 auto;
 }
+.particle-controls {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: center;
+  text-align: left;
+}
+.particle-summary { flex: 1; min-width: 240px; }
+.particle-summary h1 { margin: 0; font-size: 1.3rem; }
+.particle-summary p { margin: 0.35rem 0 0; color: #65717b; font-size: 0.9rem; }
+.particle-controls label { display: grid; gap: 0.4rem; font-size: 0.85rem; }
+.particle-controls select, .particle-controls button {
+  border: 1px solid #c9d1d8;
+  border-radius: 6px;
+  padding: 0.5rem 0.7rem;
+  background: white;
+  color: #18232c;
+  font: inherit;
+}
+.particle-controls input { accent-color: #427cc2; }
 @media (max-width: 700px) {
   .workshop { padding-inline: 0; }
   .back { left: 0.8rem; }

@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { gpuParticlePosition } from '@/lib-components/particles/compiler/gpuPathMotion.js'
 import { createParticleBackend, type ParticleBackend } from '@/lib-components/particles/backend.js'
 import { compileParticles } from '@/lib-components/particles/compiler/evaluator.js'
 import { isParticleSource, particleGraphSignature } from '@/lib-components/particles/graph.js'
@@ -83,7 +84,7 @@ export class ParticleBridge {
                 parameters,
                 pixelRatio: typeof window === 'undefined' ? 1 : window.devicePixelRatio,
                 resolveTarget: target => this.resolveTarget(target),
-            })
+            }, { gpuPaths: true })
             backend.object.name = `vx-connector-particles-${ownerId}-${record.key}`
             backend.object.userData.vxConnectorOutput = true
             backend.object.traverse(object => {
@@ -193,6 +194,8 @@ function stageScene(stage: VuetrexStage): THREE.Scene {
 }
 
 function particlePoint(object: THREE.Object3D, instanceId: number): THREE.Vector3 {
+    const animated = gpuParticlePosition(object, instanceId)
+    if (animated) return animated.applyMatrix4(object.matrixWorld)
     const position = (object as THREE.Points).geometry?.getAttribute?.('position')
     if (!position || instanceId >= position.count) return new THREE.Vector3()
     return new THREE.Vector3(position.getX(instanceId), position.getY(instanceId), position.getZ(instanceId))

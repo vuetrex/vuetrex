@@ -39,6 +39,7 @@ export function registerParticleBackend(name: string, factory: ParticleBackendFa
 export function createParticleBackend(
     program: CompiledParticleProgram,
     context: ParticleBackendContext,
+    options: { readonly gpuPaths?: boolean } = {},
 ): ParticleBackend {
     const requested = new Set(program.emitters.map(emitter =>
         resolveParticleValue(emitter.simulation.backend, context.parameters) ?? 'auto',
@@ -46,6 +47,8 @@ export function createParticleBackend(
     if (requested.size > 1) {
         throw new Error(`A joined particle graph cannot mix backends: ${[...requested].join(', ')}.`)
     }
+    // Connector auto mode accelerates eligible paths; explicit backends retain their contract.
+    if (requested.size === 0 && options.gpuPaths) return new CpuParticleBackend(program, context, true)
     const name = requested.values().next().value ?? 'cpu'
     const factory = backends.get(name)
     if (!factory) {

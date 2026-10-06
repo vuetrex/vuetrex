@@ -395,17 +395,18 @@ export class ComposerController {
             result.side = source.side
             return result
         }
-        if (source instanceof THREE.ShaderMaterial && !((object as THREE.Points).isPoints && object.userData.vxParticleAdapter === 'cpu')) {
+        if (source instanceof THREE.ShaderMaterial && !((object as THREE.Points).isPoints && ['cpu', 'gpu-path'].includes(object.userData.vxParticleAdapter))) {
             const reason = `Selected bloom skipped unsupported custom ShaderMaterial${source.name ? ` ${source.name}` : ''}`
             if (!this.fallbackReasons.includes(reason)) {
                 this.fallbackReasons.push(reason)
                 this.publishStatus()
             }
         }
-        if ((object as THREE.Points).isPoints && object.userData.vxParticleAdapter === 'cpu' && source instanceof THREE.ShaderMaterial) {
+        if ((object as THREE.Points).isPoints && ['cpu', 'gpu-path'].includes(object.userData.vxParticleAdapter) && source instanceof THREE.ShaderMaterial) {
             if (!result) {
                 const particleMask = source.clone()
-                particleMask.uniforms = THREE.UniformsUtils.clone(source.uniforms)
+                // Borrow source uniforms so GPU motion uses the same clock and route texture.
+                particleMask.uniforms = { ...source.uniforms }
                 particleMask.uniforms.vxBloomGain = { value: gain }
                 particleMask.uniforms.vxBloomThreshold = { value: threshold }
                 particleMask.fragmentShader = `uniform float vxBloomGain; uniform float vxBloomThreshold;\n${source.fragmentShader}`

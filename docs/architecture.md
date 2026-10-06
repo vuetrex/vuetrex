@@ -150,7 +150,11 @@ encode application metrics.
 
 `ParticleNode` compiles the authored DAG into a backend-neutral `CompiledParticleProgram`. The built-in CPU backend
 groups compatible appearances into soft point-shader batches and updates path, cloud, turbulence, orbit, and basic
-force motion from the stage clock. Named cloud targets resolve through semantic node IDs on every frame. A registered
+force motion from the stage clock. Connector auto mode additionally accelerates eligible linear path emitters in
+GLSL using a static cumulative-distance route texture and per-particle phase, speed, and spread. Its frame update
+changes only a clock uniform; conservative route bounds and on-demand CPU picking avoid per-frame position uploads.
+GPU textures belong to the batch, and selected-bloom materials borrow its motion uniforms. Unsupported effects and
+explicit CPU/custom backend selections retain their existing execution path. Named cloud targets resolve through semantic node IDs on every frame. A registered
 backend owns its Three.js object, time stepping, hit mapping, bounds, and disposal; this is the extension boundary for
 FBO or compute implementations. Only `<vx-particles>` enters the logical/Three.js scene pipeline.
 
